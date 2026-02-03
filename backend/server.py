@@ -130,8 +130,12 @@ class Event(BaseModel):
     title: str
     description: Optional[str] = None
     event_date: str
-    event_type: str = "appointment"  # appointment, work_schedule, task
+    event_time: Optional[str] = None
+    event_type: str = "appointment"  # appointment, work_schedule, event, task
+    work_start_time: Optional[str] = None
+    work_end_time: Optional[str] = None
     created_by: str
+    created_by_name: Optional[str] = None
     status: str = "pending"  # pending, approved
     created_at: str
 
