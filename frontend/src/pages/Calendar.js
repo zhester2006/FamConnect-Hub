@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
+import Sidebar from '@/components/Sidebar';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
