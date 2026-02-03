@@ -305,7 +305,7 @@ async def populate_sample_data():
     
     print("✅ Sample data created successfully!")
     print("\n🔑 Login credentials:")
-    print("   Parent: parent@familyhub.demo")
+    print("   Parent: parent@famfocus.demo")
     print("   Child (Alex): Use parent account to create session")
     print("\n💡 Tip: Sign in with Google and the app will use your real account")
     
