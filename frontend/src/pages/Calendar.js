@@ -176,16 +176,16 @@ export default function Calendar({ user }) {
       </main>
 
       {showAddEvent && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6" data-testid="add-event-modal">
-          <div className="glass-card rounded-3xl p-6 max-w-md w-full">
-            <h2 className="text-2xl font-black text-white mb-4">Add Event</h2>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 lg:p-6" data-testid="add-event-modal">
+          <div className="glass-card rounded-3xl p-4 lg:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl lg:text-2xl font-black text-white mb-4">Add Event</h2>
             <form onSubmit={handleAddEvent} className="space-y-4">
               <input
                 type="text"
                 placeholder="Event title"
                 value={newEvent.title}
                 onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder:text-slate-600"
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 text-base"
                 required
                 data-testid="event-title-input"
               />
@@ -193,21 +193,21 @@ export default function Calendar({ user }) {
                 placeholder="Description (optional)"
                 value={newEvent.description}
                 onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 h-24 resize-none"
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 h-20 lg:h-24 resize-none text-base"
                 data-testid="event-description-input"
               />
               <input
                 type="date"
                 value={newEvent.event_date}
                 onChange={(e) => setNewEvent({...newEvent, event_date: e.target.value})}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white"
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white text-base"
                 required
                 data-testid="event-date-input"
               />
-              <div className="flex space-x-2">
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                 <button
                   type="submit"
-                  className="flex-1 bg-primary hover:bg-primary/80 text-white font-bold py-3 px-4 rounded-full transition-all"
+                  className="flex-1 bg-primary hover:bg-primary/80 active:scale-95 text-white font-bold py-3 px-4 rounded-full transition-all"
                   data-testid="submit-event-button"
                 >
                   Add Event
@@ -215,7 +215,7 @@ export default function Calendar({ user }) {
                 <button
                   type="button"
                   onClick={() => setShowAddEvent(false)}
-                  className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-4 rounded-full transition-all"
+                  className="flex-1 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold py-3 px-4 rounded-full transition-all"
                   data-testid="cancel-event-button"
                 >
                   Cancel
