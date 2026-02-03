@@ -103,6 +103,14 @@ export default function Calendar({ user }) {
   const today = new Date();
   const isToday = (day) => day === today.getDate() && currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear();
 
+  const handleDayClick = (day) => {
+    if (!day) return;
+    setSelectedDate(day);
+    const eventsForDay = getEventsForDay(day);
+    setDayPopupEvents(eventsForDay);
+    setShowDayPopup(true);
+  };
+
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
