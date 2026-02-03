@@ -8,22 +8,22 @@ export default function Settings({ user }) {
   const [theme, setTheme] = useState('cosmic_explorer');
   const [notifications, setNotifications] = useState(true);
 
-  const themes = [
-    { id: 'cosmic_explorer', name: 'Cosmic Explorer', colors: ['#020617', '#3B82F6', '#FACC15'] },
-    { id: 'ocean_breeze', name: 'Ocean Breeze', colors: ['#0C1E2E', '#06B6D4', '#10B981'] },
-    { id: 'sunset_glow', name: 'Sunset Glow', colors: ['#2D1B1E', '#F59E0B', '#EF4444'] },
-    { id: 'forest_night', name: 'Forest Night', colors: ['#0F1F0F', '#10B981', '#34D399'] },
-    { id: 'purple_dream', name: 'Purple Dream', colors: ['#1E1B2E', '#8B5CF6', '#A78BFA'] },
-    { id: 'candy_pop', name: 'Candy Pop', colors: ['#2E1B1F', '#EC4899', '#F472B6'] },
-    { id: 'neon_nights', name: 'Neon Nights', colors: ['#0A0E1A', '#00FFF0', '#FF00FF'] },
-    { id: 'autumn_harvest', name: 'Autumn Harvest', colors: ['#1F1610', '#F97316', '#FBBF24'] },
-    { id: 'arctic_frost', name: 'Arctic Frost', colors: ['#0F1619', '#67E8F9', '#F0F9FF'] },
-    { id: 'volcano_burst', name: 'Volcano Burst', colors: ['#1A0F0F', '#DC2626', '#F97316'] },
-    { id: 'mint_fresh', name: 'Mint Fresh', colors: ['#0F1F19', '#6EE7B7', '#34D399'] },
-    { id: 'royal_gold', name: 'Royal Gold', colors: ['#1F1810', '#EAB308', '#FACC15'] },
-    { id: 'deep_ocean', name: 'Deep Ocean', colors: ['#0A1628', '#1E40AF', '#3B82F6'] },
-    { id: 'cherry_blossom', name: 'Cherry Blossom', colors: ['#2E1B2B', '#F9A8D4', '#FCD34D'] },
-    { id: 'midnight_sky', name: 'Midnight Sky', colors: ['#0F0F1E', '#6366F1', '#818CF8'] },
+  const themeOptions = [
+    'Cosmic Explorer',
+    'Ocean Breeze',
+    'Sunset Glow',
+    'Forest Night',
+    'Purple Dream',
+    'Candy Pop',
+    'Neon Nights',
+    'Autumn Harvest',
+    'Arctic Frost',
+    'Volcano Burst',
+    'Mint Fresh',
+    'Royal Gold',
+    'Deep Ocean',
+    'Cherry Blossom',
+    'Midnight Sky'
   ];
 
   return (
