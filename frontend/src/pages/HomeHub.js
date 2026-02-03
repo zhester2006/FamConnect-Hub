@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Calendar, MessageCircle, Sun } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
-import SpotifyPlayer from '@/components/SpotifyPlayer';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
