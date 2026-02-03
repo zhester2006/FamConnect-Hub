@@ -160,19 +160,20 @@ export default function Calendar({ user }) {
         <div className="space-y-3">
           <h3 className="text-lg font-bold text-white">Upcoming Events</h3>
           {events.slice(0, 5).map(event => (
-            <div key={event.event_id} className="glass-card rounded-2xl p-4" data-testid="event-item">
+            <div key={event.event_id} className="glass-card rounded-2xl p-3 lg:p-4" data-testid="event-item">
               <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="font-bold text-white">{event.title}</h4>
-                  <p className="text-sm text-slate-400 mt-1">{event.description}</p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-white truncate">{event.title}</h4>
+                  <p className="text-sm text-slate-400 mt-1 line-clamp-2">{event.description}</p>
                   <p className="text-xs text-accent mt-2">{new Date(event.event_date).toLocaleDateString()}</p>
                 </div>
-                <CalendarIcon className="w-5 h-5 text-secondary" />
+                <CalendarIcon className="w-5 h-5 text-secondary flex-shrink-0 ml-2" />
               </div>
             </div>
           ))}
         </div>
-      </div>
+        </div>
+      </main>
 
       {showAddEvent && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6" data-testid="add-event-modal">
