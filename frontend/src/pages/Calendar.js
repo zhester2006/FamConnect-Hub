@@ -18,6 +18,20 @@ export default function Calendar({ user }) {
     event_type: 'appointment'
   });
 
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/events`, { credentials: 'include' });
+        const data = await res.json();
+        setEvents(data.events);
+      } catch (error) {
+        console.error('Failed to fetch events:', error);
+      }
+    };
+    
+    fetchEvents();
+  }, [currentDate]);
+
   const fetchEvents = useCallback(async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/events`, { credentials: 'include' });
@@ -27,10 +41,6 @@ export default function Calendar({ user }) {
       console.error('Failed to fetch events:', error);
     }
   }, []);
-
-  useEffect(() => {
-    fetchEvents();
-  }, [currentDate, fetchEvents]);
 
   const handleAddEvent = async (e) => {
     e.preventDefault();
