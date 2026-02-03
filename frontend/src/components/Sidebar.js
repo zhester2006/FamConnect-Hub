@@ -80,9 +80,11 @@ export default function Sidebar({ user, isOpen, setIsOpen }) {
         <div className="flex flex-col h-full">
           <div className="p-6 border-b border-slate-800">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
+              <img 
+                src="https://customer-assets.emergentagent.com/job_homebridge-5/artifacts/2ku9mapg_app_logo.png.png"
+                alt="FamFocus Hub"
+                className="w-12 h-12 rounded-lg object-contain"
+              />
               <div className="flex-1">
                 <h1 className="text-xl font-black gradient-text">FamFocus Hub</h1>
                 <p className="text-xs text-slate-400">Cosmic Explorer</p>
