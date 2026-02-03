@@ -41,23 +41,27 @@ export default function HomeHub({ user }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 p-8" data-testid="home-hub">
-      <div className="grid grid-cols-12 gap-6 max-w-7xl mx-auto">
-        <div className="col-span-8 space-y-6">
-          <div className="glass-card rounded-3xl p-8 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl"></div>
-            <div className="relative z-10">
-              <p className="text-slate-400 text-lg mb-2">{time.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-              <h1 className="text-7xl font-black text-white mb-4">
-                {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </h1>
-              <div className="flex items-center space-x-4">
-                <Sun className="w-8 h-8 text-accent" />
-                <span className="text-2xl text-white">72°F</span>
-                <span className="text-slate-400">Sunny</span>
+    <div className="flex h-screen bg-slate-950">
+      <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      
+      <main className="flex-1 overflow-y-auto lg:ml-72">
+        <div className="p-6 lg:p-8" data-testid="home-hub">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-7xl mx-auto">
+            <div className="lg:col-span-8 space-y-6">
+              <div className="glass-card rounded-3xl p-6 lg:p-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl"></div>
+                <div className="relative z-10">
+                  <p className="text-slate-400 text-base lg:text-lg mb-2">{time.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+                  <h1 className="text-5xl lg:text-7xl font-black text-white mb-4">
+                    {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </h1>
+                  <div className="flex items-center space-x-4">
+                    <Sun className="w-8 h-8 text-accent" />
+                    <span className="text-2xl text-white">72°F</span>
+                    <span className="text-slate-400">Sunny</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
           {quote && (
             <div className="glass-card rounded-2xl p-6">
