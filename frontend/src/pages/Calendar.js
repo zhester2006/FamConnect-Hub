@@ -17,6 +17,8 @@ export default function Calendar({ user }) {
   const [events, setEvents] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [showAddEvent, setShowAddEvent] = useState(false);
+  const [showDayPopup, setShowDayPopup] = useState(false);
+  const [dayPopupEvents, setDayPopupEvents] = useState([]);
   const [filterType, setFilterType] = useState('all');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
