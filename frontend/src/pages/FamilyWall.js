@@ -172,9 +172,9 @@ export default function FamilyWall({ user }) {
 
   return (
     <div className="flex h-screen bg-slate-950">
-      <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
-      <main className="flex-1 flex flex-col lg:ml-72">
+      <main className={`flex-1 flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto pb-32" data-testid="family-wall">
           <div className="p-4 lg:p-6 space-y-4">
