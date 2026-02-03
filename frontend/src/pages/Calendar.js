@@ -132,7 +132,7 @@ export default function Calendar({ user }) {
               return (
                 <div
                   key={index}
-                  className={`aspect-square rounded-lg p-2 ${
+                  className={`aspect-square rounded-lg p-1 lg:p-2 ${
                     day ? 'bg-slate-900/50 hover:bg-slate-800/50' : ''
                   } ${
                     isToday ? 'ring-2 ring-primary' : ''
@@ -141,11 +141,11 @@ export default function Calendar({ user }) {
                 >
                   {day && (
                     <>
-                      <div className="text-sm font-bold text-white mb-1">{day}</div>
+                      <div className="text-xs lg:text-sm font-bold text-white mb-1">{day}</div>
                       {dayEvents.length > 0 && (
                         <div className="space-y-1">
                           {dayEvents.slice(0, 2).map(event => (
-                            <div key={event.event_id} className="w-full h-1 bg-accent rounded-full"></div>
+                            <div key={event.event_id} className="w-full h-0.5 lg:h-1 bg-accent rounded-full"></div>
                           ))}
                         </div>
                       )}
