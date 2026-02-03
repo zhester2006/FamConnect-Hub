@@ -63,31 +63,33 @@ export default function LiveChat({ user }) {
               className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
               data-testid="chat-message"
             >
-              <div className={`max-w-[80%] ${isOwn ? 'order-2' : 'order-1'}`}>
+              <div className={`flex items-end space-x-2 max-w-[75%] ${isOwn ? 'flex-row-reverse space-x-reverse' : ''}`}>
                 {!isOwn && (
-                  <div className="flex items-center space-x-2 mb-1">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xs font-black text-white">
-                      {message.user_name.charAt(0)}
-                    </div>
-                    <span className="text-xs text-slate-400 font-medium">{message.user_name}</span>
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xs font-black text-white flex-shrink-0">
+                    {message.user_name.charAt(0)}
                   </div>
                 )}
-                <div
-                  className={`rounded-2xl p-4 ${
-                    isOwn
-                      ? 'bg-primary text-white'
-                      : 'glass-card text-white'
-                  }`}
-                >
-                  <p className="text-sm break-words">{message.content}</p>
-                  <div className="flex items-center justify-end space-x-1 mt-2">
-                    <span className="text-xs opacity-70">
+                <div>
+                  {!isOwn && (
+                    <span className="text-xs text-slate-400 font-medium ml-2 mb-1 block">{message.user_name}</span>
+                  )}
+                  <div
+                    className={`rounded-2xl p-4 ${
+                      isOwn
+                        ? 'bg-primary text-white rounded-br-md'
+                        : 'glass-card text-white rounded-bl-md'
+                    }`}
+                  >
+                    <p className="text-sm break-words">{message.content}</p>
+                  </div>
+                  <div className={`flex items-center space-x-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                    <span className="text-xs text-slate-500">
                       {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     {isOwn && (
-                      <div className="text-xs">
+                      <div className="text-xs text-slate-500">
                         {message.read_by?.length > 1 ? (
-                          <CheckCheck className="w-3 h-3" />
+                          <CheckCheck className="w-3 h-3 text-primary" />
                         ) : (
                           <Check className="w-3 h-3" />
                         )}
