@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Users, Calendar, MessageCircle, Sun, Cloud, Wind } from 'lucide-react';
+import { Users, Calendar, MessageCircle, Sun } from 'lucide-react';
+import Sidebar from '@/components/Sidebar';
+import SpotifyPlayer from '@/components/SpotifyPlayer';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function HomeHub({ user }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [time, setTime] = useState(new Date());
   const [familyMembers, setFamilyMembers] = useState([]);
   const [todayEvents, setTodayEvents] = useState([]);
