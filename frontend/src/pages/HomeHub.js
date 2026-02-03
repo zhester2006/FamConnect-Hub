@@ -461,6 +461,73 @@ export default function HomeHub({ user }) {
           </div>
         </div>
       )}
+
+      {/* Day Detail Popup */}
+      {selectedDay && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedDay(null)}>
+          <div className="glass-card rounded-2xl p-5 max-w-md w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-black text-white">
+                  {selectedDay.fullDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </h2>
+                <p className="text-xs text-slate-400">{dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}</p>
+              </div>
+              <button onClick={() => setSelectedDay(null)} className="p-1.5 hover:bg-slate-800 rounded-lg" data-testid="close-day-detail">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            
+            {dayEvents.length === 0 ? (
+              <div className="text-center py-8">
+                <CalendarDays className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+                <p className="text-slate-400">No events scheduled</p>
+                <button
+                  onClick={() => { setSelectedDay(null); setShowAddEvent(true); setNewEvent({...newEvent, event_date: selectedDay.dateStr}); }}
+                  className="mt-4 bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-full text-sm font-bold transition-all"
+                >
+                  Add Event
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {dayEvents.map(event => (
+                  <div key={event.event_id} className={`p-3 rounded-xl border-l-4 bg-slate-800/50 ${
+                    EVENT_TYPES[event.event_type]?.color?.replace('bg-', 'border-') || 'border-primary'
+                  }`}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-1">
+                          {event.event_type === 'work_schedule' ? (
+                            <Briefcase className={`w-4 h-4 ${EVENT_TYPES[event.event_type]?.textColor}`} />
+                          ) : (
+                            <CalendarDays className={`w-4 h-4 ${EVENT_TYPES[event.event_type]?.textColor}`} />
+                          )}
+                          <span className={`text-xs font-bold ${EVENT_TYPES[event.event_type]?.textColor}`}>
+                            {EVENT_TYPES[event.event_type]?.label}
+                          </span>
+                        </div>
+                        <h3 className="font-bold text-white">{event.title}</h3>
+                        {event.event_type === 'work_schedule' && event.work_start_time && (
+                          <p className="text-sm text-orange-400 mt-1">
+                            {event.work_start_time} - {event.work_end_time}
+                          </p>
+                        )}
+                        {event.event_time && event.event_type !== 'work_schedule' && (
+                          <p className="text-sm text-slate-400 mt-1">{event.event_time}</p>
+                        )}
+                        {event.created_by_name && (
+                          <p className="text-xs text-slate-500 mt-1">Added by {event.created_by_name}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
