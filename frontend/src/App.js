@@ -14,6 +14,7 @@ import RewardsShop from '@/pages/RewardsShop';
 import DinnerPlanner from '@/pages/DinnerPlanner';
 import Settings from '@/pages/Settings';
 import HomeHub from '@/pages/HomeHub';
+import FamilyManagement from '@/pages/FamilyManagement';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
