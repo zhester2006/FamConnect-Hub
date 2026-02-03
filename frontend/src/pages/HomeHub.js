@@ -119,6 +119,8 @@ export default function HomeHub({ user }) {
     event_type: 'appointment'
   });
   const [newItem, setNewItem] = useState('');
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [dayEvents, setDayEvents] = useState([]);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
