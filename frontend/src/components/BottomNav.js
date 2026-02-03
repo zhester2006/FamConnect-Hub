@@ -23,8 +23,8 @@ export default function BottomNav({ userRole = 'parent' }) {
   const parentNavItems = [
     { icon: Home, label: 'Dashboard', path: '/dashboard' },
     { icon: Calendar, label: 'Calendar', path: '/calendar' },
+    { icon: Users, label: 'Family', path: '/family' },
     { icon: MessageCircle, label: 'Chat', path: '/chat' },
-    { icon: Users, label: 'Family', path: '/family-wall' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
 
