@@ -66,12 +66,12 @@ export default function HomeHub({ user }) {
           {quote && (
             <div className="glass-card rounded-2xl p-6">
               <h3 className="text-sm font-bold text-accent mb-2">Daily Inspiration</h3>
-              <p className="text-lg text-white italic">"{quote}"</p>
+              <p className="text-base lg:text-lg text-white italic">"{quote}"</p>
             </div>
           )}
 
           <div className="glass-card rounded-2xl p-6">
-            <h2 className="text-2xl font-bold text-white mb-4 flex items-center space-x-2">
+            <h2 className="text-xl lg:text-2xl font-bold text-white mb-4 flex items-center space-x-2">
               <Calendar className="w-6 h-6 text-secondary" />
               <span>Today's Schedule</span>
             </h2>
@@ -90,7 +90,9 @@ export default function HomeHub({ user }) {
           </div>
         </div>
 
-        <div className="col-span-4 space-y-6">
+        <div className="lg:col-span-4 space-y-6">
+          <SpotifyPlayer />
+
           <div className="glass-card rounded-2xl p-6">
             <h3 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
               <Users className="w-5 h-5 text-primary" />
@@ -99,16 +101,18 @@ export default function HomeHub({ user }) {
             <div className="space-y-3">
               {familyMembers.map(member => (
                 <div key={member.user_id} className="flex items-center space-x-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-lg font-black text-white">
-                    {member.name.charAt(0)}
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-lg font-black text-white">
+                      {member.name.charAt(0)}
+                    </div>
+                    {member.online_status && (
+                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 border-2 border-slate-950 rounded-full"></div>
+                    )}
                   </div>
                   <div>
                     <p className="font-medium text-white">{member.name}</p>
                     <p className="text-xs text-slate-400 capitalize">{member.role}</p>
                   </div>
-                  {member.online_status && (
-                    <div className="ml-auto w-3 h-3 bg-green-400 rounded-full"></div>
-                  )}
                 </div>
               ))}
             </div>
@@ -129,6 +133,8 @@ export default function HomeHub({ user }) {
           </div>
         </div>
       </div>
+    </div>
+    </main>
     </div>
   );
 }
