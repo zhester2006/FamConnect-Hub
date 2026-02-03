@@ -205,6 +205,14 @@ export default function HomeHub({ user }) {
     }
   };
 
+  const handleDayClick = (day) => {
+    if (!day) return;
+    const dateStr = `${calendarDate.getFullYear()}-${String(calendarDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const eventsForDay = events.filter(e => e.event_date === dateStr);
+    setDayEvents(eventsForDay);
+    setSelectedDay({ day, dateStr, fullDate: new Date(calendarDate.getFullYear(), calendarDate.getMonth(), day) });
+  };
+
   const todayEvents = events.filter(e => e.event_date === new Date().toISOString().split('T')[0]);
   const onlineMembers = familyMembers.filter(m => m.online_status);
 
