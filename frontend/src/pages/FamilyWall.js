@@ -1,14 +1,75 @@
-import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Image as ImageIcon, Plus, TrendingUp } from 'lucide-react';
-import BottomNav from '@/components/BottomNav';
+import React, { useState, useEffect, useRef } from 'react';
+import { Heart, MessageCircle, Image as ImageIcon, Plus, TrendingUp, Smile, Send, X, BarChart2, Check } from 'lucide-react';
+import Sidebar from '@/components/Sidebar';
+import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+
+const EMOJI_LIST = ['😀', '😂', '❤️', '👍', '🎉', '🔥', '💪', '⭐', '🌟', '✨', '🏠', '👨‍👩‍👧‍👦', '🍕', '🎮', '📚', '🎨', '⚽', '🎵', '💯', '🙌'];
+
+const PollComponent = ({ poll, user, onVote }) => {
+  const totalVotes = poll.poll_options?.reduce((sum, opt) => sum + (opt.votes?.length || 0), 0) || 0;
+  const hasVoted = poll.poll_options?.some(opt => opt.votes?.includes(user?.user_id));
+
+  return (
+    <div className="mt-3 space-y-2">
+      <p className="text-sm text-accent font-bold flex items-center space-x-2">
+        <BarChart2 className="w-4 h-4" />
+        <span>Poll</span>
+      </p>
+      {poll.poll_options?.map((option, idx) => {
+        const voteCount = option.votes?.length || 0;
+        const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+        const userVoted = option.votes?.includes(user?.user_id);
+        
+        return (
+          <button
+            key={idx}
+            onClick={() => !hasVoted && onVote(poll.post_id, idx)}
+            disabled={hasVoted}
+            className={`w-full relative overflow-hidden rounded-xl p-3 transition-all ${
+              hasVoted ? 'cursor-default' : 'hover:scale-[1.02] cursor-pointer'
+            } ${userVoted ? 'border-2 border-primary' : 'border border-slate-700'}`}
+          >
+            <div 
+              className="absolute inset-0 bg-primary/20 transition-all"
+              style={{ width: `${percentage}%` }}
+            />
+            <div className="relative z-10 flex items-center justify-between">
+              <span className="text-white text-sm font-medium">{option.text}</span>
+              <div className="flex items-center space-x-2">
+                {userVoted && <Check className="w-4 h-4 text-primary" />}
+                <span className="text-slate-400 text-xs">{percentage}%</span>
+              </div>
+            </div>
+            {option.votes?.length > 0 && (
+              <div className="relative z-10 flex -space-x-1 mt-2">
+                {option.votes.slice(0, 5).map((voterId, i) => (
+                  <div key={i} className="w-5 h-5 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-[8px] font-bold text-white border border-slate-900">
+                    {voterId.charAt(0).toUpperCase()}
+                  </div>
+                ))}
+              </div>
+            )}
+          </button>
+        );
+      })}
+      <p className="text-xs text-slate-500 text-center">{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</p>
+    </div>
+  );
+};
 
 export default function FamilyWall({ user }) {
   const [posts, setPosts] = useState([]);
   const [quote, setQuote] = useState('');
-  const [showAddPost, setShowAddPost] = useState(false);
-  const [newPost, setNewPost] = useState({ content: '', post_type: 'text' });
+  const [newPost, setNewPost] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showPollCreator, setShowPollCreator] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState(['', '']);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const inputRef = useRef(null);
+  const postsEndRef = useRef(null);
 
   useEffect(() => {
     fetchPosts();
@@ -19,7 +80,7 @@ export default function FamilyWall({ user }) {
     try {
       const res = await fetch(`${BACKEND_URL}/api/family-wall`, { credentials: 'include' });
       const data = await res.json();
-      setPosts(data.posts);
+      setPosts(data.posts || []);
     } catch (error) {
       console.error('Failed to fetch posts:', error);
     }
@@ -29,122 +90,297 @@ export default function FamilyWall({ user }) {
     try {
       const res = await fetch(`${BACKEND_URL}/api/family-wall/daily-quote`, { credentials: 'include' });
       const data = await res.json();
-      setQuote(data.quote);
+      setQuote(data.quote || '');
     } catch (error) {
       console.error('Failed to fetch quote:', error);
     }
   };
 
-  const handleAddPost = async (e) => {
+  const handleSubmitPost = async (e) => {
     e.preventDefault();
+    if (!newPost.trim()) return;
+
     try {
       await fetch(`${BACKEND_URL}/api/family-wall`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(newPost)
+        body: JSON.stringify({ content: newPost, post_type: 'text' })
       });
-      setShowAddPost(false);
-      setNewPost({ content: '', post_type: 'text' });
+      setNewPost('');
       fetchPosts();
+      toast.success('Posted!');
     } catch (error) {
-      console.error('Failed to add post:', error);
+      toast.error('Failed to post');
+    }
+  };
+
+  const handleCreatePoll = async () => {
+    if (!pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2) {
+      toast.error('Please add a question and at least 2 options');
+      return;
+    }
+
+    try {
+      await fetch(`${BACKEND_URL}/api/family-wall`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          content: pollQuestion,
+          post_type: 'poll',
+          poll_options: pollOptions.filter(o => o.trim()).map(text => ({ text, votes: [] }))
+        })
+      });
+      setShowPollCreator(false);
+      setPollQuestion('');
+      setPollOptions(['', '']);
+      fetchPosts();
+      toast.success('Poll created!');
+    } catch (error) {
+      toast.error('Failed to create poll');
+    }
+  };
+
+  const handleVote = async (postId, optionIndex) => {
+    try {
+      await fetch(`${BACKEND_URL}/api/family-wall/${postId}/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ option_index: optionIndex })
+      });
+      fetchPosts();
+      toast.success('Vote recorded!');
+    } catch (error) {
+      toast.error('Failed to vote');
+    }
+  };
+
+  const addEmoji = (emoji) => {
+    setNewPost(prev => prev + emoji);
+    setShowEmojiPicker(false);
+    inputRef.current?.focus();
+  };
+
+  const addPollOption = () => {
+    if (pollOptions.length < 6) {
+      setPollOptions([...pollOptions, '']);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 pb-24" data-testid="family-wall">
-      <div className="p-6 space-y-6">
-        <header className="flex items-center justify-between">
-          <h1 className="text-2xl font-black text-white">Family Wall</h1>
-          <button
-            onClick={() => setShowAddPost(true)}
-            className="bg-primary hover:bg-primary/80 text-white p-2 rounded-full transition-all neon-glow"
-            data-testid="add-post-button"
-          >
-            <Plus className="w-6 h-6" />
-          </button>
-        </header>
+    <div className="flex h-screen bg-slate-950">
+      <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      
+      <main className="flex-1 flex flex-col lg:ml-72">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto pb-32" data-testid="family-wall">
+          <div className="p-4 lg:p-6 space-y-4">
+            <header className="flex items-center justify-between">
+              <h1 className="text-2xl font-black text-white">Family Wall</h1>
+              {user?.role === 'parent' && (
+                <button
+                  onClick={() => setShowPollCreator(true)}
+                  className="bg-accent hover:bg-accent/80 text-slate-950 px-4 py-2 rounded-full text-sm font-bold flex items-center space-x-2 transition-all"
+                  data-testid="create-poll-btn"
+                >
+                  <BarChart2 className="w-4 h-4" />
+                  <span>Create Poll</span>
+                </button>
+              )}
+            </header>
 
-        {quote && (
-          <div className="glass-card rounded-3xl p-6 relative overflow-hidden" data-testid="daily-quote">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-accent/20 rounded-full blur-3xl"></div>
-            <div className="relative z-10">
-              <div className="flex items-center space-x-2 mb-3">
-                <TrendingUp className="w-5 h-5 text-accent" />
-                <span className="text-sm font-bold text-accent">Daily Inspiration</span>
+            {/* Daily Quote */}
+            {quote && (
+              <div className="glass-card rounded-2xl p-5 relative overflow-hidden" data-testid="daily-quote">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-accent/20 rounded-full blur-3xl" />
+                <div className="relative z-10">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <TrendingUp className="w-5 h-5 text-accent" />
+                    <span className="text-sm font-bold text-accent">Daily Inspiration</span>
+                  </div>
+                  <p className="text-base text-white font-medium italic">"{quote}"</p>
+                </div>
               </div>
-              <p className="text-lg text-white font-medium italic">"{quote}"</p>
+            )}
+
+            {/* Posts */}
+            <div className="space-y-4">
+              {posts.map((post) => (
+                <div key={post.post_id} className="glass-card rounded-2xl p-4" data-testid="wall-post">
+                  <div className="flex items-start space-x-3 mb-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-sm font-black text-white flex-shrink-0">
+                      {post.user_name?.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-white text-sm">{post.user_name}</h3>
+                      <p className="text-xs text-slate-400">
+                        {new Date(post.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <p className="text-white text-sm leading-relaxed mb-3">{post.content}</p>
+                  
+                  {post.media_url && (
+                    <img 
+                      src={post.media_url} 
+                      alt="Post media" 
+                      className="rounded-xl max-h-64 w-full object-cover mb-3"
+                    />
+                  )}
+
+                  {post.post_type === 'poll' && (
+                    <PollComponent poll={post} user={user} onVote={handleVote} />
+                  )}
+
+                  <div className="flex items-center space-x-4 pt-2 border-t border-slate-800">
+                    <button className="flex items-center space-x-1 text-slate-400 hover:text-red-400 transition-all" data-testid="like-btn">
+                      <Heart className="w-4 h-4" />
+                      <span className="text-xs">Like</span>
+                    </button>
+                    <button className="flex items-center space-x-1 text-slate-400 hover:text-primary transition-all" data-testid="comment-btn">
+                      <MessageCircle className="w-4 h-4" />
+                      <span className="text-xs">Comment</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div ref={postsEndRef} />
+          </div>
+        </div>
+
+        {/* Sticky Input Bar at Bottom */}
+        <div className="fixed bottom-0 left-0 right-0 lg:left-72 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800 p-3 z-40">
+          <form onSubmit={handleSubmitPost} className="flex items-center space-x-2">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="p-2 hover:bg-slate-800 rounded-full transition-all"
+                data-testid="emoji-btn"
+              >
+                <Smile className="w-5 h-5 text-slate-400" />
+              </button>
+              
+              {/* Emoji Picker */}
+              {showEmojiPicker && (
+                <div className="absolute bottom-12 left-0 bg-slate-900 border border-slate-700 rounded-xl p-3 shadow-xl z-50">
+                  <div className="grid grid-cols-5 gap-2">
+                    {EMOJI_LIST.map((emoji, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => addEmoji(emoji)}
+                        className="text-xl hover:scale-125 transition-transform p-1"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              className="p-2 hover:bg-slate-800 rounded-full transition-all"
+              data-testid="media-btn"
+            >
+              <ImageIcon className="w-5 h-5 text-slate-400" />
+            </button>
+
+            <input
+              ref={inputRef}
+              type="text"
+              value={newPost}
+              onChange={(e) => setNewPost(e.target.value)}
+              placeholder="Share something with your family..."
+              className="flex-1 bg-slate-800/50 border border-slate-700 rounded-full px-4 py-2.5 text-white placeholder:text-slate-500 text-sm focus:outline-none focus:border-primary transition-all"
+              data-testid="post-input"
+            />
+
+            <button
+              type="submit"
+              disabled={!newPost.trim()}
+              className="p-2.5 bg-primary hover:bg-primary/80 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-full transition-all"
+              data-testid="send-btn"
+            >
+              <Send className="w-5 h-5 text-white" />
+            </button>
+          </form>
+        </div>
+
+        {/* Poll Creator Modal */}
+        {showPollCreator && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="glass-card rounded-2xl p-5 max-w-md w-full max-h-[80vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-black text-white">Create Poll</h2>
+                <button onClick={() => setShowPollCreator(false)} className="p-1 hover:bg-slate-800 rounded-lg">
+                  <X className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm text-slate-400 mb-1 block">Question</label>
+                  <input
+                    type="text"
+                    value={pollQuestion}
+                    onChange={(e) => setPollQuestion(e.target.value)}
+                    placeholder="What's for dinner tonight?"
+                    className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 text-sm"
+                    data-testid="poll-question-input"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm text-slate-400 mb-2 block">Options</label>
+                  <div className="space-y-2">
+                    {pollOptions.map((option, idx) => (
+                      <div key={idx} className="flex items-center space-x-2">
+                        <span className="text-slate-500 text-sm w-6">{idx + 1}.</span>
+                        <input
+                          type="text"
+                          value={option}
+                          onChange={(e) => {
+                            const newOptions = [...pollOptions];
+                            newOptions[idx] = e.target.value;
+                            setPollOptions(newOptions);
+                          }}
+                          placeholder={`Option ${idx + 1}`}
+                          className="flex-1 bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white placeholder:text-slate-600 text-sm"
+                          data-testid={`poll-option-${idx}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  {pollOptions.length < 6 && (
+                    <button
+                      type="button"
+                      onClick={addPollOption}
+                      className="mt-2 text-primary text-sm font-medium hover:underline"
+                    >
+                      + Add another option
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleCreatePoll}
+                  className="w-full bg-accent hover:bg-accent/80 text-slate-950 font-bold py-3 rounded-full transition-all"
+                  data-testid="create-poll-submit"
+                >
+                  Create Poll
+                </button>
+              </div>
             </div>
           </div>
         )}
-
-        <div className="space-y-4">
-          {posts.map((post) => (
-            <div key={post.post_id} className="glass-card rounded-2xl p-5" data-testid="wall-post">
-              <div className="flex items-start space-x-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-sm font-black text-white flex-shrink-0">
-                  {post.user_name.charAt(0)}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-white">{post.user_name}</h3>
-                  <p className="text-xs text-slate-400">
-                    {new Date(post.created_at).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <p className="text-white mb-4 leading-relaxed">{post.content}</p>
-              <div className="flex items-center space-x-4 text-slate-400">
-                <button className="flex items-center space-x-1 hover:text-red-400 transition-all" data-testid="like-button">
-                  <Heart className="w-5 h-5" />
-                  <span className="text-sm">Like</span>
-                </button>
-                <button className="flex items-center space-x-1 hover:text-primary transition-all" data-testid="comment-button">
-                  <MessageCircle className="w-5 h-5" />
-                  <span className="text-sm">Comment</span>
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {showAddPost && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6" data-testid="add-post-modal">
-          <div className="glass-card rounded-3xl p-6 max-w-md w-full">
-            <h2 className="text-2xl font-black text-white mb-4">New Post</h2>
-            <form onSubmit={handleAddPost} className="space-y-4">
-              <textarea
-                placeholder="Share something with your family..."
-                value={newPost.content}
-                onChange={(e) => setNewPost({...newPost, content: e.target.value})}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 h-32 resize-none"
-                required
-                data-testid="post-content-input"
-              />
-              <div className="flex space-x-2">
-                <button
-                  type="submit"
-                  className="flex-1 bg-primary hover:bg-primary/80 text-white font-bold py-3 px-4 rounded-full transition-all"
-                  data-testid="submit-post-button"
-                >
-                  Post
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAddPost(false)}
-                  className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-4 rounded-full transition-all"
-                  data-testid="cancel-post-button"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-      
-      <BottomNav userRole={user?.role} />
+      </main>
     </div>
   );
 }
