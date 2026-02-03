@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import Sidebar from '@/components/Sidebar';
