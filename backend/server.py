@@ -60,7 +60,7 @@ class User(BaseModel):
     email: str
     name: str
     picture: Optional[str] = None
-    role: str = "parent"  # parent, child
+    role: str = "parent"  # parent, child, member
     profile_icon: Optional[str] = None
     profile_background: Optional[str] = None
     points: int = 0
