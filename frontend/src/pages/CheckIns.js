@@ -1,9 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { MapPin, Navigation, Bell, Plus, Trash2, AlertTriangle, CheckCircle, X, ExternalLink, Shield, Wifi, WifiOff } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { MapPin, Navigation, Bell, Plus, Trash2, AlertTriangle, CheckCircle, X, ExternalLink, Shield, Wifi, WifiOff, Map } from 'lucide-react';
+import { GoogleMap, useJsApiLoader, Marker, Circle, InfoWindow } from '@react-google-maps/api';
 import Sidebar from '@/components/Sidebar';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const GOOGLE_MAPS_API_KEY = 'AIzaSyBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'; // Placeholder - user needs to add their key
+
+const mapContainerStyle = {
+  width: '100%',
+  height: '300px',
+  borderRadius: '16px'
+};
+
+const defaultCenter = { lat: 40.7128, lng: -74.0060 }; // NYC default
 
 export default function CheckIns({ user }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -17,65 +27,60 @@ export default function CheckIns({ user }) {
   const [newGeofence, setNewGeofence] = useState({ name: '', latitude: '', longitude: '', radius_feet: 50 });
   const [selectedChild, setSelectedChild] = useState(null);
   const [children, setChildren] = useState([]);
+  const [mapCenter, setMapCenter] = useState(defaultCenter);
+  const [selectedMarker, setSelectedMarker] = useState(null);
+  const [showMap, setShowMap] = useState(true);
+
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+    libraries: ['places']
+  });
 
   useEffect(() => {
     initializeLocation();
     fetchData();
-    
-    // Set up location watcher
-    let watchId;
-    if (navigator.geolocation) {
-      watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setCurrentLocation({ latitude, longitude });
-          setGpsEnabled(true);
-          sendLocationUpdate(latitude, longitude);
-        },
-        (error) => {
-          console.error('GPS Error:', error);
-          setGpsEnabled(false);
-          if (currentLocation) {
-            reportGpsDisabled(currentLocation.latitude, currentLocation.longitude);
-          }
-        },
-        { enableHighAccuracy: true, maximumAge: 30000, timeout: 27000 }
-      );
-    }
-
-    // Handle offline events
-    const handleOffline = () => {
-      if (currentLocation) {
-        sendLocationUpdate(currentLocation.latitude, currentLocation.longitude, true);
-      }
-    };
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      if (watchId) navigator.geolocation.clearWatch(watchId);
-      window.removeEventListener('offline', handleOffline);
-    };
   }, []);
 
   const initializeLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setCurrentLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          });
+          const loc = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setCurrentLocation(loc);
+          setMapCenter(loc);
           setGpsEnabled(true);
+          sendLocationUpdate(loc.lat, loc.lng);
         },
         (error) => {
           console.error('Location error:', error);
           setGpsEnabled(false);
-          toast.error('Please enable location services for full functionality');
+          toast.error('Please enable location services');
         },
         { enableHighAccuracy: true }
       );
-    } else {
-      toast.error('Geolocation is not supported by this browser');
+
+      // Watch position
+      navigator.geolocation.watchPosition(
+        (position) => {
+          const loc = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setCurrentLocation(loc);
+          setGpsEnabled(true);
+          sendLocationUpdate(loc.lat, loc.lng);
+        },
+        (error) => {
+          setGpsEnabled(false);
+          if (currentLocation) {
+            reportGpsDisabled(currentLocation.lat, currentLocation.lng);
+          }
+        },
+        { enableHighAccuracy: true, maximumAge: 30000, timeout: 27000 }
+      );
     }
   };
 
@@ -112,6 +117,14 @@ export default function CheckIns({ user }) {
       const res = await fetch(`${BACKEND_URL}/api/checkins/${childId}`, { credentials: 'include' });
       const data = await res.json();
       setCheckins(data.checkins || []);
+      
+      // Center map on last checkin
+      if (data.checkins && data.checkins.length > 0) {
+        setMapCenter({
+          lat: data.checkins[0].latitude,
+          lng: data.checkins[0].longitude
+        });
+      }
     } catch (error) {
       console.error('Failed to fetch checkins:', error);
     }
@@ -156,12 +169,12 @@ export default function CheckIns({ user }) {
           longitude: parseFloat(newGeofence.longitude)
         })
       });
-      toast.success('Geofence created!');
+      toast.success('Safe zone created!');
       setShowAddGeofence(false);
       setNewGeofence({ name: '', latitude: '', longitude: '', radius_feet: 50 });
       fetchData();
     } catch (error) {
-      toast.error('Failed to create geofence');
+      toast.error('Failed to create safe zone');
     }
   };
 
@@ -171,10 +184,10 @@ export default function CheckIns({ user }) {
         method: 'DELETE',
         credentials: 'include'
       });
-      toast.success('Geofence deleted');
+      toast.success('Safe zone deleted');
       fetchData();
     } catch (error) {
-      toast.error('Failed to delete geofence');
+      toast.error('Failed to delete');
     }
   };
 
@@ -182,8 +195,8 @@ export default function CheckIns({ user }) {
     if (currentLocation) {
       setNewGeofence({
         ...newGeofence,
-        latitude: currentLocation.latitude.toString(),
-        longitude: currentLocation.longitude.toString()
+        latitude: currentLocation.lat.toString(),
+        longitude: currentLocation.lng.toString()
       });
     }
   };
@@ -191,6 +204,18 @@ export default function CheckIns({ user }) {
   const openInMaps = (lat, lng) => {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
   };
+
+  const onMapClick = useCallback((e) => {
+    if (showAddGeofence) {
+      setNewGeofence({
+        ...newGeofence,
+        latitude: e.latLng.lat().toString(),
+        longitude: e.latLng.lng().toString()
+      });
+    }
+  }, [showAddGeofence, newGeofence]);
+
+  const feetToMeters = (feet) => feet * 0.3048;
 
   return (
     <div className="flex h-screen bg-slate-950">
@@ -203,20 +228,152 @@ export default function CheckIns({ user }) {
               <h1 className="text-2xl font-black text-white">Location</h1>
               <p className="text-sm text-slate-400">Track and manage family locations</p>
             </div>
-            <div className={`flex items-center space-x-2 px-3 py-1.5 rounded-full ${gpsEnabled ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
-              {gpsEnabled ? (
-                <>
-                  <Wifi className="w-4 h-4 text-green-400" />
-                  <span className="text-xs text-green-400 font-bold">GPS Active</span>
-                </>
-              ) : (
-                <>
-                  <WifiOff className="w-4 h-4 text-red-400" />
-                  <span className="text-xs text-red-400 font-bold">GPS Off</span>
-                </>
-              )}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setShowMap(!showMap)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center space-x-1 ${showMap ? 'bg-primary text-white' : 'bg-slate-800 text-slate-400'}`}
+              >
+                <Map className="w-3 h-3" />
+                <span>Map</span>
+              </button>
+              <div className={`flex items-center space-x-2 px-3 py-1.5 rounded-full ${gpsEnabled ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                {gpsEnabled ? (
+                  <>
+                    <Wifi className="w-4 h-4 text-green-400" />
+                    <span className="text-xs text-green-400 font-bold">GPS Active</span>
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="w-4 h-4 text-red-400" />
+                    <span className="text-xs text-red-400 font-bold">GPS Off</span>
+                  </>
+                )}
+              </div>
             </div>
           </header>
+
+          {/* Google Map */}
+          {showMap && (
+            <div className="glass-card rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-bold text-white flex items-center space-x-2">
+                  <Map className="w-4 h-4 text-primary" />
+                  <span>Family Map</span>
+                </h2>
+                {showAddGeofence && (
+                  <p className="text-xs text-accent">Click on map to set location</p>
+                )}
+              </div>
+              
+              {loadError ? (
+                <div className="h-[300px] bg-slate-800 rounded-2xl flex items-center justify-center">
+                  <p className="text-slate-400 text-sm">Map requires Google Maps API key</p>
+                </div>
+              ) : !isLoaded ? (
+                <div className="h-[300px] bg-slate-800 rounded-2xl flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                </div>
+              ) : (
+                <GoogleMap
+                  mapContainerStyle={mapContainerStyle}
+                  center={mapCenter}
+                  zoom={14}
+                  onClick={onMapClick}
+                  options={{
+                    styles: [
+                      { elementType: "geometry", stylers: [{ color: "#1a1a2e" }] },
+                      { elementType: "labels.text.stroke", stylers: [{ color: "#1a1a2e" }] },
+                      { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+                      { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
+                      { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
+                    ],
+                    disableDefaultUI: true,
+                    zoomControl: true
+                  }}
+                >
+                  {/* Current Location Marker */}
+                  {currentLocation && (
+                    <Marker
+                      position={currentLocation}
+                      icon={{
+                        path: window.google?.maps?.SymbolPath?.CIRCLE,
+                        scale: 10,
+                        fillColor: '#3B82F6',
+                        fillOpacity: 1,
+                        strokeColor: '#fff',
+                        strokeWeight: 3
+                      }}
+                      onClick={() => setSelectedMarker({ type: 'current', ...currentLocation })}
+                    />
+                  )}
+
+                  {/* Child's Last Location */}
+                  {checkins.length > 0 && selectedChild && (
+                    <Marker
+                      position={{ lat: checkins[0].latitude, lng: checkins[0].longitude }}
+                      icon={{
+                        path: window.google?.maps?.SymbolPath?.CIRCLE,
+                        scale: 8,
+                        fillColor: '#F59E0B',
+                        fillOpacity: 1,
+                        strokeColor: '#fff',
+                        strokeWeight: 2
+                      }}
+                      onClick={() => setSelectedMarker({ type: 'child', name: selectedChild.name, ...checkins[0] })}
+                    />
+                  )}
+
+                  {/* Geofence Circles */}
+                  {geofences.map(fence => (
+                    <React.Fragment key={fence.geofence_id}>
+                      <Circle
+                        center={{ lat: fence.latitude, lng: fence.longitude }}
+                        radius={feetToMeters(fence.radius_feet)}
+                        options={{
+                          fillColor: '#22C55E',
+                          fillOpacity: 0.2,
+                          strokeColor: '#22C55E',
+                          strokeOpacity: 0.8,
+                          strokeWeight: 2
+                        }}
+                      />
+                      <Marker
+                        position={{ lat: fence.latitude, lng: fence.longitude }}
+                        icon={{
+                          path: window.google?.maps?.SymbolPath?.CIRCLE,
+                          scale: 6,
+                          fillColor: '#22C55E',
+                          fillOpacity: 1,
+                          strokeColor: '#fff',
+                          strokeWeight: 2
+                        }}
+                        onClick={() => setSelectedMarker({ type: 'fence', ...fence })}
+                      />
+                    </React.Fragment>
+                  ))}
+
+                  {/* Info Window */}
+                  {selectedMarker && (
+                    <InfoWindow
+                      position={{ lat: selectedMarker.latitude || selectedMarker.lat, lng: selectedMarker.longitude || selectedMarker.lng }}
+                      onCloseClick={() => setSelectedMarker(null)}
+                    >
+                      <div className="p-2 text-slate-900">
+                        {selectedMarker.type === 'current' && <p className="font-bold">Your Location</p>}
+                        {selectedMarker.type === 'child' && <p className="font-bold">{selectedMarker.name}'s Last Location</p>}
+                        {selectedMarker.type === 'fence' && (
+                          <>
+                            <p className="font-bold">{selectedMarker.name}</p>
+                            <p className="text-sm">Safe Zone ({selectedMarker.radius_feet}ft)</p>
+                          </>
+                        )}
+                      </div>
+                    </InfoWindow>
+                  )}
+                </GoogleMap>
+              )}
+            </div>
+          )}
 
           {/* Location Alerts */}
           {notifications.length > 0 && (
@@ -234,9 +391,9 @@ export default function CheckIns({ user }) {
                     <p className="text-white text-sm font-medium">{notif.message}</p>
                     <p className="text-slate-400 text-xs">{new Date(notif.created_at).toLocaleString()}</p>
                   </div>
-                  {notif.latitude && (
+                  {(notif.latitude || notif.last_known_lat) && (
                     <button
-                      onClick={() => openInMaps(notif.latitude, notif.longitude)}
+                      onClick={() => openInMaps(notif.latitude || notif.last_known_lat, notif.longitude || notif.last_known_lng)}
                       className="p-2 bg-primary/20 hover:bg-primary/40 rounded-lg transition-all"
                       title="Route to location"
                     >
@@ -284,11 +441,21 @@ export default function CheckIns({ user }) {
                     <p className="text-xs text-slate-400">Radius: {fence.radius_feet}ft</p>
                     <div className="flex items-center space-x-2 mt-2">
                       <button
-                        onClick={() => openInMaps(fence.latitude, fence.longitude)}
+                        onClick={() => {
+                          setMapCenter({ lat: fence.latitude, lng: fence.longitude });
+                          setShowMap(true);
+                        }}
                         className="text-xs text-primary hover:underline flex items-center space-x-1"
                       >
+                        <Map className="w-3 h-3" />
+                        <span>Show on Map</span>
+                      </button>
+                      <button
+                        onClick={() => openInMaps(fence.latitude, fence.longitude)}
+                        className="text-xs text-secondary hover:underline flex items-center space-x-1"
+                      >
                         <ExternalLink className="w-3 h-3" />
-                        <span>View on Map</span>
+                        <span>Navigate</span>
                       </button>
                     </div>
                   </div>
@@ -345,9 +512,20 @@ export default function CheckIns({ user }) {
                             <p className="text-slate-500 text-xs">{new Date(checkin.created_at).toLocaleString()}</p>
                           </div>
                         </div>
-                        {checkin.is_offline_update && (
-                          <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">Offline</span>
-                        )}
+                        <div className="flex items-center space-x-2">
+                          {checkin.is_offline_update && (
+                            <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">Offline</span>
+                          )}
+                          <button
+                            onClick={() => {
+                              setMapCenter({ lat: checkin.latitude, lng: checkin.longitude });
+                              setShowMap(true);
+                            }}
+                            className="p-1 hover:bg-slate-800 rounded"
+                          >
+                            <Map className="w-3 h-3 text-slate-400" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -356,7 +534,7 @@ export default function CheckIns({ user }) {
             </div>
           )}
 
-          {/* Child's own location display */}
+          {/* Child's own location */}
           {user?.role === 'child' && currentLocation && (
             <div className="glass-card rounded-xl p-4">
               <h3 className="text-sm font-bold text-white mb-3 flex items-center space-x-2">
@@ -364,7 +542,7 @@ export default function CheckIns({ user }) {
                 <span>Your Current Location</span>
               </h3>
               <p className="text-slate-400 text-sm">
-                {currentLocation.latitude.toFixed(6)}, {currentLocation.longitude.toFixed(6)}
+                {currentLocation.lat.toFixed(6)}, {currentLocation.lng.toFixed(6)}
               </p>
               <p className="text-slate-500 text-xs mt-2">Your location is being shared with your parents</p>
             </div>
@@ -399,7 +577,7 @@ export default function CheckIns({ user }) {
                   <label className="text-xs text-slate-400 mb-1 block">Latitude</label>
                   <input
                     type="text"
-                    placeholder="e.g., 40.7128"
+                    placeholder="Click map or enter"
                     value={newGeofence.latitude}
                     onChange={(e) => setNewGeofence({...newGeofence, latitude: e.target.value})}
                     className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-3 py-2.5 text-white placeholder:text-slate-600 text-sm"
@@ -410,7 +588,7 @@ export default function CheckIns({ user }) {
                   <label className="text-xs text-slate-400 mb-1 block">Longitude</label>
                   <input
                     type="text"
-                    placeholder="e.g., -74.0060"
+                    placeholder="Click map or enter"
                     value={newGeofence.longitude}
                     onChange={(e) => setNewGeofence({...newGeofence, longitude: e.target.value})}
                     className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-3 py-2.5 text-white placeholder:text-slate-600 text-sm"
