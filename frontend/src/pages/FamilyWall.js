@@ -68,6 +68,7 @@ export default function FamilyWall({ user }) {
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const inputRef = useRef(null);
   const postsEndRef = useRef(null);
 
