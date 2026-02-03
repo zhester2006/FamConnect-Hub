@@ -193,7 +193,7 @@ export default function Calendar({ user }) {
                       <>
                         <span className={`text-sm font-bold ${isToday(day) ? 'text-accent' : 'text-white'}`}>{day}</span>
                         <div className="space-y-0.5 mt-1">
-                          {dayEvents.slice(0, 3).map(event => (
+                          {dayEventsForCell.slice(0, 3).map(event => (
                             <div
                               key={event.event_id}
                               className={`text-[9px] px-1 py-0.5 rounded truncate text-white ${EVENT_TYPES[event.event_type]?.color || 'bg-primary'}`}
@@ -201,8 +201,8 @@ export default function Calendar({ user }) {
                               {event.title}
                             </div>
                           ))}
-                          {dayEvents.length > 3 && (
-                            <span className="text-[9px] text-slate-400">+{dayEvents.length - 3} more</span>
+                          {dayEventsForCell.length > 3 && (
+                            <span className="text-[9px] text-slate-400">+{dayEventsForCell.length - 3} more</span>
                           )}
                         </div>
                       </>
