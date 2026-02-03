@@ -8,6 +8,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export default function LiveChat({ user }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
