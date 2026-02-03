@@ -5,8 +5,48 @@ import BottomNav from '@/components/BottomNav';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function Settings({ user }) {
-  const [theme, setTheme] = useState('cosmic_explorer');
-  const [notifications, setNotifications] = useState(true);
+  const [theme, setTheme] = useState(user?.settings?.theme || 'cosmic_explorer');
+  const [darkMode, setDarkMode] = useState(user?.settings?.dark_mode !== false);
+  const [notifications, setNotifications] = useState(user?.settings?.notifications_enabled !== false);
+  const [saving, setSaving] = useState(false);
+
+  const handleSaveSettings = async () => {
+    setSaving(true);
+    try {
+      await fetch(`${BACKEND_URL}/api/users/${user.user_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          settings: {
+            theme,
+            dark_mode: darkMode,
+            notifications_enabled: notifications
+          }
+        })
+      });
+      
+      // Apply theme immediately
+      document.documentElement.classList.toggle('light-mode', !darkMode);
+      document.documentElement.setAttribute('data-theme', theme);
+      
+      toast.success('Settings saved successfully!');
+      
+      // Reload to apply changes
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      toast.error('Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    // Apply current theme on mount
+    document.documentElement.classList.toggle('light-mode', !darkMode);
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme, darkMode]);
 
   const themeOptions = [
     'Cosmic Explorer',
