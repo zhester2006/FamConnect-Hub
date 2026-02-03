@@ -281,6 +281,33 @@ async def create_child_profile(request: Request, data: dict):
     await db.users.insert_one(child_doc)
     return await db.users.find_one({"user_id": child_id}, {"_id": 0})
 
+@api_router.put("/users/{user_id}/role")
+async def update_user_role(user_id: str, request: Request, data: dict):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can change roles")
+    
+    new_role = data.get('role')
+    if new_role not in ['parent', 'child', 'member']:
+        raise HTTPException(status_code=400, detail="Invalid role. Must be 'parent', 'child', or 'member'")
+    
+    # Ensure the user being updated is part of the family
+    target_user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Prevent changing your own role
+    if user_id == current_user['user_id']:
+        raise HTTPException(status_code=403, detail="Cannot change your own role")
+    
+    await db.users.update_one({
+        "user_id": user_id
+    }, {
+        "$set": {"role": new_role}
+    })
+    
+    return await db.users.find_one({"user_id": user_id}, {"_id": 0})
+
 @api_router.put("/users/{user_id}")
 async def update_user(user_id: str, request: Request, data: dict):
     current_user = await get_current_user(request)
