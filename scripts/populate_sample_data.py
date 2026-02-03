@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Sample data script for FamilyHub
+Sample data script for FamFocus Hub
 Populates MongoDB with realistic family data for preview/demo
 """
 
