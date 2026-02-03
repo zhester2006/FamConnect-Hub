@@ -10,6 +10,7 @@ export default function Settings({ user }) {
   const [darkMode, setDarkMode] = useState(user?.settings?.dark_mode !== false);
   const [notifications, setNotifications] = useState(user?.settings?.notifications_enabled !== false);
   const [saving, setSaving] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleSaveSettings = async () => {
     setSaving(true);
