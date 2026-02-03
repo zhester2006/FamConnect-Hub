@@ -32,7 +32,7 @@ export default function BottomNav({ userRole = 'parent' }) {
     { icon: Home, label: 'My Space', path: '/space' },
     { icon: Calendar, label: 'Calendar', path: '/calendar' },
     { icon: MessageCircle, label: 'Chat', path: '/chat' },
-    { icon: Award, label: 'Rewards', path: '/rewards' },
+    { icon: ShoppingCart, label: 'Shopping', path: '/shopping' },
   ];
 
   const navItems = userRole === 'parent' ? parentNavItems : childNavItems;
