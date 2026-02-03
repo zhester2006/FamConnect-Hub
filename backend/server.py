@@ -471,6 +471,35 @@ async def create_post(request: Request, data: dict):
     await db.family_wall.insert_one(post_doc)
     return await db.family_wall.find_one({"post_id": post_id}, {"_id": 0})
 
+@api_router.post("/family-wall/{post_id}/vote")
+async def vote_on_poll(post_id: str, request: Request, data: dict):
+    current_user = await get_current_user(request)
+    option_index = data.get('option_index')
+    
+    post = await db.family_wall.find_one({"post_id": post_id}, {"_id": 0})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    if post.get('post_type') != 'poll':
+        raise HTTPException(status_code=400, detail="Post is not a poll")
+    
+    poll_options = post.get('poll_options', [])
+    if option_index < 0 or option_index >= len(poll_options):
+        raise HTTPException(status_code=400, detail="Invalid option index")
+    
+    # Check if user already voted
+    for opt in poll_options:
+        if current_user['user_id'] in opt.get('votes', []):
+            raise HTTPException(status_code=400, detail="Already voted")
+    
+    # Add vote
+    poll_options[option_index]['votes'] = poll_options[option_index].get('votes', []) + [current_user['user_id']]
+    
+    await db.family_wall.update_one(
+        {"post_id": post_id},
+        {"$set": {"poll_options": poll_options}}
+    )
+    return await db.family_wall.find_one({"post_id": post_id}, {"_id": 0})
+
 # AI Daily Quote
 @api_router.get("/family-wall/daily-quote")
 async def get_daily_quote(request: Request):
