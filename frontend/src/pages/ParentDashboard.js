@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, CheckCircle, Clock, AlertCircle, TrendingUp, Calendar as CalendarIcon } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
+import RoleManager from '@/components/RoleManager';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
