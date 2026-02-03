@@ -15,8 +15,12 @@ export default function WelcomePage() {
       
       <div className="relative z-10 min-h-screen flex flex-col">
         <header className="p-6">
-          <div className="flex items-center space-x-2">
-            <Sparkles className="w-8 h-8 text-accent" />
+          <div className="flex items-center space-x-3">
+            <img 
+              src="https://customer-assets.emergentagent.com/job_homebridge-5/artifacts/2ku9mapg_app_logo.png.png"
+              alt="FamFocus Hub"
+              className="w-10 h-10 rounded-lg object-contain"
+            />
             <h1 className="text-2xl font-black gradient-text tracking-tight">FamFocus Hub</h1>
           </div>
         </header>
