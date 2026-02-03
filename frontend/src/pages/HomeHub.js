@@ -90,8 +90,6 @@ export default function HomeHub({ user }) {
         </div>
 
         <div className="lg:col-span-4 space-y-4">
-          <SpotifyPlayer />
-
           <div className="glass-card rounded-2xl p-4">
             <h3 className="text-lg font-bold text-white mb-3 flex items-center space-x-2">
               <Users className="w-5 h-5 text-primary" />
