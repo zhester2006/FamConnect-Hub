@@ -1,7 +1,36 @@
-import React from 'react';
-import { Sparkles, Calendar, MessageCircle, Award, Users, TrendingUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sparkles, Calendar, MessageCircle, Award, TrendingUp, Bot } from 'lucide-react';
 
 const REDIRECT_URL_BASE = typeof window !== 'undefined' ? window.location.origin : '';
+
+const PixieGreeting = () => {
+  const [greeting, setGreeting] = useState('');
+  const greetings = [
+    "Hi there! I'm Pixie, your family's digital helper! Ready to make family life easier? ✨",
+    "Welcome! I'm Pixie! Let me help your family stay organized and connected! 🌟",
+    "Hello, friend! Pixie here! Let's turn daily tasks into fun family adventures! 💫",
+    "Hey! I'm Pixie, and I'm so excited to meet your family! Let's get started! 🎉"
+  ];
+
+  useEffect(() => {
+    setGreeting(greetings[Math.floor(Math.random() * greetings.length)]);
+  }, []);
+
+  return (
+    <div className="glass-card rounded-2xl p-4 mb-6 relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-24 h-24 bg-accent/20 rounded-full blur-2xl" />
+      <div className="relative z-10 flex items-start space-x-3">
+        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center flex-shrink-0 animate-float">
+          <Bot className="w-6 h-6 text-white" />
+        </div>
+        <div className="flex-1">
+          <p className="text-accent text-xs font-bold mb-1">Pixie - Your AI Guide</p>
+          <p className="text-white text-sm leading-relaxed">{greeting}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function WelcomePage() {
   const handleLogin = () => {
@@ -11,55 +40,58 @@ export default function WelcomePage() {
 
   return (
     <div className="min-h-screen bg-slate-950 relative overflow-hidden" data-testid="welcome-page">
-      <div className="absolute inset-0 bg-gradient-radial from-primary/10 via-transparent to-transparent"></div>
+      <div className="absolute inset-0 bg-gradient-radial from-primary/10 via-transparent to-transparent" />
       
       <div className="relative z-10 min-h-screen flex flex-col">
-        <header className="p-6">
+        <header className="p-4 lg:p-6">
           <div className="flex items-center space-x-3">
             <img 
               src="https://customer-assets.emergentagent.com/job_homebridge-5/artifacts/2ku9mapg_app_logo.png.png"
               alt="FamFocus Hub"
               className="w-10 h-10 rounded-lg object-contain"
             />
-            <h1 className="text-2xl font-black gradient-text tracking-tight">FamFocus Hub</h1>
+            <h1 className="text-xl lg:text-2xl font-black gradient-text tracking-tight">FamFocus Hub</h1>
           </div>
         </header>
 
-        <main className="flex-1 flex items-center justify-center px-6 pb-20">
-          <div className="max-w-md w-full space-y-8 text-center">
+        <main className="flex-1 flex items-center justify-center px-4 lg:px-6 pb-10">
+          <div className="max-w-md w-full space-y-6 text-center">
             <div className="space-y-4">
               <div className="inline-block">
                 <img 
                   src="https://customer-assets.emergentagent.com/job_homebridge-5/artifacts/tqccfghc_startup.gif.gif" 
                   alt="FamFocus Hub"
-                  className="w-64 h-64 object-contain mx-auto"
+                  className="w-48 h-48 lg:w-56 lg:h-56 object-contain mx-auto"
                 />
               </div>
-              <h2 className="text-4xl sm:text-5xl font-black text-white tracking-tight">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
                 Welcome to Your
                 <span className="gradient-text block">Family Space</span>
               </h2>
-              <p className="text-lg text-slate-400 max-w-sm mx-auto">
-                Where chores become adventures, and every family member shines
+              <p className="text-base lg:text-lg text-slate-400 max-w-sm mx-auto">
+                A place where keeping up with the day-to-day is no longer a chore within itself
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 py-8">
-              <div className="glass-card rounded-2xl p-4 space-y-2">
-                <Calendar className="w-8 h-8 text-secondary mx-auto" />
-                <p className="text-sm text-slate-300 font-medium">Smart Scheduling</p>
+            {/* Pixie AI Greeting */}
+            <PixieGreeting />
+
+            <div className="grid grid-cols-2 gap-3 py-4">
+              <div className="glass-card rounded-xl p-3 space-y-1.5">
+                <Calendar className="w-6 h-6 text-secondary mx-auto" />
+                <p className="text-xs text-slate-300 font-medium">Smart Scheduling</p>
               </div>
-              <div className="glass-card rounded-2xl p-4 space-y-2">
-                <Award className="w-8 h-8 text-accent mx-auto" />
-                <p className="text-sm text-slate-300 font-medium">Rewards System</p>
+              <div className="glass-card rounded-xl p-3 space-y-1.5">
+                <Award className="w-6 h-6 text-accent mx-auto" />
+                <p className="text-xs text-slate-300 font-medium">Rewards System</p>
               </div>
-              <div className="glass-card rounded-2xl p-4 space-y-2">
-                <MessageCircle className="w-8 h-8 text-green-400 mx-auto" />
-                <p className="text-sm text-slate-300 font-medium">Family Chat</p>
+              <div className="glass-card rounded-xl p-3 space-y-1.5">
+                <MessageCircle className="w-6 h-6 text-green-400 mx-auto" />
+                <p className="text-xs text-slate-300 font-medium">Family Chat</p>
               </div>
-              <div className="glass-card rounded-2xl p-4 space-y-2">
-                <TrendingUp className="w-8 h-8 text-pink-400 mx-auto" />
-                <p className="text-sm text-slate-300 font-medium">Leaderboards</p>
+              <div className="glass-card rounded-xl p-3 space-y-1.5">
+                <TrendingUp className="w-6 h-6 text-pink-400 mx-auto" />
+                <p className="text-xs text-slate-300 font-medium">Leaderboards</p>
               </div>
             </div>
 
@@ -74,7 +106,7 @@ export default function WelcomePage() {
               </span>
             </button>
 
-            <p className="text-xs text-slate-500 mt-4">
+            <p className="text-xs text-slate-500">
               Secure authentication powered by Google
             </p>
           </div>
