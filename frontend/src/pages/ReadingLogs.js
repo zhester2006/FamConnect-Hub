@@ -8,6 +8,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export default function ReadingLogs({ user }) {
   const [logs, setLogs] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showAddLog, setShowAddLog] = useState(false);
   const [readingData, setReadingData] = useState({
     book_name: '',
