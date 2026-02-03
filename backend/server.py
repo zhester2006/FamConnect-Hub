@@ -753,12 +753,14 @@ async def mark_message_read(message_id: str, request: Request):
 
 # Events/Calendar
 @api_router.get("/events")
-async def get_events(request: Request, start_date: Optional[str] = None, end_date: Optional[str] = None):
+async def get_events(request: Request, start_date: Optional[str] = None, end_date: Optional[str] = None, event_type: Optional[str] = None):
     await get_current_user(request)
     query = {}
     if start_date and end_date:
         query["event_date"] = {"$gte": start_date, "$lte": end_date}
-    events = await db.events.find(query, {"_id": 0}).to_list(1000)
+    if event_type:
+        query["event_type"] = event_type
+    events = await db.events.find(query, {"_id": 0}).sort("event_date", 1).to_list(1000)
     return {"events": events}
 
 @api_router.post("/events")
@@ -773,9 +775,39 @@ async def create_event(request: Request, data: dict):
         "title": data['title'],
         "description": data.get('description'),
         "event_date": data['event_date'],
+        "event_time": data.get('event_time'),
         "event_type": data.get('event_type', 'appointment'),
+        "work_start_time": data.get('work_start_time'),
+        "work_end_time": data.get('work_end_time'),
         "created_by": current_user['user_id'],
+        "created_by_name": current_user['name'],
         "status": status,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.events.insert_one(event_doc)
+    return await db.events.find_one({"event_id": event_id}, {"_id": 0})
+
+# Work Schedule endpoint
+@api_router.post("/events/work-schedule")
+async def create_work_schedule(request: Request, data: dict):
+    current_user = await get_current_user(request)
+    if current_user['role'] not in ['parent', 'member']:
+        raise HTTPException(status_code=403, detail="Only parents and members can add work schedules")
+    
+    event_id = f"event_{uuid.uuid4().hex[:12]}"
+    
+    event_doc = {
+        "event_id": event_id,
+        "family_id": current_user.get('parent_id', current_user['user_id']),
+        "title": f"{current_user['name']}'s Work",
+        "description": data.get('description'),
+        "event_date": data['event_date'],
+        "event_type": "work_schedule",
+        "work_start_time": data['start_time'],
+        "work_end_time": data['end_time'],
+        "created_by": current_user['user_id'],
+        "created_by_name": current_user['name'],
+        "status": "approved",
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.events.insert_one(event_doc)
