@@ -1,242 +1,340 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
-import BottomNav from '@/components/BottomNav';
+import React, { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Plus, X, Clock, Briefcase, CalendarDays, Star } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
+import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+
+const EVENT_TYPES = {
+  appointment: { label: 'Appointment', color: 'bg-green-500', icon: CalendarDays },
+  event: { label: 'Event', color: 'bg-accent', icon: Star },
+  work_schedule: { label: 'Work Schedule', color: 'bg-orange-500', icon: Briefcase },
+  task: { label: 'Task', color: 'bg-purple-500', icon: Clock }
+};
 
 export default function Calendar({ user }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState([]);
-  const [view, setView] = useState('month');
+  const [selectedDate, setSelectedDate] = useState(null);
   const [showAddEvent, setShowAddEvent] = useState(false);
+  const [filterType, setFilterType] = useState('all');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [newEvent, setNewEvent] = useState({
     title: '',
-    description: '',
     event_date: '',
-    event_type: 'appointment'
+    event_time: '09:00',
+    event_type: 'appointment',
+    work_start_time: '',
+    work_end_time: ''
   });
 
   useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/events`, { credentials: 'include' });
-        const data = await res.json();
-        setEvents(data.events);
-      } catch (error) {
-        console.error('Failed to fetch events:', error);
-      }
-    };
-    
     fetchEvents();
-  }, [currentDate]);
+  }, [filterType]);
 
-  const fetchEvents = useCallback(async () => {
+  const fetchEvents = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/events`, { credentials: 'include' });
+      let url = `${BACKEND_URL}/api/events`;
+      if (filterType !== 'all') {
+        url += `?event_type=${filterType}`;
+      }
+      const res = await fetch(url, { credentials: 'include' });
       const data = await res.json();
-      setEvents(data.events);
+      setEvents(data.events || []);
     } catch (error) {
       console.error('Failed to fetch events:', error);
     }
-  }, []);
+  };
 
   const handleAddEvent = async (e) => {
     e.preventDefault();
     try {
+      const eventData = {
+        title: newEvent.title,
+        event_date: newEvent.event_date,
+        event_time: newEvent.event_time,
+        event_type: newEvent.event_type
+      };
+
+      if (newEvent.event_type === 'work_schedule') {
+        eventData.work_start_time = newEvent.work_start_time;
+        eventData.work_end_time = newEvent.work_end_time;
+        eventData.title = `${user.name}'s Work`;
+      }
+
       await fetch(`${BACKEND_URL}/api/events`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(newEvent)
+        body: JSON.stringify(eventData)
       });
+      toast.success('Event added!');
       setShowAddEvent(false);
-      setNewEvent({ title: '', description: '', event_date: '', event_type: 'appointment' });
+      setNewEvent({ title: '', event_date: '', event_time: '09:00', event_type: 'appointment', work_start_time: '', work_end_time: '' });
       fetchEvents();
     } catch (error) {
-      console.error('Failed to add event:', error);
+      toast.error('Failed to add event');
     }
   };
 
-  const getDaysInMonth = (date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
+  const getDaysInMonth = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
     const startingDayOfWeek = firstDay.getDay();
     
     const days = [];
-    for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(null);
-    }
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push(i);
-    }
+    for (let i = 0; i < startingDayOfWeek; i++) days.push(null);
+    for (let i = 1; i <= daysInMonth; i++) days.push(i);
     return days;
   };
 
-  const getEventsForDate = (day) => {
+  const getEventsForDay = (day) => {
     if (!day) return [];
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     return events.filter(e => e.event_date === dateStr);
   };
 
+  const today = new Date();
+  const isToday = (day) => day === today.getDate() && currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear();
+
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  const selectedDateEvents = selectedDate ? getEventsForDay(selectedDate) : [];
+
   return (
     <div className="flex h-screen bg-slate-950">
-      <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
-      <main className="flex-1 overflow-y-auto lg:ml-72">
-        <div className="p-4 lg:p-6 space-y-4 lg:space-y-6" data-testid="calendar-page">
-          <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <h1 className="text-2xl lg:text-3xl font-black text-white">Family Calendar</h1>
-            <button
-              onClick={() => setShowAddEvent(true)}
-              className="bg-primary hover:bg-primary/80 active:scale-95 text-white p-3 lg:p-2 rounded-full transition-all neon-glow w-full sm:w-auto"
-              data-testid="add-event-button"
-            >
-              <Plus className="w-5 h-5 lg:w-6 lg:h-6 mx-auto sm:mx-0" />
-            </button>
+      <main className={`flex-1 overflow-y-auto transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
+        <div className="p-4 lg:p-6 space-y-4" data-testid="calendar-page">
+          {/* Header */}
+          <header className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center space-x-3">
+              <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))} className="p-2 hover:bg-slate-800 rounded-lg transition-all">
+                <ChevronLeft className="w-5 h-5 text-slate-400" />
+              </button>
+              <h1 className="text-xl lg:text-2xl font-black text-white">
+                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              </h1>
+              <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))} className="p-2 hover:bg-slate-800 rounded-lg transition-all">
+                <ChevronRight className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <div className="flex items-center space-x-2">
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm"
+                data-testid="filter-type"
+              >
+                <option value="all">All Types</option>
+                <option value="appointment">Appointments</option>
+                <option value="event">Events</option>
+                <option value="work_schedule">Work Schedules</option>
+                <option value="task">Tasks</option>
+              </select>
+              <button
+                onClick={() => { setShowAddEvent(true); setNewEvent({...newEvent, event_date: selectedDate ? `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}` : ''}); }}
+                className="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-full text-sm font-bold transition-all flex items-center space-x-2"
+                data-testid="add-event-btn"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add</span>
+              </button>
+            </div>
           </header>
 
-        <div className="glass-card rounded-2xl p-3 lg:p-4">
-          <div className="flex items-center justify-between mb-4">
-            <button
-              onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}
-              className="p-2 hover:bg-white/5 rounded-lg transition-all"
-              data-testid="prev-month-button"
-            >
-              <ChevronLeft className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
-            </button>
-            <h2 className="text-lg lg:text-xl font-bold text-white">
-              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-            </h2>
-            <button
-              onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}
-              className="p-2 hover:bg-white/5 rounded-lg transition-all"
-              data-testid="next-month-button"
-            >
-              <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-7 gap-1 lg:gap-2 mb-2">
-            {dayNames.map(day => (
-              <div key={day} className="text-center text-xs font-bold text-slate-400">
-                {day}
+          {/* Event Type Legend */}
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(EVENT_TYPES).map(([key, value]) => (
+              <div key={key} className="flex items-center space-x-1.5 px-2 py-1 bg-slate-800/50 rounded-full">
+                <div className={`w-2 h-2 rounded-full ${value.color}`} />
+                <span className="text-xs text-slate-400">{value.label}</span>
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-1 lg:gap-2">
-            {getDaysInMonth(currentDate).map((day, index) => {
-              const dayEvents = getEventsForDate(day);
-              const isToday = day === new Date().getDate() && 
-                currentDate.getMonth() === new Date().getMonth() && 
-                currentDate.getFullYear() === new Date().getFullYear();
-              
-              return (
-                <div
-                  key={index}
-                  className={`aspect-square rounded-lg p-1 lg:p-2 ${
-                    day ? 'bg-slate-900/50 hover:bg-slate-800/50' : ''
-                  } ${
-                    isToday ? 'ring-2 ring-primary' : ''
-                  } transition-all cursor-pointer`}
-                  data-testid={`calendar-day-${day}`}
-                >
-                  {day && (
-                    <>
-                      <div className="text-xs lg:text-sm font-bold text-white mb-1">{day}</div>
-                      {dayEvents.length > 0 && (
-                        <div className="space-y-1">
-                          {dayEvents.slice(0, 2).map(event => (
-                            <div key={event.event_id} className="w-full h-0.5 lg:h-1 bg-accent rounded-full"></div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <h3 className="text-lg font-bold text-white">Upcoming Events</h3>
-          {events.slice(0, 5).map(event => (
-            <div key={event.event_id} className="glass-card rounded-2xl p-3 lg:p-4" data-testid="event-item">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-bold text-white truncate">{event.title}</h4>
-                  <p className="text-sm text-slate-400 mt-1 line-clamp-2">{event.description}</p>
-                  <p className="text-xs text-accent mt-2">{new Date(event.event_date).toLocaleDateString()}</p>
-                </div>
-                <CalendarIcon className="w-5 h-5 text-secondary flex-shrink-0 ml-2" />
-              </div>
+          {/* Calendar Grid */}
+          <div className="glass-card rounded-2xl p-4">
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {dayNames.map(day => (
+                <div key={day} className="text-center text-sm font-bold text-slate-500 py-2">{day}</div>
+              ))}
             </div>
-          ))}
-        </div>
+            <div className="grid grid-cols-7 gap-1">
+              {getDaysInMonth().map((day, i) => {
+                const dayEvents = getEventsForDay(day);
+                return (
+                  <div
+                    key={i}
+                    onClick={() => day && setSelectedDate(day)}
+                    className={`min-h-[80px] p-1 rounded-lg transition-all cursor-pointer ${
+                      day ? 'hover:bg-slate-800/50' : ''
+                    } ${selectedDate === day ? 'bg-primary/20 border border-primary' : ''} ${
+                      isToday(day) ? 'bg-accent/10 border border-accent' : ''
+                    }`}
+                  >
+                    {day && (
+                      <>
+                        <span className={`text-sm font-bold ${isToday(day) ? 'text-accent' : 'text-white'}`}>{day}</span>
+                        <div className="space-y-0.5 mt-1">
+                          {dayEvents.slice(0, 3).map(event => (
+                            <div
+                              key={event.event_id}
+                              className={`text-[9px] px-1 py-0.5 rounded truncate text-white ${EVENT_TYPES[event.event_type]?.color || 'bg-primary'}`}
+                            >
+                              {event.title}
+                            </div>
+                          ))}
+                          {dayEvents.length > 3 && (
+                            <span className="text-[9px] text-slate-400">+{dayEvents.length - 3} more</span>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Selected Date Events */}
+          {selectedDate && (
+            <div className="glass-card rounded-2xl p-4">
+              <h2 className="text-lg font-bold text-white mb-3">
+                {monthNames[currentDate.getMonth()]} {selectedDate}, {currentDate.getFullYear()}
+              </h2>
+              {selectedDateEvents.length === 0 ? (
+                <p className="text-slate-400 text-sm">No events on this day</p>
+              ) : (
+                <div className="space-y-2">
+                  {selectedDateEvents.map(event => {
+                    const EventIcon = EVENT_TYPES[event.event_type]?.icon || CalendarDays;
+                    return (
+                      <div key={event.event_id} className={`flex items-start space-x-3 p-3 rounded-xl border-l-4 ${EVENT_TYPES[event.event_type]?.color?.replace('bg-', 'border-') || 'border-primary'} bg-slate-800/50`}>
+                        <EventIcon className={`w-5 h-5 mt-0.5 ${EVENT_TYPES[event.event_type]?.color?.replace('bg-', 'text-') || 'text-primary'}`} />
+                        <div className="flex-1">
+                          <h3 className="font-bold text-white">{event.title}</h3>
+                          <p className="text-sm text-slate-400">{EVENT_TYPES[event.event_type]?.label}</p>
+                          {event.event_type === 'work_schedule' && event.work_start_time && (
+                            <p className="text-sm text-orange-400 mt-1">
+                              {event.work_start_time} - {event.work_end_time}
+                            </p>
+                          )}
+                          {event.event_time && event.event_type !== 'work_schedule' && (
+                            <p className="text-sm text-slate-500 mt-1">{event.event_time}</p>
+                          )}
+                          <p className="text-xs text-slate-500 mt-1">Added by {event.created_by_name}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
 
+      {/* Add Event Modal */}
       {showAddEvent && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 lg:p-6" data-testid="add-event-modal">
-          <div className="glass-card rounded-3xl p-4 lg:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl lg:text-2xl font-black text-white mb-4">Add Event</h2>
-            <form onSubmit={handleAddEvent} className="space-y-4">
-              <input
-                type="text"
-                placeholder="Event title"
-                value={newEvent.title}
-                onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 text-base"
-                required
-                data-testid="event-title-input"
-              />
-              <textarea
-                placeholder="Description (optional)"
-                value={newEvent.description}
-                onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 h-20 lg:h-24 resize-none text-base"
-                data-testid="event-description-input"
-              />
-              <input
-                type="date"
-                value={newEvent.event_date}
-                onChange={(e) => setNewEvent({...newEvent, event_date: e.target.value})}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white text-base"
-                required
-                data-testid="event-date-input"
-              />
-              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                <button
-                  type="submit"
-                  className="flex-1 bg-primary hover:bg-primary/80 active:scale-95 text-white font-bold py-3 px-4 rounded-full transition-all"
-                  data-testid="submit-event-button"
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-card rounded-2xl p-5 max-w-sm w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-black text-white">Add Event</h2>
+              <button onClick={() => setShowAddEvent(false)} className="p-1 hover:bg-slate-800 rounded-lg">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <form onSubmit={handleAddEvent} className="space-y-3">
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">Event Type *</label>
+                <select
+                  value={newEvent.event_type}
+                  onChange={(e) => setNewEvent({...newEvent, event_type: e.target.value})}
+                  className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm"
+                  required
+                  data-testid="event-type-select"
                 >
-                  Add Event
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAddEvent(false)}
-                  className="flex-1 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold py-3 px-4 rounded-full transition-all"
-                  data-testid="cancel-event-button"
-                >
-                  Cancel
-                </button>
+                  <option value="appointment">Appointment</option>
+                  <option value="event">Event</option>
+                  <option value="work_schedule">Work Schedule</option>
+                  <option value="task">Task</option>
+                </select>
               </div>
+
+              {newEvent.event_type !== 'work_schedule' && (
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Title *</label>
+                  <input
+                    type="text"
+                    placeholder="Event title"
+                    value={newEvent.title}
+                    onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
+                    className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white placeholder:text-slate-600 text-sm"
+                    required
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">Date *</label>
+                <input
+                  type="date"
+                  value={newEvent.event_date}
+                  onChange={(e) => setNewEvent({...newEvent, event_date: e.target.value})}
+                  className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm"
+                  required
+                />
+              </div>
+
+              {newEvent.event_type === 'work_schedule' ? (
+                <>
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">Start Time *</label>
+                    <input
+                      type="time"
+                      value={newEvent.work_start_time}
+                      onChange={(e) => setNewEvent({...newEvent, work_start_time: e.target.value})}
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">End Time *</label>
+                    <input
+                      type="time"
+                      value={newEvent.work_end_time}
+                      onChange={(e) => setNewEvent({...newEvent, work_end_time: e.target.value})}
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm"
+                      required
+                    />
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Time</label>
+                  <input
+                    type="time"
+                    value={newEvent.event_time}
+                    onChange={(e) => setNewEvent({...newEvent, event_time: e.target.value})}
+                    className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm"
+                  />
+                </div>
+              )}
+
+              <button type="submit" className="w-full bg-primary hover:bg-primary/80 text-white font-bold py-3 rounded-full transition-all">
+                Add Event
+              </button>
             </form>
           </div>
         </div>
       )}
-      
-      <BottomNav userRole={user?.role} />
     </div>
   );
 }
