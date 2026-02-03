@@ -7,6 +7,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function ChildSpace({ user }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [chores, setChores] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [userRank, setUserRank] = useState(0);
