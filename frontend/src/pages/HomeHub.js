@@ -268,7 +268,7 @@ export default function HomeHub({ user }) {
                     <Plus className="w-3 h-3 text-secondary" />
                   </button>
                 </div>
-                <MiniCalendar events={events} currentDate={calendarDate} setCurrentDate={setCalendarDate} />
+                <MiniCalendar events={events} currentDate={calendarDate} setCurrentDate={setCalendarDate} onDayClick={handleDayClick} />
               </div>
 
               {/* Today's Events */}
