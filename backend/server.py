@@ -375,17 +375,36 @@ async def approve_chore(chore_id: str, request: Request, data: dict):
     
     approved = data.get('approved', True)
     status = "approved" if approved else "pending"
+    modified_points = data.get('points')  # Allow parent to modify points
+    
     update_data = {"status": status}
+    if modified_points is not None:
+        update_data["points"] = modified_points
     
     if approved:
         chore = await db.chores.find_one({"chore_id": chore_id}, {"_id": 0})
         if chore and chore.get('completed_by'):
+            points_to_award = modified_points if modified_points is not None else chore.get('points', 10)
             await db.users.update_one(
                 {"user_id": chore['completed_by']},
-                {"$inc": {"points": chore.get('points', 10)}}
+                {"$inc": {"points": points_to_award}}
             )
     
     await db.chores.update_one({"chore_id": chore_id}, {"$set": update_data})
+    return await db.chores.find_one({"chore_id": chore_id}, {"_id": 0})
+
+# Update chore points (parent only)
+@api_router.put("/chores/{chore_id}/points")
+async def update_chore_points(chore_id: str, request: Request, data: dict):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can modify points")
+    
+    new_points = data.get('points')
+    if new_points is None or new_points < 0:
+        raise HTTPException(status_code=400, detail="Invalid points value")
+    
+    await db.chores.update_one({"chore_id": chore_id}, {"$set": {"points": new_points}})
     return await db.chores.find_one({"chore_id": chore_id}, {"_id": 0})
 
 # AI Schedule chores
