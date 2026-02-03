@@ -58,28 +58,17 @@ export default function Settings({ user }) {
           </div>
           
           <div className="grid grid-cols-1 gap-3">
-            {themes.map((t) => (
+            {themeOptions.map((themeName, index) => (
               <button
-                key={t.id}
-                onClick={() => setTheme(t.id)}
+                key={themeName}
+                onClick={() => setTheme(themeName)}
                 className={`glass-card rounded-xl p-4 flex items-center justify-between transition-all ${
-                  theme === t.id ? 'border-2 border-primary' : 'border border-slate-800'
+                  theme === themeName ? 'border-2 border-primary' : 'border border-slate-800'
                 }`}
-                data-testid={`theme-${t.id}`}
+                data-testid={`theme-${themeName.toLowerCase().replace(/ /g, '-')}`}
               >
-                <div className="flex items-center space-x-3">
-                  <div className="flex space-x-1">
-                    {t.colors.map((color, i) => (
-                      <div
-                        key={i}
-                        className="w-6 h-6 rounded-full"
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                  <span className="font-medium text-white">{t.name}</span>
-                </div>
-                {theme === t.id && (
+                <span className="font-medium text-white">{themeName}</span>
+                {theme === themeName && (
                   <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
                     <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
