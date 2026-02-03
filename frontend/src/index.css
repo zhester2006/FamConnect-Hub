@@ -113,6 +113,64 @@ code {
     animation: float 3s ease-in-out infinite;
 }
 
+/* Weather Animations */
+@keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+    animation: spin-slow 8s linear infinite;
+}
+
+@keyframes bounce-slow {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+.animate-bounce-slow {
+    animation: bounce-slow 2s ease-in-out infinite;
+}
+
+@keyframes rain {
+    0% { transform: translateY(-10px); opacity: 0; }
+    50% { opacity: 1; }
+    100% { transform: translateY(15px); opacity: 0; }
+}
+
+.animate-rain {
+    animation: rain 0.8s linear infinite;
+}
+
+@keyframes snow {
+    0% { transform: translateY(-5px) rotate(0deg); opacity: 0; }
+    50% { opacity: 1; }
+    100% { transform: translateY(15px) rotate(360deg); opacity: 0; }
+}
+
+.animate-snow {
+    animation: snow 2s ease-in-out infinite;
+}
+
+@keyframes flash {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+}
+
+.animate-flash {
+    animation: flash 0.3s ease-in-out infinite;
+}
+
+@keyframes wind {
+    0% { transform: translateX(0); }
+    50% { transform: translateX(5px); }
+    100% { transform: translateX(0); }
+}
+
+.animate-wind {
+    animation: wind 1s ease-in-out infinite;
+}
+
 .gradient-text {
     background: linear-gradient(135deg, #3B82F6 0%, #06B6D4 100%);
     -webkit-background-clip: text;
