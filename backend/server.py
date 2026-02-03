@@ -411,6 +411,193 @@ Return a JSON array with format: {{"date": "YYYY-MM-DD", "child_id": "user_xxx",
     response = await chat.send_message(UserMessage(text=prompt))
     return {"schedule": response}
 
+# Get all available chore types
+@api_router.get("/chores/types")
+async def get_chore_types(request: Request):
+    current_user = await get_current_user(request)
+    chore_types = await db.chore_types.find({}, {"_id": 0}).to_list(100)
+    if not chore_types:
+        # Return default chore types
+        default_types = [
+            {"name": "Dishes", "points": 10, "description": "Wash and put away dishes"},
+            {"name": "Vacuum", "points": 15, "description": "Vacuum the floors"},
+            {"name": "Laundry", "points": 15, "description": "Wash, dry and fold laundry"},
+            {"name": "Take out trash", "points": 5, "description": "Take trash to the bins"},
+            {"name": "Clean room", "points": 10, "description": "Clean and organize bedroom"},
+            {"name": "Feed pets", "points": 5, "description": "Feed and water pets"},
+            {"name": "Set table", "points": 5, "description": "Set the table for meals"},
+            {"name": "Sweep floors", "points": 10, "description": "Sweep all floors"},
+            {"name": "Wipe counters", "points": 5, "description": "Clean kitchen counters"},
+            {"name": "Make bed", "points": 5, "description": "Make your bed each morning"}
+        ]
+        return {"chore_types": default_types}
+    return {"chore_types": chore_types}
+
+# Add new chore type
+@api_router.post("/chores/types")
+async def add_chore_type(request: Request, data: dict):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can add chore types")
+    
+    type_id = f"type_{uuid.uuid4().hex[:12]}"
+    type_doc = {
+        "type_id": type_id,
+        "name": data['name'],
+        "points": data.get('points', 10),
+        "description": data.get('description', ''),
+        "created_by": current_user['user_id'],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.chore_types.insert_one(type_doc)
+    return await db.chore_types.find_one({"type_id": type_id}, {"_id": 0})
+
+# Delete chore type
+@api_router.delete("/chores/types/{type_name}")
+async def delete_chore_type(type_name: str, request: Request):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can delete chore types")
+    
+    await db.chore_types.delete_one({"name": type_name})
+    return {"success": True}
+
+# Toggle child exclusion from chore
+@api_router.put("/chores/exclude-child")
+async def toggle_child_chore_exclusion(request: Request, data: dict):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can manage exclusions")
+    
+    child_id = data.get('child_id')
+    chore_name = data.get('chore_name')
+    exclude = data.get('exclude', True)
+    
+    child = await db.users.find_one({"user_id": child_id}, {"_id": 0})
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+    
+    excluded_chores = child.get('settings', {}).get('excluded_chores', [])
+    
+    if exclude and chore_name not in excluded_chores:
+        excluded_chores.append(chore_name)
+    elif not exclude and chore_name in excluded_chores:
+        excluded_chores.remove(chore_name)
+    
+    await db.users.update_one(
+        {"user_id": child_id},
+        {"$set": {"settings.excluded_chores": excluded_chores}}
+    )
+    return await db.users.find_one({"user_id": child_id}, {"_id": 0})
+
+# Process missed chores (penalty system)
+@api_router.post("/chores/process-missed")
+async def process_missed_chores(request: Request):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can process missed chores")
+    
+    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
+    today = datetime.now(timezone.utc).date().isoformat()
+    
+    # Find missed chores from yesterday
+    missed_chores = await db.chores.find({
+        "scheduled_date": yesterday,
+        "status": "pending"
+    }, {"_id": 0}).to_list(100)
+    
+    results = []
+    for missed in missed_chores:
+        # Mark as missed
+        await db.chores.update_one(
+            {"chore_id": missed['chore_id']},
+            {"$set": {"status": "missed"}}
+        )
+        
+        # Find who was supposed to do the chore today
+        today_chore = await db.chores.find_one({
+            "title": missed['title'],
+            "scheduled_date": today
+        }, {"_id": 0})
+        
+        if today_chore and today_chore.get('assigned_to') != missed.get('assigned_to'):
+            # Give the bumped child a "bye day"
+            bye_doc = {
+                "bye_id": f"bye_{uuid.uuid4().hex[:12]}",
+                "user_id": today_chore['assigned_to'],
+                "date": today,
+                "reason": f"Bumped due to {missed.get('assigned_to_name', 'another child')} missing {missed['title']}",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.bye_days.insert_one(bye_doc)
+            
+            # Reassign today's chore to the child who missed
+            await db.chores.update_one(
+                {"chore_id": today_chore['chore_id']},
+                {"$set": {"assigned_to": missed['assigned_to'], "assigned_to_name": missed.get('assigned_to_name')}}
+            )
+        
+        # Create additional chore for today (the missed one)
+        penalty_chore = {
+            "chore_id": f"chore_{uuid.uuid4().hex[:12]}",
+            "family_id": missed['family_id'],
+            "title": f"{missed['title']} (Makeup)",
+            "description": f"Makeup chore from {yesterday}",
+            "assigned_to": missed['assigned_to'],
+            "assigned_to_name": missed.get('assigned_to_name'),
+            "scheduled_date": today,
+            "points": missed.get('points', 10),
+            "status": "pending",
+            "created_by": current_user['user_id'],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "is_penalty": True
+        }
+        await db.chores.insert_one(penalty_chore)
+        results.append({"missed": missed['title'], "penalty_created": True})
+    
+    return {"processed": len(missed_chores), "results": results}
+
+# Get bye days
+@api_router.get("/chores/bye-days")
+async def get_bye_days(request: Request):
+    current_user = await get_current_user(request)
+    query = {}
+    if current_user['role'] == 'child':
+        query["user_id"] = current_user['user_id']
+    
+    bye_days = await db.bye_days.find(query, {"_id": 0}).sort("date", -1).to_list(50)
+    return {"bye_days": bye_days}
+
+# Get child's chore settings
+@api_router.get("/chores/child-settings/{child_id}")
+async def get_child_chore_settings(child_id: str, request: Request):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can view child settings")
+    
+    child = await db.users.find_one({"user_id": child_id}, {"_id": 0})
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+    
+    excluded_chores = child.get('settings', {}).get('excluded_chores', [])
+    chore_types = await db.chore_types.find({}, {"_id": 0}).to_list(100)
+    
+    if not chore_types:
+        chore_types = [
+            {"name": "Dishes", "points": 10},
+            {"name": "Vacuum", "points": 15},
+            {"name": "Laundry", "points": 15},
+            {"name": "Take out trash", "points": 5},
+            {"name": "Clean room", "points": 10},
+            {"name": "Feed pets", "points": 5}
+        ]
+    
+    return {
+        "child": child,
+        "excluded_chores": excluded_chores,
+        "available_chores": chore_types
+    }
+
 # Shopping list
 @api_router.get("/shopping")
 async def get_shopping_list(request: Request):
