@@ -125,31 +125,57 @@ export default function Settings({ user }) {
         <div className="glass-card rounded-2xl p-5 space-y-4">
           <div className="flex items-center space-x-2">
             <Bell className="w-5 h-5 text-secondary" />
-            <h2 className="text-lg font-bold text-white">Notifications</h2>
+            <h2 className="text-lg font-bold text-white">Preferences</h2>
           </div>
           
-          <div className="flex items-center justify-between">
-            <span className="text-white">Push Notifications</span>
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <span className="text-white font-medium">Dark Mode</span>
+              <p className="text-xs text-slate-400 mt-1">Toggle between dark and light themes</p>
+            </div>
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className={`w-14 h-7 rounded-full transition-all relative ${
+                darkMode ? 'bg-primary' : 'bg-slate-300'
+              }`}
+              data-testid="dark-mode-toggle"
+            >
+              <div
+                className={`w-6 h-6 bg-white rounded-full shadow-md absolute top-0.5 transition-transform flex items-center justify-center ${
+                  darkMode ? 'translate-x-7' : 'translate-x-0.5'
+                }`}
+              >
+                {darkMode ? <Moon className="w-3 h-3 text-primary" /> : <Sun className="w-3 h-3 text-slate-700" />}
+              </div>
+            </button>
+          </div>
+          
+          <div className="flex items-center justify-between py-2">
+            <span className="text-white font-medium">Push Notifications</span>
             <button
               onClick={() => setNotifications(!notifications)}
-              className={`w-12 h-6 rounded-full transition-all ${
+              className={`w-14 h-7 rounded-full transition-all ${
                 notifications ? 'bg-primary' : 'bg-slate-700'
               }`}
               data-testid="notifications-toggle"
             >
               <div
-                className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform ${
-                  notifications ? 'translate-x-6' : 'translate-x-1'
+                className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform ${
+                  notifications ? 'translate-x-7' : 'translate-x-0.5'
                 }`}
               />
             </button>
           </div>
-          
-          <div className="flex items-center justify-between opacity-50">
-            <span className="text-white">Dark Mode</span>
-            <Moon className="w-5 h-5 text-white" />
-          </div>
         </div>
+
+        <button
+          onClick={handleSaveSettings}
+          disabled={saving}
+          className="w-full bg-primary hover:bg-primary/80 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-full transition-all neon-glow"
+          data-testid="save-settings-button"
+        >
+          {saving ? 'Saving...' : 'Save Settings'}
+        </button>
 
         <div className="text-center text-sm text-slate-500 pt-8">
           <p>FamFocus Hub v1.0</p>
