@@ -129,6 +129,9 @@ function AppRouter() {
       <Route path="/dinner" element={<ProtectedRoute><DinnerPlanner /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/hub" element={<ProtectedRoute><HomeHub /></ProtectedRoute>} />
+      <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+      <Route path="/reading" element={<ProtectedRoute><ReadingLogs /></ProtectedRoute>} />
+      <Route path="/checkins" element={<ProtectedRoute><CheckIns /></ProtectedRoute>} />
     </Routes>
   );
 }
