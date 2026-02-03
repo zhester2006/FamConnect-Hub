@@ -11,10 +11,6 @@ export default function ShoppingList({ user }) {
   const [newItem, setNewItem] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    fetchItems();
-  }, []);
-
   const fetchItems = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/shopping`, { credentials: 'include' });
@@ -24,6 +20,10 @@ export default function ShoppingList({ user }) {
       console.error('Failed to fetch shopping items:', error);
     }
   };
+
+  useEffect(() => {
+    fetchItems();
+  }, []);
 
   const handleAddItem = async (e) => {
     e.preventDefault();
