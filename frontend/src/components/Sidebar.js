@@ -59,16 +59,16 @@ export default function Sidebar({ user, isOpen, setIsOpen }) {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className=\"fixed top-4 left-4 z-50 lg:hidden bg-slate-900/90 backdrop-blur-md border border-slate-700 text-white p-3 rounded-full shadow-lg hover:bg-slate-800 transition-all\"
-        data-testid=\"mobile-menu-toggle\"
+        className="fixed top-4 left-4 z-50 lg:hidden bg-slate-900/90 backdrop-blur-md border border-slate-700 text-white p-3 rounded-full shadow-lg hover:bg-slate-800 transition-all"
+        data-testid="mobile-menu-toggle"
       >
-        {isOpen ? <X className=\"w-6 h-6\" /> : <Menu className=\"w-6 h-6\" />}
+        {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
 
       {/* Overlay for mobile */}
       {isOpen && (
         <div 
-          className=\"fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden\"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}
@@ -78,7 +78,7 @@ export default function Sidebar({ user, isOpen, setIsOpen }) {
         className={`fixed top-0 left-0 h-full z-50 glass-card border-r border-white/10 backdrop-blur-2xl bg-slate-950/95 transition-transform duration-300 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0 w-72`}
-        data-testid=\"sidebar\"
+        data-testid="sidebar"
       >
         <div className=\"flex flex-col h-full\">
           {/* Header */}
