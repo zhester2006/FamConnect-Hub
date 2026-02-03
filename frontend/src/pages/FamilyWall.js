@@ -254,7 +254,7 @@ export default function FamilyWall({ user }) {
         </div>
 
         {/* Sticky Input Bar at Bottom */}
-        <div className="fixed bottom-0 left-0 right-0 lg:left-72 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800 p-3 z-40">
+        <div className={`fixed bottom-0 left-0 right-0 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800 p-3 z-40 transition-all duration-300 ${sidebarCollapsed ? 'lg:left-16' : 'lg:left-64'}`}>
           <form onSubmit={handleSubmitPost} className="flex items-center space-x-2">
             <div className="relative">
               <button
