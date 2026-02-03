@@ -779,9 +779,19 @@ async def create_event(request: Request, data: dict):
 
 # Reading logs
 @api_router.get("/reading-logs")
-async def get_reading_logs(request: Request):
+async def get_reading_logs(request: Request, child_id: Optional[str] = None):
     current_user = await get_current_user(request)
-    logs = await db.reading_logs.find({"user_id": current_user['user_id']}, {"_id": 0}).to_list(100)
+    
+    if current_user['role'] == 'parent' and child_id:
+        # Parent viewing child's logs
+        logs = await db.reading_logs.find({"user_id": child_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    elif current_user['role'] == 'parent':
+        # Parent viewing all children's logs
+        logs = await db.reading_logs.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    else:
+        # Child viewing own logs
+        logs = await db.reading_logs.find({"user_id": current_user['user_id']}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
     return {"logs": logs}
 
 @api_router.post("/reading-logs")
@@ -792,15 +802,31 @@ async def create_reading_log(request: Request, data: dict):
     log_doc = {
         "log_id": log_id,
         "user_id": current_user['user_id'],
+        "user_name": current_user['name'],
         "family_id": current_user.get('parent_id', current_user['user_id']),
         "book_name": data['book_name'],
-        "pages_read": data['pages_read'],
+        "pages_read": data.get('pages_read', 0),
         "summary": data['summary'],
-        "date": data['date'],
+        "date": data.get('date', datetime.now(timezone.utc).date().isoformat()),
         "status": "pending",
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.reading_logs.insert_one(log_doc)
+    return await db.reading_logs.find_one({"log_id": log_id}, {"_id": 0})
+
+@api_router.put("/reading-logs/{log_id}/approve")
+async def approve_reading_log(log_id: str, request: Request, data: dict):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can approve reading logs")
+    
+    approved = data.get('approved', True)
+    status = "approved" if approved else "rejected"
+    
+    await db.reading_logs.update_one(
+        {"log_id": log_id},
+        {"$set": {"status": status, "approved_by": current_user['user_id'], "approved_at": datetime.now(timezone.utc).isoformat()}}
+    )
     return await db.reading_logs.find_one({"log_id": log_id}, {"_id": 0})
 
 # Dinner planner
