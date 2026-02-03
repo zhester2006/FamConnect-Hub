@@ -25,7 +25,7 @@ const WeatherIcon = ({ condition, size = 'md' }) => {
   return icons[condition] || icons.sunny;
 };
 
-const MiniCalendar = ({ events, currentDate, setCurrentDate }) => {
+const MiniCalendar = ({ events, currentDate, setCurrentDate, onDayClick }) => {
   const today = new Date();
   
   const getDaysInMonth = (date) => {
@@ -79,6 +79,7 @@ const MiniCalendar = ({ events, currentDate, setCurrentDate }) => {
           return (
             <div
               key={i}
+              onClick={() => onDayClick && onDayClick(day)}
               className={`aspect-square flex items-center justify-center text-[9px] rounded transition-all relative
                 ${day ? 'hover:bg-white/10 cursor-pointer' : ''}
                 ${isToday ? 'bg-primary text-white font-bold' : 'text-slate-300'}
