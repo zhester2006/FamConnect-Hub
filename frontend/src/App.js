@@ -119,6 +119,7 @@ function AppRouter() {
     <Routes>
       <Route path="/login" element={<WelcomePage />} />
       <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/callback" element={<SpotifyCallback />} />
       <Route path="/dashboard" element={<ProtectedRoute><ParentDashboard /></ProtectedRoute>} />
       <Route path="/space" element={<ProtectedRoute><ChildSpace /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
