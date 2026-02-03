@@ -112,7 +112,7 @@ const MiniCalendar = ({ events, onDateClick }) => {
         </button>
       </div>
       <div className="grid grid-cols-7 gap-0.5 mb-1">
-        {dayNames.map(d => <div key={d} className="text-center text-[10px] text-slate-500 font-bold">{d}</div>)}
+        {dayNames.map((d, idx) => <div key={idx} className="text-center text-[10px] text-slate-500 font-bold">{d}</div>)}
       </div>
       <div className="grid grid-cols-7 gap-0.5">
         {getDaysInMonth(currentDate).map((day, i) => {
