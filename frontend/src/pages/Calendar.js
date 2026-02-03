@@ -178,11 +178,11 @@ export default function Calendar({ user }) {
             </div>
             <div className="grid grid-cols-7 gap-1">
               {getDaysInMonth().map((day, i) => {
-                const dayEvents = getEventsForDay(day);
+                const dayEventsForCell = getEventsForDay(day);
                 return (
                   <div
                     key={i}
-                    onClick={() => day && setSelectedDate(day)}
+                    onClick={() => day && handleDayClick(day)}
                     className={`min-h-[80px] p-1 rounded-lg transition-all cursor-pointer ${
                       day ? 'hover:bg-slate-800/50' : ''
                     } ${selectedDate === day ? 'bg-primary/20 border border-primary' : ''} ${
