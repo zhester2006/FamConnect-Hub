@@ -18,6 +18,7 @@ import FamilyManagement from '@/pages/FamilyManagement';
 import Leaderboard from '@/pages/Leaderboard';
 import ReadingLogs from '@/pages/ReadingLogs';
 import CheckIns from '@/pages/CheckIns';
+import SpotifyCallback from '@/pages/SpotifyCallback';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
