@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, Calendar, MessageCircle, Users, ShoppingCart, Award, 
   Settings, LogOut, Utensils, Trophy, Book, MapPin, Menu, X,
-  LayoutDashboard, Sparkles, ChevronLeft, ChevronRight
+  LayoutDashboard, Sparkles, ChevronLeft, ChevronRight, Move, GripVertical
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -12,12 +12,80 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(collapsed || false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isFloating, setIsFloating] = useState(false);
+  const dragRef = useRef(null);
+  const startPos = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebar-position');
+    const savedFloating = localStorage.getItem('sidebar-floating');
+    if (saved) {
+      setPosition(JSON.parse(saved));
+    }
+    if (savedFloating === 'true') {
+      setIsFloating(true);
+    }
+  }, []);
 
   const handleCollapse = () => {
     const newState = !isCollapsed;
     setIsCollapsed(newState);
     if (setCollapsed) setCollapsed(newState);
   };
+
+  const toggleFloating = () => {
+    const newFloating = !isFloating;
+    setIsFloating(newFloating);
+    localStorage.setItem('sidebar-floating', newFloating.toString());
+    if (!newFloating) {
+      setPosition({ x: 0, y: 0 });
+      localStorage.removeItem('sidebar-position');
+    }
+  };
+
+  const handleMouseDown = (e) => {
+    if (!isFloating) return;
+    setIsDragging(true);
+    startPos.current = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    };
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging || !isFloating) return;
+    const newX = e.clientX - startPos.current.x;
+    const newY = e.clientY - startPos.current.y;
+    
+    // Constrain to viewport
+    const maxX = window.innerWidth - (isCollapsed ? 64 : 256);
+    const maxY = window.innerHeight - 100;
+    
+    setPosition({
+      x: Math.max(0, Math.min(newX, maxX)),
+      y: Math.max(0, Math.min(newY, maxY))
+    });
+  };
+
+  const handleMouseUp = () => {
+    if (isDragging && isFloating) {
+      localStorage.setItem('sidebar-position', JSON.stringify(position));
+    }
+    setIsDragging(false);
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging, position]);
 
   const handleLogout = async () => {
     try {
@@ -62,6 +130,14 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
 
   const menuItems = user?.role === 'parent' ? parentMenuItems : childMenuItems;
 
+  const sidebarStyle = isFloating ? {
+    position: 'fixed',
+    left: position.x,
+    top: position.y,
+    zIndex: 60,
+    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+  } : {};
+
   return (
     <>
       {/* Mobile Menu Toggle */}
@@ -83,14 +159,27 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full z-50 glass-card border-r border-white/10 backdrop-blur-2xl bg-slate-950/95 transition-all duration-300 ${
+        ref={dragRef}
+        style={sidebarStyle}
+        className={`${isFloating ? '' : 'fixed top-0 left-0'} h-full z-50 glass-card border-r border-white/10 backdrop-blur-2xl bg-slate-950/95 transition-all duration-300 ${
           isCollapsed ? 'w-16' : 'w-64'
-        } ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+        } ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${
+          isFloating ? 'rounded-2xl max-h-[90vh] overflow-hidden' : ''
+        }`}
         data-testid="sidebar"
       >
         <div className="flex flex-col h-full">
-          {/* Header */}
+          {/* Header with Drag Handle */}
           <div className={`p-4 border-b border-slate-800 ${isCollapsed ? 'px-2' : ''}`}>
+            {/* Drag Handle - Only visible when floating */}
+            {isFloating && (
+              <div 
+                onMouseDown={handleMouseDown}
+                className="flex items-center justify-center mb-2 cursor-move py-1 hover:bg-slate-800 rounded-lg transition-all"
+              >
+                <GripVertical className="w-4 h-4 text-slate-500" />
+              </div>
+            )}
             <div className="flex items-center justify-between">
               {!isCollapsed && (
                 <div className="flex items-center space-x-2">
@@ -111,18 +200,29 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
                   className="w-10 h-10 rounded-lg object-contain mx-auto"
                 />
               )}
-              {/* Collapse Toggle - Desktop Only */}
-              <button
-                onClick={handleCollapse}
-                className="hidden lg:flex p-1.5 hover:bg-slate-800 rounded-lg transition-all"
-                data-testid="collapse-toggle"
-              >
-                {isCollapsed ? (
-                  <ChevronRight className="w-4 h-4 text-slate-400" />
-                ) : (
-                  <ChevronLeft className="w-4 h-4 text-slate-400" />
-                )}
-              </button>
+              <div className="hidden lg:flex items-center space-x-1">
+                {/* Float Toggle */}
+                <button
+                  onClick={toggleFloating}
+                  className={`p-1.5 rounded-lg transition-all ${isFloating ? 'bg-primary/20 text-primary' : 'hover:bg-slate-800 text-slate-400'}`}
+                  title={isFloating ? 'Dock sidebar' : 'Float sidebar'}
+                  data-testid="float-toggle"
+                >
+                  <Move className="w-4 h-4" />
+                </button>
+                {/* Collapse Toggle */}
+                <button
+                  onClick={handleCollapse}
+                  className="p-1.5 hover:bg-slate-800 rounded-lg transition-all"
+                  data-testid="collapse-toggle"
+                >
+                  {isCollapsed ? (
+                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                  ) : (
+                    <ChevronLeft className="w-4 h-4 text-slate-400" />
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
