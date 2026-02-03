@@ -1,0 +1,175 @@
+{
+  "identity": {
+    "persona": "E1",
+    "philosophy": "Anti-AI, Bold, Emotional, Gamified",
+    "mission": "Transform mundane chores into a cosmic adventure. Kill the boring 'admin panel' vibe. Make it feel like a game.",
+    "theme_name": "Cosmic Explorer (Black & Blue Variant)"
+  },
+  "typography": {
+    "headings": {
+      "font_family": "Outfit, sans-serif",
+      "weights": ["700", "900"],
+      "usage": "Headings, Hero Text, Gamified Stats",
+      "letter_spacing": "tracking-tight"
+    },
+    "body": {
+      "font_family": "Manrope, sans-serif",
+      "weights": ["400", "500", "600"],
+      "usage": "Paragraphs, UI Elements, Lists",
+      "letter_spacing": "tracking-normal"
+    },
+    "mono": {
+      "font_family": "JetBrains Mono, monospace",
+      "usage": "Code snippets, IDs, Technical Data"
+    }
+  },
+  "colors": {
+    "palette": {
+      "background": {
+        "default": "#020617",
+        "paper": "#0F172A",
+        "subtle": "#1E293B"
+      },
+      "primary": {
+        "main": "#3B82F6",
+        "light": "#60A5FA",
+        "dark": "#1D4ED8",
+        "contrast": "#FFFFFF"
+      },
+      "secondary": {
+        "main": "#06B6D4",
+        "light": "#22D3EE",
+        "dark": "#0891B2"
+      },
+      "accent": {
+        "main": "#FACC15",
+        "glow": "rgba(250, 204, 21, 0.5)"
+      },
+      "text": {
+        "primary": "#F8FAFC",
+        "secondary": "#94A3B8",
+        "muted": "#64748B"
+      },
+      "status": {
+        "success": "#10B981",
+        "error": "#EF4444",
+        "warning": "#F59E0B",
+        "info": "#3B82F6"
+      }
+    },
+    "gradients": {
+      "primary": "linear-gradient(135deg, #3B82F6 0%, #06B6D4 100%)",
+      "glow": "radial-gradient(circle at center, rgba(59, 130, 246, 0.15) 0%, rgba(2, 6, 23, 0) 70%)",
+      "card_border": "linear-gradient(to bottom right, rgba(255,255,255,0.2), rgba(255,255,255,0.05))"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": {
+      "default": "backdrop-blur-xl bg-slate-900/70 border border-white/10 shadow-xl",
+      "heavy": "backdrop-blur-2xl bg-slate-950/80 border border-white/5"
+    },
+    "shadows": {
+      "neon": "0 0 20px rgba(59, 130, 246, 0.3)",
+      "card": "0 10px 30px -10px rgba(0, 0, 0, 0.5)"
+    },
+    "borders": {
+      "radius": "rounded-2xl",
+      "width": "border-2"
+    }
+  },
+  "layout_strategies": {
+    "mobile": {
+      "nav": "Bottom Navigation Bar (Floating Glass)",
+      "padding": "p-4",
+      "structure": "Single Column, Stacked Cards"
+    },
+    "desktop_hub": {
+      "grid": "Bento Grid (Grid-cols-4 or Grid-cols-12)",
+      "gap": "gap-6",
+      "padding": "p-8",
+      "sidebar": "Collapsible or Icon-only rail"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-white rounded-full px-8 py-3 font-bold shadow-[0_0_15px_rgba(59,130,246,0.4)] hover:shadow-[0_0_25px_rgba(59,130,246,0.6)] transition-all hover:scale-105 active:scale-95",
+      "secondary": "bg-slate-800 text-white border border-slate-700 rounded-full px-6 py-2 hover:bg-slate-700 transition-all",
+      "ghost": "text-slate-400 hover:text-white hover:bg-white/5 rounded-lg px-4 py-2"
+    },
+    "cards": {
+      "base": "bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:border-primary/50 transition-colors duration-300",
+      "interactive": "cursor-pointer hover:-translate-y-1 hover:shadow-2xl transition-all duration-300"
+    },
+    "inputs": {
+      "base": "bg-slate-950/50 border-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl h-12 px-4 text-white placeholder:text-slate-600"
+    }
+  },
+  "motion": {
+    "library": "framer-motion",
+    "transitions": {
+      "default": { "type": "spring", "stiffness": 300, "damping": 30 },
+      "slow": { "duration": 0.5, "ease": "easeInOut" }
+    },
+    "micro_interactions": {
+      "hover": "scale: 1.02",
+      "tap": "scale: 0.98",
+      "entrance": "opacity: 0, y: 20 -> opacity: 1, y: 0"
+    }
+  },
+  "assets": {
+    "icons": "lucide-react",
+    "images": {
+      "family_wall": [
+        {
+          "url": "https://images.unsplash.com/flagged/photo-1567318362383-fa193e67bbd5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTJ8MHwxfHNlYXJjaHw0fHxoYXBweSUyMGZhbWlseSUyMHBvcnRyYWl0JTIwZGl2ZXJzZXxlbnwwfHx8fDE3NzAxMjcyNTZ8MA&ixlib=rb-4.1.0&q=85",
+          "alt": "Diverse family on sofa",
+          "category": "family_wall"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1596510914965-9ae08acae566?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTJ8MHwxfHNlYXJjaHwxfHxoYXBweSUyMGZhbWlseSUyMHBvcnRyYWl0JTIwZGl2ZXJzZXxlbnwwfHx8fDE3NzAxMjcyNTZ8MA&ixlib=rb-4.1.0&q=85",
+          "alt": "Mother and child by ocean",
+          "category": "family_wall"
+        }
+      ],
+      "rewards": [
+        {
+          "url": "https://images.unsplash.com/photo-1577218232240-a6a3761e352c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MTJ8MHwxfHNlYXJjaHwxfHx0b3lzJTIwdmlkZW8lMjBnYW1lcyUyMGdpZnQlMjBjYXJkcyUyMHJld2FyZHN8ZW58MHx8fHwxNzcwMTI3MjU4fDA&ixlib=rb-4.1.0&q=85",
+          "alt": "Plush toys",
+          "category": "rewards"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1647221598276-124ebb861536?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MTJ8MHwxfHNlYXJjaHw0fHx0b3lzJTIwdmlkZW8lMjBnYW1lcyUyMGdpZnQlMjBjYXJkcyUyMHJld2FyZHN8ZW58MHx8fHwxNzcwMTI3MjU4fDA&ixlib=rb-4.1.0&q=85",
+          "alt": "Gift boxes",
+          "category": "rewards"
+        }
+      ]
+    }
+  },
+  "instructions_to_main_agent": {
+    "general": "You are building a 'Cosmic Family Hub'. It must feel like a high-end game UI, not a spreadsheet. Use the 'Black and Blue' theme aggressively but keep it readable.",
+    "critical_rules": [
+      "DO NOT use gradients for text unless it is a massive headline.",
+      "DO NOT use pure black (#000000). Use Slate-950 (#020617).",
+      "ALWAYS use 'Outfit' font for headings.",
+      "ALWAYS use 'Manrope' font for body.",
+      "Ensure all interactive elements have 'data-testid'.",
+      "Use 'sonner' for toasts.",
+      "Use 'lucide-react' for icons."
+    ],
+    "layout_specifics": {
+      "home_hub": "Use a Bento Grid layout. Large widgets for Calendar and Weather. Smaller widgets for Chores and Messages.",
+      "child_space": "Gamify it. Progress bars must be thick and colorful. Use badges and icons heavily.",
+      "parent_dashboard": "Dense but clean. Use tables for lists but style them with glassmorphism."
+    }
+  },
+  "universal_guidelines": {
+    "design_philosophy": "Fusion over Imitation. Emotion First. Content is King.",
+    "anti_patterns": [
+      "Purple/Teal for CTA (Use Electric Blue/Yellow instead)",
+      "Inter font everywhere (Use Outfit/Manrope)",
+      "Center-everything (Use asymmetry)",
+      "Gradient overload (Use texture/noise)"
+    ],
+    "accessibility": "Ensure contrast ratios (APCA). Support reduced motion preferences."
+  }
+}
