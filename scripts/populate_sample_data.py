@@ -71,7 +71,7 @@ async def populate_sample_data():
     # Member (Grandma)
     member1 = {
         "user_id": "user_member001",
-        "email": "grandma@familyhub.demo",
+        "email": "grandma@famfocus.demo",
         "name": "Emma Wilson",
         "picture": "https://api.dicebear.com/7.x/avataaars/svg?seed=Emma",
         "role": "member",
