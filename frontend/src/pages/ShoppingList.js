@@ -10,12 +10,13 @@ export default function ShoppingList({ user }) {
   const [showAddItem, setShowAddItem] = useState(false);
   const [newItem, setNewItem] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const fetchItems = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/shopping`, { credentials: 'include' });
       const data = await res.json();
-      setItems(data.items);
+      setItems(data.items || []);
     } catch (error) {
       console.error('Failed to fetch shopping items:', error);
     }
