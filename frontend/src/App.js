@@ -15,6 +15,9 @@ import DinnerPlanner from '@/pages/DinnerPlanner';
 import Settings from '@/pages/Settings';
 import HomeHub from '@/pages/HomeHub';
 import FamilyManagement from '@/pages/FamilyManagement';
+import Leaderboard from '@/pages/Leaderboard';
+import ReadingLogs from '@/pages/ReadingLogs';
+import CheckIns from '@/pages/CheckIns';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
