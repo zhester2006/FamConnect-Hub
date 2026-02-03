@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Plus, ShoppingCart, CheckCircle, Clock, Users, Sun, Cloud, CloudRain, Wind, Snowflake, CloudLightning, Sparkles, X, ChevronLeft, ChevronRight, Star, Bell } from 'lucide-react';
+import { Calendar, Plus, ShoppingCart, CheckCircle, Clock, Users, Sun, Cloud, CloudRain, Wind, Snowflake, CloudLightning, Sparkles, X, ChevronLeft, ChevronRight, Star, Bell, CalendarDays, Briefcase } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+
+const EVENT_TYPES = {
+  appointment: { label: 'Appointment', color: 'bg-green-500', textColor: 'text-green-400' },
+  event: { label: 'Event', color: 'bg-accent', textColor: 'text-accent' },
+  work_schedule: { label: 'Work', color: 'bg-orange-500', textColor: 'text-orange-400' },
+  task: { label: 'Task', color: 'bg-purple-500', textColor: 'text-purple-400' }
+};
 
 const WeatherIcon = ({ condition, size = 'md' }) => {
   const sizeClass = size === 'sm' ? 'w-6 h-6' : 'w-10 h-10';
