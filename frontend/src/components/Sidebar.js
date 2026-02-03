@@ -143,7 +143,7 @@ export default function Sidebar({ user, isOpen, setIsOpen }) {
               <span className="font-medium text-sm">Logout</span>
             </button>
             <div className="text-center text-xs text-slate-500 pt-2">
-              <p>FamilyHub v1.0</p>
+              <p>FamFocus Hub v1.0</p>
             </div>
           </div>
         </div>
