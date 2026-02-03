@@ -9,6 +9,7 @@ export default function ShoppingList({ user }) {
   const [items, setItems] = useState([]);
   const [showAddItem, setShowAddItem] = useState(false);
   const [newItem, setNewItem] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     fetchItems();
