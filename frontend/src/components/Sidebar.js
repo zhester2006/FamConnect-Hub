@@ -84,7 +84,7 @@ export default function Sidebar({ user, isOpen, setIsOpen }) {
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1">
-                <h1 className="text-xl font-black gradient-text">FamilyHub</h1>
+                <h1 className="text-xl font-black gradient-text">FamFocus Hub</h1>
                 <p className="text-xs text-slate-400">Cosmic Explorer</p>
               </div>
             </div>
