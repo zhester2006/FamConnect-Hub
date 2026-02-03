@@ -162,17 +162,28 @@ export default function ParentDashboard({ user }) {
             <Users className="w-5 h-5 text-primary" />
             <span>Family Members</span>
           </h2>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-3">
             {familyMembers.map((member) => (
-              <div key={member.user_id} className="glass-card rounded-2xl p-4 text-center" data-testid="family-member">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-secondary mx-auto mb-2 flex items-center justify-center text-2xl font-black text-white">
-                  {member.name.charAt(0)}
+              <div key={member.user_id} className="glass-card rounded-2xl p-4" data-testid="family-member">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xl font-black text-white flex-shrink-0">
+                      {member.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-white">{member.name}</h3>
+                      <p className="text-xs text-slate-400">{member.email}</p>
+                      {member.role === 'child' && (
+                        <p className="text-accent font-bold text-sm mt-1">{member.points || 0} points</p>
+                      )}
+                    </div>
+                  </div>
+                  <RoleManager 
+                    member={member} 
+                    currentUser={user}
+                    onRoleUpdated={fetchDashboardData}
+                  />
                 </div>
-                <h3 className="font-bold text-white text-sm">{member.name}</h3>
-                <p className="text-xs text-slate-400 capitalize">{member.role}</p>
-                {member.role === 'child' && (
-                  <p className="text-accent font-bold mt-1">{member.points || 0} pts</p>
-                )}
               </div>
             ))}
           </div>
