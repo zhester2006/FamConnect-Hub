@@ -30,7 +30,7 @@ export default function Calendar({ user }) {
 
   useEffect(() => {
     fetchEvents();
-  }, [currentDate]);
+  }, [currentDate, fetchEvents]);
 
   const handleAddEvent = async (e) => {
     e.preventDefault();
