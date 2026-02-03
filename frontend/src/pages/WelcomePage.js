@@ -17,15 +17,19 @@ export default function WelcomePage() {
         <header className="p-6">
           <div className="flex items-center space-x-2">
             <Sparkles className="w-8 h-8 text-accent" />
-            <h1 className="text-2xl font-black gradient-text tracking-tight">FamilyHub</h1>
+            <h1 className="text-2xl font-black gradient-text tracking-tight">FamFocus Hub</h1>
           </div>
         </header>
 
         <main className="flex-1 flex items-center justify-center px-6 pb-20">
           <div className="max-w-md w-full space-y-8 text-center">
             <div className="space-y-4">
-              <div className="inline-block p-4 rounded-3xl bg-primary/10 backdrop-blur-xl border border-primary/20">
-                <Users className="w-16 h-16 text-primary animate-float" />
+              <div className="inline-block">
+                <img 
+                  src="https://customer-assets.emergentagent.com/job_homebridge-5/artifacts/tqccfghc_startup.gif.gif" 
+                  alt="FamFocus Hub"
+                  className="w-64 h-64 object-contain mx-auto"
+                />
               </div>
               <h2 className="text-4xl sm:text-5xl font-black text-white tracking-tight">
                 Welcome to Your
