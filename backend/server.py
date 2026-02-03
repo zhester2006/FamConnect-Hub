@@ -933,6 +933,34 @@ async def create_reward(request: Request, data: dict):
     await db.rewards.insert_one(reward_doc)
     return await db.rewards.find_one({"reward_id": reward_id}, {"_id": 0})
 
+@api_router.put("/rewards/{reward_id}")
+async def update_reward(reward_id: str, request: Request, data: dict):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can modify rewards")
+    
+    update_data = {}
+    if 'name' in data:
+        update_data['name'] = data['name']
+    if 'description' in data:
+        update_data['description'] = data['description']
+    if 'points_required' in data:
+        update_data['points_required'] = data['points_required']
+    if 'image_url' in data:
+        update_data['image_url'] = data['image_url']
+    
+    await db.rewards.update_one({"reward_id": reward_id}, {"$set": update_data})
+    return await db.rewards.find_one({"reward_id": reward_id}, {"_id": 0})
+
+@api_router.delete("/rewards/{reward_id}")
+async def delete_reward(reward_id: str, request: Request):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can delete rewards")
+    
+    await db.rewards.delete_one({"reward_id": reward_id})
+    return {"success": True}
+
 @api_router.post("/rewards/{reward_id}/redeem")
 async def redeem_reward(reward_id: str, request: Request):
     current_user = await get_current_user(request)
