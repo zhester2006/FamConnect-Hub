@@ -61,21 +61,24 @@ export default function ShoppingList({ user }) {
   const purchasedItems = items.filter(i => i.status === 'purchased');
 
   return (
-    <div className="min-h-screen bg-slate-950 pb-24" data-testid="shopping-list">
-      <div className="p-6 space-y-6">
-        <header className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-black text-white">Shopping List</h1>
-            <p className="text-sm text-slate-400">{approvedItems.length} items to buy</p>
-          </div>
-          <button
-            onClick={() => setShowAddItem(true)}
-            className="bg-primary hover:bg-primary/80 text-white p-2 rounded-full transition-all neon-glow"
-            data-testid="add-item-button"
-          >
-            <Plus className="w-6 h-6" />
-          </button>
-        </header>
+    <div className="flex h-screen bg-slate-950">
+      <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      
+      <main className="flex-1 overflow-y-auto lg:ml-72">
+        <div className="p-4 lg:p-6 space-y-4 lg:space-y-6" data-testid="shopping-list">
+          <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-black text-white">Shopping List</h1>
+              <p className="text-sm text-slate-400">{approvedItems.length} items to buy</p>
+            </div>
+            <button
+              onClick={() => setShowAddItem(true)}
+              className="bg-primary hover:bg-primary/80 active:scale-95 text-white p-3 lg:p-2 rounded-full transition-all neon-glow w-full sm:w-auto"
+              data-testid="add-item-button"
+            >
+              <Plus className="w-5 h-5 lg:w-6 lg:h-6 mx-auto sm:mx-0" />
+            </button>
+          </header>
 
         {user?.role === 'parent' && pendingItems.length > 0 && (
           <div className="space-y-3">
