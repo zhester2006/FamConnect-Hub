@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 import { Settings as SettingsIcon, Palette, Bell, Moon, Sun } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 
