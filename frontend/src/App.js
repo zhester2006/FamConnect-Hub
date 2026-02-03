@@ -120,6 +120,7 @@ function AppRouter() {
       <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
       <Route path="/chat" element={<ProtectedRoute><LiveChat /></ProtectedRoute>} />
       <Route path="/family-wall" element={<ProtectedRoute><FamilyWall /></ProtectedRoute>} />
+      <Route path="/family" element={<ProtectedRoute><FamilyManagement /></ProtectedRoute>} />
       <Route path="/shopping" element={<ProtectedRoute><ShoppingList /></ProtectedRoute>} />
       <Route path="/rewards" element={<ProtectedRoute><RewardsShop /></ProtectedRoute>} />
       <Route path="/dinner" element={<ProtectedRoute><DinnerPlanner /></ProtectedRoute>} />
