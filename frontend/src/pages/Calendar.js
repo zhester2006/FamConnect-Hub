@@ -18,10 +18,6 @@ export default function Calendar({ user }) {
     event_type: 'appointment'
   });
 
-  useEffect(() => {
-    fetchEvents();
-  }, [currentDate]);
-
   const fetchEvents = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/events`, { credentials: 'include' });
@@ -31,6 +27,10 @@ export default function Calendar({ user }) {
       console.error('Failed to fetch events:', error);
     }
   };
+
+  useEffect(() => {
+    fetchEvents();
+  }, [currentDate]);
 
   const handleAddEvent = async (e) => {
     e.preventDefault();
