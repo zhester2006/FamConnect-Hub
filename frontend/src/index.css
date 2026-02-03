@@ -11,6 +11,41 @@ body {
     -moz-osx-font-smoothing: grayscale;
     background: #020617;
     color: #F8FAFC;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+.light-mode body {
+    background: #FFFFFF;
+    color: #0F172A;
+}
+
+.light-mode .bg-slate-950 {
+    background: #FFFFFF !important;
+}
+
+.light-mode .bg-slate-900 {
+    background: #F8FAFC !important;
+}
+
+.light-mode .bg-slate-800 {
+    background: #F1F5F9 !important;
+}
+
+.light-mode .text-white {
+    color: #0F172A !important;
+}
+
+.light-mode .text-slate-400 {
+    color: #64748B !important;
+}
+
+.light-mode .text-slate-300 {
+    color: #94A3B8 !important;
+}
+
+.light-mode .glass-card {
+    background: rgba(248, 250, 252, 0.9) !important;
+    border-color: rgba(203, 213, 225, 0.3) !important;
 }
 
 h1, h2, h3, h4, h5, h6 {
