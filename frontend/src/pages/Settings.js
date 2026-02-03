@@ -110,7 +110,7 @@ export default function Settings({ user }) {
         </div>
 
         <div className="text-center text-sm text-slate-500 pt-8">
-          <p>FamilyHub v1.0</p>
+          <p>FamFocus Hub v1.0</p>
           <p className="mt-1">Made with love for families</p>
         </div>
       </div>
