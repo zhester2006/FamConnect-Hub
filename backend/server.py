@@ -999,13 +999,19 @@ async def create_checkin(request: Request, data: dict):
     checkin_doc = {
         "checkin_id": checkin_id,
         "user_id": current_user['user_id'],
+        "user_name": current_user['name'],
         "family_id": current_user.get('parent_id', current_user['user_id']),
         "latitude": data['latitude'],
         "longitude": data['longitude'],
         "address": data.get('address'),
+        "is_offline_update": data.get('is_offline_update', False),
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.checkins.insert_one(checkin_doc)
+    
+    # Check geofences
+    await check_geofences(current_user, data['latitude'], data['longitude'])
+    
     return await db.checkins.find_one({"checkin_id": checkin_id}, {"_id": 0})
 
 @api_router.get("/checkins/{user_id}")
@@ -1016,6 +1022,141 @@ async def get_user_checkins(user_id: str, request: Request):
     
     checkins = await db.checkins.find({"user_id": user_id}, {"_id": 0}).sort("created_at", -1).limit(10).to_list(10)
     return {"checkins": checkins}
+
+@api_router.get("/checkins/{user_id}/last")
+async def get_last_checkin(user_id: str, request: Request):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent' and current_user['user_id'] != user_id:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    checkin = await db.checkins.find_one({"user_id": user_id}, {"_id": 0}, sort=[("created_at", -1)])
+    return checkin or {"error": "No checkins found"}
+
+# Geofencing
+@api_router.get("/geofences")
+async def get_geofences(request: Request):
+    current_user = await get_current_user(request)
+    parent_id = current_user.get('parent_id', current_user['user_id'])
+    geofences = await db.geofences.find({"family_id": parent_id}, {"_id": 0}).to_list(100)
+    return {"geofences": geofences}
+
+@api_router.post("/geofences")
+async def create_geofence(request: Request, data: dict):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can create geofences")
+    
+    geofence_id = f"fence_{uuid.uuid4().hex[:12]}"
+    geofence_doc = {
+        "geofence_id": geofence_id,
+        "family_id": current_user['user_id'],
+        "name": data['name'],  # e.g., "Home", "School"
+        "latitude": data['latitude'],
+        "longitude": data['longitude'],
+        "radius_feet": data.get('radius_feet', 50),
+        "notify_on_exit": data.get('notify_on_exit', True),
+        "notify_on_enter": data.get('notify_on_enter', False),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.geofences.insert_one(geofence_doc)
+    return await db.geofences.find_one({"geofence_id": geofence_id}, {"_id": 0})
+
+@api_router.delete("/geofences/{geofence_id}")
+async def delete_geofence(geofence_id: str, request: Request):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can delete geofences")
+    
+    await db.geofences.delete_one({"geofence_id": geofence_id})
+    return {"success": True}
+
+# GPS Status Notification
+@api_router.post("/location/gps-disabled")
+async def report_gps_disabled(request: Request, data: dict):
+    current_user = await get_current_user(request)
+    
+    # Create notification for parents
+    notification_doc = {
+        "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+        "type": "gps_disabled",
+        "user_id": current_user['user_id'],
+        "user_name": current_user['name'],
+        "family_id": current_user.get('parent_id', current_user['user_id']),
+        "message": f"{current_user['name']}'s GPS has been turned off",
+        "last_known_lat": data.get('last_latitude'),
+        "last_known_lng": data.get('last_longitude'),
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.notifications.insert_one(notification_doc)
+    return {"success": True}
+
+# Get notifications
+@api_router.get("/notifications")
+async def get_notifications(request: Request):
+    current_user = await get_current_user(request)
+    parent_id = current_user.get('parent_id', current_user['user_id'])
+    notifications = await db.notifications.find(
+        {"family_id": parent_id}, 
+        {"_id": 0}
+    ).sort("created_at", -1).limit(50).to_list(50)
+    return {"notifications": notifications}
+
+# Helper function to check geofences
+async def check_geofences(user, lat, lng):
+    import math
+    
+    parent_id = user.get('parent_id', user['user_id'])
+    geofences = await db.geofences.find({"family_id": parent_id}, {"_id": 0}).to_list(100)
+    
+    for fence in geofences:
+        # Calculate distance in feet
+        lat1, lon1 = math.radians(lat), math.radians(lng)
+        lat2, lon2 = math.radians(fence['latitude']), math.radians(fence['longitude'])
+        
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+        c = 2 * math.asin(math.sqrt(a))
+        distance_feet = c * 20902231  # Earth radius in feet
+        
+        # Get last known position
+        last_checkin = await db.checkins.find_one(
+            {"user_id": user['user_id']}, 
+            {"_id": 0}, 
+            sort=[("created_at", -1)],
+            skip=1
+        )
+        
+        is_inside = distance_feet <= fence['radius_feet']
+        was_inside = False
+        
+        if last_checkin:
+            lat1_old = math.radians(last_checkin['latitude'])
+            lon1_old = math.radians(last_checkin['longitude'])
+            dlat_old = lat2 - lat1_old
+            dlon_old = lon2 - lon1_old
+            a_old = math.sin(dlat_old/2)**2 + math.cos(lat1_old) * math.cos(lat2) * math.sin(dlon_old/2)**2
+            c_old = 2 * math.asin(math.sqrt(a_old))
+            old_distance = c_old * 20902231
+            was_inside = old_distance <= fence['radius_feet']
+        
+        # Create notification if crossed boundary
+        if was_inside and not is_inside and fence.get('notify_on_exit'):
+            notification_doc = {
+                "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+                "type": "geofence_exit",
+                "user_id": user['user_id'],
+                "user_name": user['name'],
+                "family_id": parent_id,
+                "geofence_name": fence['name'],
+                "message": f"{user['name']} has left {fence['name']}",
+                "latitude": lat,
+                "longitude": lng,
+                "read": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.notifications.insert_one(notification_doc)
 
 app.include_router(api_router)
 
