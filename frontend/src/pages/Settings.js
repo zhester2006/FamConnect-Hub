@@ -156,7 +156,7 @@ export default function Settings({ user }) {
         </div>
       </div>
       
-      <BottomNav userRole={user?.role} />
+      <Sidebar userRole={user?.role} />
     </div>
   );
 }
