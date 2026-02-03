@@ -77,18 +77,21 @@ export default function Calendar({ user }) {
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <div className="min-h-screen bg-slate-950 pb-24" data-testid="calendar-page">
-      <div className="p-6 space-y-6">
-        <header className="flex items-center justify-between">
-          <h1 className="text-2xl font-black text-white">Family Calendar</h1>
-          <button
-            onClick={() => setShowAddEvent(true)}
-            className="bg-primary hover:bg-primary/80 text-white p-2 rounded-full transition-all neon-glow"
-            data-testid="add-event-button"
-          >
-            <Plus className="w-6 h-6" />
-          </button>
-        </header>
+    <div className="flex h-screen bg-slate-950">
+      <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      
+      <main className="flex-1 overflow-y-auto lg:ml-72">
+        <div className="p-4 lg:p-6 space-y-4 lg:space-y-6" data-testid="calendar-page">
+          <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h1 className="text-2xl lg:text-3xl font-black text-white">Family Calendar</h1>
+            <button
+              onClick={() => setShowAddEvent(true)}
+              className="bg-primary hover:bg-primary/80 active:scale-95 text-white p-3 lg:p-2 rounded-full transition-all neon-glow w-full sm:w-auto"
+              data-testid="add-event-button"
+            >
+              <Plus className="w-5 h-5 lg:w-6 lg:h-6 mx-auto sm:mx-0" />
+            </button>
+          </header>
 
         <div className="glass-card rounded-2xl p-4">
           <div className="flex items-center justify-between mb-4">
