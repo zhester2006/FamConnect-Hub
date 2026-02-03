@@ -69,15 +69,15 @@ export default function Settings({ user }) {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 pb-24" data-testid="settings-page">
-      <div className="p-6 space-y-6">
-        <header>
-          <h1 className="text-2xl font-black text-white flex items-center space-x-2">
-            <SettingsIcon className="w-7 h-7 text-primary" />
-            <span>Settings</span>
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">Customize your FamilyHub experience</p>
-        </header>
+    <div className="flex h-screen bg-slate-950">
+      <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      
+      <main className="flex-1 overflow-y-auto lg:ml-72">
+        <div className="p-6 lg:p-8 space-y-6">
+          <header>
+            <h1 className="text-2xl font-black text-white">Settings</h1>
+            <p className="text-sm text-slate-400 mt-1">Customize your FamFocus Hub experience</p>
+          </header>
 
         <div className="glass-card rounded-2xl p-5">
           <div className="flex items-center justify-between">
