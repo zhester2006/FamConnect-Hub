@@ -10,6 +10,7 @@ export default function Calendar({ user }) {
   const [events, setEvents] = useState([]);
   const [view, setView] = useState('month');
   const [showAddEvent, setShowAddEvent] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [newEvent, setNewEvent] = useState({
     title: '',
     description: '',
