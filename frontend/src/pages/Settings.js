@@ -155,9 +155,8 @@ export default function Settings({ user }) {
           <p>FamFocus Hub v1.0</p>
           <p className="mt-1">Made with love for families</p>
         </div>
-      </div>
-      
-      <Sidebar userRole={user?.role} />
+        </div>
+      </main>
     </div>
   );
 }
