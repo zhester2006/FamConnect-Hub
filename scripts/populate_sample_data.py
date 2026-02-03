@@ -55,7 +55,7 @@ async def populate_sample_data():
     # Parent 2
     parent2 = {
         "user_id": "user_parent002",
-        "email": "dad@familyhub.demo",
+        "email": "dad@famfocus.demo",
         "name": "Mike Johnson",
         "picture": "https://api.dicebear.com/7.x/avataaars/svg?seed=Mike",
         "role": "parent",
