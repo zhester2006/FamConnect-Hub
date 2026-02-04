@@ -29,16 +29,31 @@ export default function ParentDashboard({ navigation }) {
 
   const fetchData = useCallback(async () => {
     try {
-      const [membersData, choresData, eventsData, weatherData, batteryData] = await Promise.all([
+      const [membersData, choresData, eventsData, weatherData, batteryData, leaderboardData] = await Promise.all([
         apiService.getFamilyMembers(),
         apiService.getChores(),
         apiService.getEvents(),
         apiService.getWeather().catch(() => null),
         apiService.getFamilyBatteryStatus().catch(() => ({ battery_status: [] })),
+        apiService.getLeaderboard().catch(() => ({ leaderboard: [] })),
       ]);
 
       const allMembers = membersData.members || [];
-      setChildren(allMembers.filter(m => m.role === 'child'));
+      const leaderboard = leaderboardData.leaderboard || [];
+      
+      // Create a map of user_id to rank
+      const rankMap = {};
+      leaderboard.forEach((child, index) => {
+        rankMap[child.user_id] = index + 1;
+      });
+      
+      // Add rank to children
+      const childrenWithRank = allMembers.filter(m => m.role === 'child').map(child => ({
+        ...child,
+        rank: rankMap[child.user_id] || null
+      }));
+      
+      setChildren(childrenWithRank);
       setChores(choresData.chores || []);
       setEvents(eventsData.events || []);
       setWeather(weatherData);
