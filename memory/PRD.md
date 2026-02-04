@@ -168,6 +168,26 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 
 ## API Endpoints
 
+### Chat & Real-time (NEW - Session 4)
+- `WS /ws/chat/{token}` - WebSocket for real-time chat
+- `GET /api/messages` - Get chat messages
+- `POST /api/messages` - Send message (REST fallback)
+- `PUT /api/messages/{id}/read` - Mark message as read
+- `GET /api/family/online` - Get online family members
+
+### Onboarding (NEW - Session 4)
+- `GET /api/onboarding/steps` - Get role-specific onboarding steps
+- `POST /api/onboarding/complete` - Mark onboarding as done
+- `POST /api/onboarding/reset` - Reset onboarding (testing)
+
+### Dinner Planner (Enhanced - Session 4)
+- `POST /api/dinner/suggest` - Get AI dinner suggestion
+- `POST /api/dinner/weekly-plan` - Create AI weekly meal plan
+- `GET /api/dinner/plans` - Get saved meal plans
+
+### Profile (NEW - Session 4)
+- `POST /api/users/{id}/upload-picture` - Upload profile/background picture
+
 ### Weather (NEW)
 - `GET /api/weather?lat=X&lon=Y` - Get current weather
 
