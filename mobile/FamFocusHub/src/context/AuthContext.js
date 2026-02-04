@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import apiService from '../services/api.service';
+import biometricService from '../services/biometric.service';
+import webSocketService from '../services/websocket.service';
 
 const AuthContext = createContext(null);
 
@@ -15,10 +17,22 @@ export const AuthProvider = ({ children }) => {
   const initAuth = async () => {
     try {
       await apiService.init();
+      
       if (apiService.sessionToken) {
         const userData = await apiService.getCurrentUser();
-        setUser(userData);
-        setIsAuthenticated(true);
+        if (userData && userData.user_id) {
+          setUser(userData);
+          setIsAuthenticated(true);
+          
+          // Initialize WebSocket for real-time features
+          webSocketService.setSessionToken(apiService.sessionToken);
+          webSocketService.connect();
+          
+          // Update biometric stored session if enabled
+          await biometricService.updateStoredSession(apiService.sessionToken);
+        } else {
+          await apiService.clearSession();
+        }
       }
     } catch (error) {
       console.error('Auth init failed:', error);
@@ -32,8 +46,19 @@ export const AuthProvider = ({ children }) => {
     try {
       await apiService.setSession(sessionToken);
       const userData = await apiService.getCurrentUser();
+      
+      if (!userData || !userData.user_id) {
+        await apiService.clearSession();
+        throw new Error('Invalid session');
+      }
+      
       setUser(userData);
       setIsAuthenticated(true);
+      
+      // Initialize WebSocket
+      webSocketService.setSessionToken(sessionToken);
+      webSocketService.connect();
+      
       return userData;
     } catch (error) {
       await apiService.clearSession();
@@ -43,6 +68,13 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
+      // Disconnect WebSocket
+      webSocketService.reset();
+      
+      // Clear biometric session
+      await biometricService.clearOnLogout();
+      
+      // Logout from API
       await apiService.logout();
     } catch (error) {
       console.error('Logout error:', error);
