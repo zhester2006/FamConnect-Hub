@@ -962,4 +962,151 @@ const styles = StyleSheet.create({
   reactionOptionEmoji: {
     fontSize: 28,
   },
+  // Chat images and GIFs
+  chatImage: {
+    width: 200,
+    height: 150,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  chatGif: {
+    width: 200,
+    height: 150,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  // Attachment button
+  attachButton: {
+    padding: 4,
+  },
+  // Image preview
+  imagePreviewContainer: {
+    padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(15, 13, 26, 0.95)',
+  },
+  previewImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  removeImageBtn: {
+    position: 'absolute',
+    top: 24,
+    right: 24,
+  },
+  imageInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  imageInput: {
+    flex: 1,
+    backgroundColor: 'rgba(30, 27, 75, 0.8)',
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    color: '#fff',
+    fontSize: 15,
+  },
+  sendImageBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#6366f1',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Attachment menu
+  attachmentOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+  },
+  attachmentMenu: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 40,
+    backgroundColor: '#1e1b4b',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 30,
+    paddingBottom: Platform.OS === 'ios' ? 50 : 30,
+  },
+  attachmentOption: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  attachmentIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  attachmentLabel: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  // GIF modal
+  gifModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'flex-end',
+  },
+  gifModalContent: {
+    backgroundColor: '#1e1b4b',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  gifModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  gifModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  gifSearchRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+  gifSearchInput: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 13, 26, 0.8)',
+    borderRadius: 12,
+    padding: 14,
+    color: '#fff',
+    fontSize: 15,
+  },
+  gifSearchBtn: {
+    width: 50,
+    borderRadius: 12,
+    backgroundColor: '#6366f1',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gifGrid: {
+    paddingBottom: 20,
+  },
+  gifItem: {
+    flex: 1,
+    margin: 4,
+    aspectRatio: 1,
+  },
+  gifPreview: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+  },
 });
