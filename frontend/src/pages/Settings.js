@@ -114,6 +114,14 @@ export default function Settings({ user }) {
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
 
+  // Profile picture state
+  const [profilePicture, setProfilePicture] = useState(user?.picture || null);
+  const [backgroundPicture, setBackgroundPicture] = useState(user?.profile_background || null);
+  const [uploadingProfile, setUploadingProfile] = useState(false);
+  const [uploadingBackground, setUploadingBackground] = useState(false);
+  const profileInputRef = useRef(null);
+  const backgroundInputRef = useRef(null);
+
   useEffect(() => {
     applyTheme(theme, themeMode);
   }, [theme, themeMode]);
@@ -148,6 +156,60 @@ export default function Settings({ user }) {
       toast.error(error.message || 'Failed to toggle push notifications');
     } finally {
       setPushLoading(false);
+    }
+  };
+
+  const handleImageUpload = async (file, type) => {
+    if (!file) return;
+    
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    const setUploading = type === 'profile' ? setUploadingProfile : setUploadingBackground;
+    setUploading(true);
+
+    try {
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result;
+        
+        const res = await fetch(`${BACKEND_URL}/api/users/${user.user_id}/upload-picture`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            image: base64,
+            type: type
+          })
+        });
+
+        if (res.ok) {
+          if (type === 'profile') {
+            setProfilePicture(base64);
+          } else {
+            setBackgroundPicture(base64);
+          }
+          toast.success(`${type === 'profile' ? 'Profile' : 'Background'} picture updated!`);
+        } else {
+          toast.error('Failed to upload image');
+        }
+        setUploading(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload image');
+      setUploading(false);
     }
   };
 
