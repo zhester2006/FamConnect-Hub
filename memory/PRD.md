@@ -385,9 +385,9 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 ## Backlog / Future Tasks
 
 ### P1 - Medium Priority
-- [ ] Mobile app OAuth integration (complete Google login flow)
-- [ ] Push notifications for mobile app
-- [ ] Mobile app offline mode with data sync
+- [ ] Biometric authentication (Face ID/Touch ID) for mobile
+- [ ] Real-time sync with WebSocket for mobile chat
+- [ ] Mobile app build and deployment to App Store/Play Store
 
 ### P2 - Low Priority
 - [ ] Advanced analytics with charts library
