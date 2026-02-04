@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, 
-  KeyboardAvoidingView, Platform, ActivityIndicator, Animated, Alert, Modal 
+  KeyboardAvoidingView, Platform, ActivityIndicator, Animated, Alert, Modal, Image 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
 import webSocketService from '../services/websocket.service';
@@ -35,6 +36,13 @@ export default function ChatScreen({ navigation }) {
   // Reaction modal state
   const [showReactionModal, setShowReactionModal] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
+  
+  // Attachment state
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [showGifModal, setShowGifModal] = useState(false);
+  const [gifs, setGifs] = useState([]);
+  const [gifSearch, setGifSearch] = useState('');
 
   // Connection status animation
   useEffect(() => {
