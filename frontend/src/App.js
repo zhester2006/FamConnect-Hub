@@ -21,6 +21,8 @@ import CheckIns from '@/pages/CheckIns';
 import Analytics from '@/pages/Analytics';
 import ChoreScheduler from '@/pages/ChoreScheduler';
 import WelcomeTutorial from '@/components/WelcomeTutorial';
+import { NotificationProvider } from '@/context/NotificationContext';
+import { NotificationPanel } from '@/components/NotificationBell';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
