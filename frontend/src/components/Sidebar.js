@@ -528,7 +528,11 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
 
           {/* Dropdown Menu */}
           {showMenu && (
-            <div className="absolute left-0 top-16" ref={menuRef}>
+            <div 
+              className="absolute left-0 top-16"
+              ref={menuRef}
+              data-testid="floating-dropdown-menu"
+            >
               <DropdownMenuContent 
                 user={user}
                 menuItems={menuItems}
@@ -536,7 +540,6 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
                 onNavigate={handleNavigate}
                 onCollapse={handleCollapse}
                 onLogout={handleLogout}
-                menuRef={null}
               />
             </div>
           )}
