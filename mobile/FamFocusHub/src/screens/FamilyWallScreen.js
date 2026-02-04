@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
+import MedalEmblem from '../components/MedalEmblem';
 
 const POST_TYPES = [
   { key: 'message', icon: 'chatbubble', label: 'Message' },
@@ -18,6 +19,7 @@ const POST_TYPES = [
 
 export default function FamilyWallScreen({ navigation }) {
   const { user } = useAuth();
+  const [leaderboard, setLeaderboard] = useState([]);
   const [posts, setPosts] = useState([]);
   const [dailyQuote, setDailyQuote] = useState('');
   const [loading, setLoading] = useState(true);
