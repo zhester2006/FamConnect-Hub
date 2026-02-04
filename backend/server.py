@@ -2704,6 +2704,203 @@ async def leave_family(family_id: str, request: Request):
     
     return {"success": True}
 
+# Edit family name
+@api_router.put("/families/{family_id}")
+async def update_family(family_id: str, request: Request, data: dict):
+    """Update family details (name)"""
+    current_user = await get_current_user(request)
+    
+    # Check if user is admin/parent of this family
+    family = await db.families.find_one({"family_id": family_id})
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+    
+    if family.get('created_by') != current_user['user_id']:
+        # Check if user is parent member
+        membership = await db.family_memberships.find_one({
+            "family_id": family_id,
+            "user_id": current_user['user_id'],
+            "role": {"$in": ["parent", "admin"]}
+        })
+        if not membership:
+            raise HTTPException(status_code=403, detail="Only parents can edit family")
+    
+    new_name = data.get('name', '').strip()
+    if not new_name:
+        raise HTTPException(status_code=400, detail="Family name is required")
+    
+    await db.families.update_one(
+        {"family_id": family_id},
+        {"$set": {"name": new_name}}
+    )
+    
+    return {"success": True}
+
+# Delete family
+@api_router.delete("/families/{family_id}")
+async def delete_family(family_id: str, request: Request):
+    """Delete a family (only by creator/admin)"""
+    current_user = await get_current_user(request)
+    
+    family = await db.families.find_one({"family_id": family_id})
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+    
+    if family.get('created_by') != current_user['user_id']:
+        raise HTTPException(status_code=403, detail="Only the family creator can delete it")
+    
+    # Delete all related data
+    await db.families.delete_one({"family_id": family_id})
+    await db.family_memberships.delete_many({"family_id": family_id})
+    await db.family_invites.delete_many({"family_id": family_id})
+    
+    # Update users who had this as current family
+    await db.users.update_many(
+        {"current_family_id": family_id},
+        {"$unset": {"current_family_id": ""}}
+    )
+    
+    return {"success": True}
+
+# Get family members
+@api_router.get("/families/{family_id}/members")
+async def get_family_members(family_id: str, request: Request):
+    """Get all members of a family"""
+    current_user = await get_current_user(request)
+    
+    # Verify user is part of this family
+    membership = await db.family_memberships.find_one({
+        "family_id": family_id,
+        "user_id": current_user['user_id']
+    })
+    
+    family = await db.families.find_one({"family_id": family_id})
+    is_family_owner = family and family.get('created_by') == current_user['user_id']
+    
+    if not membership and not is_family_owner:
+        raise HTTPException(status_code=403, detail="Not a member of this family")
+    
+    # Get all members
+    memberships = await db.family_memberships.find(
+        {"family_id": family_id},
+        {"_id": 0}
+    ).to_list(100)
+    
+    members = []
+    for m in memberships:
+        user = await db.users.find_one({"user_id": m['user_id']}, {"_id": 0, "password": 0})
+        if user:
+            members.append({
+                "user_id": m['user_id'],
+                "name": user.get('name', 'Unknown'),
+                "email": user.get('email', ''),
+                "role": m.get('role', 'member'),
+                "picture": user.get('picture')
+            })
+    
+    # Also add family creator if not already in memberships
+    if family:
+        creator_id = family.get('created_by')
+        if creator_id and not any(m['user_id'] == creator_id for m in members):
+            creator = await db.users.find_one({"user_id": creator_id}, {"_id": 0, "password": 0})
+            if creator:
+                members.append({
+                    "user_id": creator_id,
+                    "name": creator.get('name', 'Unknown'),
+                    "email": creator.get('email', ''),
+                    "role": "parent",
+                    "picture": creator.get('picture')
+                })
+    
+    return {"members": members}
+
+# Change member role
+@api_router.put("/families/{family_id}/members/{member_id}/role")
+async def change_member_role(family_id: str, member_id: str, request: Request, data: dict):
+    """Change a member's role in the family"""
+    current_user = await get_current_user(request)
+    
+    # Check if current user is parent/admin
+    family = await db.families.find_one({"family_id": family_id})
+    is_family_owner = family and family.get('created_by') == current_user['user_id']
+    
+    if not is_family_owner:
+        membership = await db.family_memberships.find_one({
+            "family_id": family_id,
+            "user_id": current_user['user_id'],
+            "role": {"$in": ["parent", "admin"]}
+        })
+        if not membership:
+            raise HTTPException(status_code=403, detail="Only parents can change roles")
+    
+    new_role = data.get('role')
+    if new_role not in ['child', 'member', 'parent']:
+        raise HTTPException(status_code=400, detail="Invalid role")
+    
+    # Can't change own role
+    if member_id == current_user['user_id']:
+        raise HTTPException(status_code=400, detail="Cannot change your own role")
+    
+    # Update the member's role
+    result = await db.family_memberships.update_one(
+        {"family_id": family_id, "user_id": member_id},
+        {"$set": {"role": new_role}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Member not found")
+    
+    # Also update the user's role if they're in the main users collection
+    await db.users.update_one(
+        {"user_id": member_id, "parent_id": family_id},
+        {"$set": {"role": new_role}}
+    )
+    
+    return {"success": True}
+
+# Remove member from family
+@api_router.delete("/families/{family_id}/members/{member_id}")
+async def remove_family_member(family_id: str, member_id: str, request: Request):
+    """Remove a member from the family"""
+    current_user = await get_current_user(request)
+    
+    # Check if current user is parent/admin
+    family = await db.families.find_one({"family_id": family_id})
+    is_family_owner = family and family.get('created_by') == current_user['user_id']
+    
+    if not is_family_owner:
+        membership = await db.family_memberships.find_one({
+            "family_id": family_id,
+            "user_id": current_user['user_id'],
+            "role": {"$in": ["parent", "admin"]}
+        })
+        if not membership:
+            raise HTTPException(status_code=403, detail="Only parents can remove members")
+    
+    # Can't remove yourself
+    if member_id == current_user['user_id']:
+        raise HTTPException(status_code=400, detail="Cannot remove yourself")
+    
+    # Can't remove family creator
+    if family and family.get('created_by') == member_id:
+        raise HTTPException(status_code=400, detail="Cannot remove family creator")
+    
+    result = await db.family_memberships.delete_one({
+        "family_id": family_id,
+        "user_id": member_id
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Member not found")
+    
+    # Update user's current family if needed
+    await db.users.update_one(
+        {"user_id": member_id, "current_family_id": family_id},
+        {"$unset": {"current_family_id": ""}}
+    )
+    
+    return {"success": True}
+
 # ==================== WELCOME TUTORIAL ====================
 
 @api_router.get("/tutorial/content")
