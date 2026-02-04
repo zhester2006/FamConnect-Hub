@@ -629,6 +629,22 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
                 />
               )}
               <div className="flex items-center gap-1">
+                {/* Notification Bell */}
+                {setShowNotificationPanel && (
+                  <button
+                    onClick={() => setShowNotificationPanel(prev => !prev)}
+                    className="relative p-2 hover:bg-white/5 rounded-xl transition-all"
+                    data-testid="notification-bell"
+                    title="Notifications"
+                  >
+                    <Bell className="w-4 h-4 text-slate-400" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+                )}
                 <button
                   onClick={toggleFloating}
                   className={`hidden md:flex p-2 rounded-xl transition-all ${isFloating ? 'bg-primary/20 text-primary' : 'hover:bg-white/5 text-slate-400'}`}
