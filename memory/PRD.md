@@ -166,6 +166,17 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - [x] Profile picture upload (profile and background)
 - [x] Image preview and hover upload UI
 
+### Session 5 - Weather, GIFs, AI Scheduler (Dec 2025) ✅
+- [x] OpenWeatherMap API key activated - REAL weather data
+- [x] GIF search and trending using Tenor API (Google)
+- [x] Family-friendly GIF content filter
+- [x] GIF picker UI in Family Wall with search
+- [x] AI Chore Scheduler with fair distribution algorithm
+- [x] Schedule history with saved schedules
+- [x] Duration options (3, 5, 7, 14 days)
+- [x] Custom preferences for scheduling
+- [x] Child nickname feature for parents
+
 ## API Endpoints
 
 ### Chat & Real-time (NEW - Session 4)
