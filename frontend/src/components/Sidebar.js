@@ -263,16 +263,8 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
   const startPos = useRef({ x: 0, y: 0 });
   const dragStartTime = useRef(0);
   
-  // Get notification context if available
-  let notificationContext = null;
-  try {
-    if (useNotifications) {
-      notificationContext = useNotifications();
-    }
-  } catch (e) {
-    // Context not available
-  }
-  
+  // Use notification context - will be null if not wrapped in provider
+  const notificationContext = useContext(NotificationContext);
   const unreadCount = notificationContext?.unreadCount || 0;
   const setShowNotificationPanel = notificationContext?.setShowNotificationPanel;
 
