@@ -20,6 +20,9 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.famfocus.hub",
+      "config": {
+        "googleMapsApiKey": "AIzaSyCaSocLshcobzOiriNteVo1jx-W6eV8tog"
+      },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "FamFocus needs your location to help keep your family informed of your whereabouts.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "FamFocus needs continuous location access to track your location even when the app is closed, helping keep your family safe.",
