@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   View, Text, StyleSheet, ScrollView, TouchableOpacity, 
-  RefreshControl, ActivityIndicator, Modal, TextInput, Dimensions, ImageBackground, Animated 
+  RefreshControl, ActivityIndicator, Modal, TextInput, Dimensions, ImageBackground, Animated, Image 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
 import { formatDate, formatTime } from '../utils/dateUtils';
+import MedalEmblem from '../components/MedalEmblem';
 
 const { width, height } = Dimensions.get('window');
 
