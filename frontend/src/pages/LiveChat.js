@@ -1,11 +1,118 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Smile, Check, CheckCheck, Wifi, WifiOff } from 'lucide-react';
+import { Send, Smile, Check, CheckCheck, Wifi, WifiOff, Circle } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const WS_URL = BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://');
 
+// Online Status Indicator Component
+const OnlineIndicator = ({ isOnline, size = 'sm' }) => {
+  const sizeClasses = {
+    sm: 'w-2.5 h-2.5',
+    md: 'w-3 h-3',
+    lg: 'w-4 h-4'
+  };
+  
+  return (
+    <div 
+      className={`${sizeClasses[size]} rounded-full ${isOnline ? 'bg-green-400' : 'bg-slate-500'} border-2 border-slate-950`}
+      title={isOnline ? 'Online' : 'Offline'}
+    />
+  );
+};
+
+// Read Receipt Component
+const ReadReceipt = ({ message, familyMembers, currentUserId }) => {
+  const readBy = message.read_by || [];
+  const isOwn = message.user_id === currentUserId;
+  
+  if (!isOwn) return null;
+  
+  // Get readers excluding self
+  const readers = readBy.filter(id => id !== currentUserId);
+  const allRead = readers.length > 0;
+  
+  return (
+    <div className="flex items-center gap-1" data-testid="read-receipt">
+      {allRead ? (
+        <>
+          <CheckCheck className="w-3.5 h-3.5 text-blue-400" />
+          <span className="text-[10px] text-blue-400">Read</span>
+        </>
+      ) : (
+        <>
+          <Check className="w-3.5 h-3.5 text-slate-500" />
+          <span className="text-[10px] text-slate-500">Sent</span>
+        </>
+      )}
+    </div>
+  );
+};
+
+// Online Users Bar Component
+const OnlineUsersBar = ({ onlineUsers, familyMembers, currentUserId }) => {
+  const onlineMembers = familyMembers.filter(m => onlineUsers.includes(m.user_id) && m.user_id !== currentUserId);
+  const offlineMembers = familyMembers.filter(m => !onlineUsers.includes(m.user_id) && m.user_id !== currentUserId);
+  
+  return (
+    <div className="flex items-center gap-3 py-2 px-4 bg-slate-900/50 border-b border-slate-800 overflow-x-auto" data-testid="online-users-bar">
+      {onlineMembers.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Circle className="w-2 h-2 fill-green-400 text-green-400" />
+          <span className="text-xs text-green-400 font-medium whitespace-nowrap">Online</span>
+          <div className="flex -space-x-2">
+            {onlineMembers.map(member => (
+              <div 
+                key={member.user_id}
+                className="relative"
+                title={member.name}
+              >
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xs font-bold text-white border-2 border-slate-950">
+                  {member.picture ? (
+                    <img src={member.picture} alt={member.name} className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    member.name?.charAt(0)
+                  )}
+                </div>
+                <OnlineIndicator isOnline={true} size="sm" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {offlineMembers.length > 0 && (
+        <div className="flex items-center gap-2 opacity-60">
+          <Circle className="w-2 h-2 fill-slate-500 text-slate-500" />
+          <span className="text-xs text-slate-500 font-medium whitespace-nowrap">Offline</span>
+          <div className="flex -space-x-2">
+            {offlineMembers.slice(0, 5).map(member => (
+              <div 
+                key={member.user_id}
+                className="relative"
+                title={member.name}
+              >
+                <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-400 border-2 border-slate-950">
+                  {member.picture ? (
+                    <img src={member.picture} alt={member.name} className="w-full h-full rounded-full object-cover opacity-50" />
+                  ) : (
+                    member.name?.charAt(0)
+                  )}
+                </div>
+              </div>
+            ))}
+            {offlineMembers.length > 5 && (
+              <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500 border-2 border-slate-950">
+                +{offlineMembers.length - 5}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 export default function LiveChat({ user }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
