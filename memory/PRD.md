@@ -199,7 +199,18 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 ### Profile (NEW - Session 4)
 - `POST /api/users/{id}/upload-picture` - Upload profile/background picture
 
-### Weather (NEW)
+### AI Features (NEW - Session 5)
+- `POST /api/chores/ai-schedule` - AI-powered fair chore scheduling
+- `GET /api/chores/schedules` - Get saved chore schedules
+
+### GIF Features (NEW - Session 5)
+- `GET /api/gifs/search?q=X&limit=Y` - Search GIFs via Tenor API
+- `GET /api/gifs/trending?limit=Y` - Get trending GIFs
+
+### Child Nicknames (NEW - Session 5)
+- `PUT /api/users/{id}/nickname` - Set/update child nickname
+
+### Weather (NOW REAL)
 - `GET /api/weather?lat=X&lon=Y` - Get current weather
 
 ### Push Notifications (NEW)
