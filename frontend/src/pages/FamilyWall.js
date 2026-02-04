@@ -163,7 +163,7 @@ const GifPicker = ({ onSelect, onClose }) => {
       </div>
       
       <div className="p-2 border-t border-slate-800 text-center">
-        <span className="text-[10px] text-slate-600">Powered by GIPHY</span>
+        <span className="text-[10px] text-slate-600">Powered by Tenor</span>
       </div>
     </div>
   );
