@@ -283,12 +283,35 @@ export default function HomeHub({ user }) {
 
   const todayEvents = events.filter(e => e.event_date === new Date().toISOString().split('T')[0]);
   const onlineMembers = familyMembers.filter(m => m.online_status);
+  
+  const currentBg = SCREENSAVER_IMAGES[bgIndex];
+  const nextBg = SCREENSAVER_IMAGES[nextBgIndex];
 
   return (
-    <div className="flex h-screen bg-slate-950">
+    <div className="flex h-screen overflow-hidden">
+      {/* Screensaver Background */}
+      <div className="fixed inset-0 z-0">
+        {/* Current Image */}
+        <div
+          className={`absolute inset-0 bg-cover bg-center transition-opacity duration-2000 animate-kenburns ${
+            isTransitioning ? 'opacity-0' : 'opacity-100'
+          }`}
+          style={{ backgroundImage: `url(${currentBg?.url})` }}
+        />
+        {/* Next Image */}
+        <div
+          className={`absolute inset-0 bg-cover bg-center transition-opacity duration-2000 ${
+            isTransitioning ? 'opacity-100' : 'opacity-0'
+          }`}
+          style={{ backgroundImage: `url(${nextBg?.url})` }}
+        />
+        {/* Dark overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/60 via-slate-950/40 to-slate-950/70" />
+      </div>
+      
       <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
-      <main className={`flex-1 overflow-hidden transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
+      <main className={`flex-1 overflow-hidden transition-all duration-300 relative z-10 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
         <div className="h-full p-3 flex flex-col" data-testid="home-hub">
           {/* Top Bar: Weather + Family Online Status */}
           <div className="flex items-center justify-between gap-3 mb-3">
