@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { createPortal } from 'react-dom';
 import { 
   Home, Calendar, MessageCircle, Users, ShoppingCart, Award, 
   Settings, LogOut, Utensils, Trophy, Book, MapPin, Menu, X,
