@@ -336,19 +336,32 @@ export default function LocationScreen({ navigation }) {
   };
 
   const formatTime = (dateStr) => {
-    const date = new Date(dateStr);
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return '';
+      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    } catch (error) {
+      return '';
+    }
   };
 
   const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    if (date.toDateString() === today.toDateString()) return 'Today';
-    if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return '';
+      
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      if (date.toDateString() === today.toDateString()) return 'Today';
+      if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } catch (error) {
+      return '';
+    }
   };
 
   if (loading) {
