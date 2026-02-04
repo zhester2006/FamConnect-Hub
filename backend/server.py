@@ -1174,11 +1174,194 @@ async def redeem_reward(reward_id: str, request: Request):
     if current_user['points'] < reward['points_required']:
         raise HTTPException(status_code=400, detail="Insufficient points")
     
+    # Create pending redemption instead of immediately deducting points
+    redemption_id = f"redemption_{uuid.uuid4().hex[:12]}"
+    redemption = {
+        "redemption_id": redemption_id,
+        "reward_id": reward_id,
+        "reward_name": reward['name'],
+        "points_cost": reward['points_required'],
+        "child_id": current_user['user_id'],
+        "child_name": current_user.get('nickname') or current_user['name'],
+        "family_id": current_user.get('parent_id', current_user['user_id']),
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.redemptions.insert_one(redemption)
+    
+    return {"success": True, "message": "Redemption submitted for approval", "redemption_id": redemption_id}
+
+# Alternative endpoint for reward redemption request
+@api_router.post("/rewards/redeem")
+async def redeem_reward_alt(request: Request):
+    data = await request.json()
+    reward_id = data.get('reward_id')
+    current_user = await get_current_user(request)
+    reward = await db.rewards.find_one({"reward_id": reward_id}, {"_id": 0})
+    if not reward:
+        raise HTTPException(status_code=404, detail="Reward not found")
+    
+    if current_user['points'] < reward['points_required']:
+        raise HTTPException(status_code=400, detail="Insufficient points")
+    
+    redemption_id = f"redemption_{uuid.uuid4().hex[:12]}"
+    redemption = {
+        "redemption_id": redemption_id,
+        "reward_id": reward_id,
+        "reward_name": reward['name'],
+        "points_cost": reward['points_required'],
+        "child_id": current_user['user_id'],
+        "child_name": current_user.get('nickname') or current_user['name'],
+        "family_id": current_user.get('parent_id', current_user['user_id']),
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.redemptions.insert_one(redemption)
+    
+    return {"success": True, "message": "Redemption submitted for approval"}
+
+# Get pending redemptions (parent)
+@api_router.get("/rewards/pending")
+async def get_pending_redemptions(request: Request):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        return {"pending": []}
+    
+    pending = await db.redemptions.find(
+        {"family_id": current_user['user_id'], "status": "pending"},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    
+    return {"pending": pending}
+
+# Approve/deny redemption
+@api_router.post("/rewards/redemptions/{redemption_id}/approve")
+async def approve_redemption(redemption_id: str, request: Request, data: dict):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can approve redemptions")
+    
+    redemption = await db.redemptions.find_one({"redemption_id": redemption_id}, {"_id": 0})
+    if not redemption:
+        raise HTTPException(status_code=404, detail="Redemption not found")
+    
+    approved = data.get('approved', False)
+    
+    if approved:
+        # Deduct points from child
+        await db.users.update_one(
+            {"user_id": redemption['child_id']},
+            {"$inc": {"points": -redemption['points_cost']}}
+        )
+        await db.redemptions.update_one(
+            {"redemption_id": redemption_id},
+            {"$set": {"status": "approved", "approved_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    else:
+        await db.redemptions.update_one(
+            {"redemption_id": redemption_id},
+            {"$set": {"status": "denied", "denied_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    
+    return {"success": True, "status": "approved" if approved else "denied"}
+
+# Tasks CRUD
+@api_router.get("/tasks")
+async def get_tasks(request: Request):
+    current_user = await get_current_user(request)
+    parent_id = current_user.get('parent_id', current_user['user_id'])
+    
+    tasks = await db.tasks.find(
+        {"family_id": parent_id, "status": {"$ne": "completed"}},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    
+    return {"tasks": tasks}
+
+@api_router.post("/tasks")
+async def create_task(request: Request):
+    data = await request.json()
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can create tasks")
+    
+    task_id = f"task_{uuid.uuid4().hex[:12]}"
+    task = {
+        "task_id": task_id,
+        "family_id": current_user['user_id'],
+        "title": data['title'],
+        "points": data.get('points', 10),
+        "deadline": data.get('deadline'),
+        "status": "pending",
+        "created_by": current_user['user_id'],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.tasks.insert_one(task)
+    
+    return {"task_id": task_id, "success": True}
+
+@api_router.post("/tasks/{task_id}/complete")
+async def complete_task(task_id: str, request: Request):
+    current_user = await get_current_user(request)
+    task = await db.tasks.find_one({"task_id": task_id}, {"_id": 0})
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    if current_user['role'] == 'child':
+        # Submit for approval
+        await db.tasks.update_one(
+            {"task_id": task_id},
+            {"$set": {
+                "status": "pending_approval",
+                "completed_by": current_user['user_id'],
+                "completed_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+    else:
+        # Parents complete instantly
+        await db.tasks.update_one(
+            {"task_id": task_id},
+            {"$set": {"status": "completed", "completed_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    
+    return {"success": True}
+
+# Award points to child (parent only)
+@api_router.post("/users/award-points")
+async def award_points(request: Request):
+    data = await request.json()
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can award points")
+    
+    child_id = data.get('user_id')
+    points = data.get('points', 0)
+    reason = data.get('reason', 'Parent bonus')
+    
+    if points <= 0:
+        raise HTTPException(status_code=400, detail="Points must be positive")
+    
+    child = await db.users.find_one({"user_id": child_id}, {"_id": 0})
+    if not child or child.get('parent_id') != current_user['user_id']:
+        raise HTTPException(status_code=404, detail="Child not found")
+    
     await db.users.update_one(
-        {"user_id": current_user['user_id']},
-        {"$inc": {"points": -reward['points_required']}}
+        {"user_id": child_id},
+        {"$inc": {"points": points}}
     )
-    return {"success": True, "remaining_points": current_user['points'] - reward['points_required']}
+    
+    # Log the award
+    await db.point_awards.insert_one({
+        "award_id": f"award_{uuid.uuid4().hex[:12]}",
+        "child_id": child_id,
+        "child_name": child.get('nickname') or child['name'],
+        "points": points,
+        "reason": reason,
+        "awarded_by": current_user['user_id'],
+        "awarded_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"success": True, "new_points": child.get('points', 0) + points}
 
 # Leaderboard
 @api_router.get("/leaderboard")
