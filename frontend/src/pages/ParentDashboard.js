@@ -157,6 +157,29 @@ export default function ParentDashboard({ user }) {
     toast.info('Check-in request sent!');
   };
 
+  const handleGenerateAiSchedule = async () => {
+    setAiScheduleLoading(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/chores/ai-schedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          preferences: schedulePreferences,
+          days: scheduleDays
+        })
+      });
+      const data = await res.json();
+      setAiSchedule(data.schedule);
+      toast.success('AI schedule generated!');
+    } catch (error) {
+      console.error('Failed to generate schedule:', error);
+      toast.error('Failed to generate schedule');
+    } finally {
+      setAiScheduleLoading(false);
+    }
+  };
+
   const children = familyMembers.filter(m => m.role === 'child');
 
   return (
