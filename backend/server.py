@@ -1307,6 +1307,225 @@ async def check_geofences(user, lat, lng):
             }
             await db.notifications.insert_one(notification_doc)
 
+# GIF Search using GIPHY API (free tier)
+@api_router.get("/gifs/search")
+async def search_gifs(q: str, limit: int = 20):
+    """Search for GIFs using GIPHY API"""
+    # Using GIPHY public beta key (limited but works for demo)
+    api_key = "dc6zaTOxFJmzC"  # GIPHY public beta key
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.get(
+                "https://api.giphy.com/v1/gifs/search",
+                params={
+                    "api_key": api_key,
+                    "q": q,
+                    "limit": limit,
+                    "rating": "g"  # Family-friendly only
+                },
+                timeout=10
+            )
+            res.raise_for_status()
+            data = res.json()
+            
+            gifs = []
+            for gif in data.get("data", []):
+                gifs.append({
+                    "id": gif["id"],
+                    "title": gif.get("title", ""),
+                    "url": gif["images"]["fixed_height"]["url"],
+                    "preview": gif["images"]["fixed_height_small"]["url"],
+                    "width": gif["images"]["fixed_height"]["width"],
+                    "height": gif["images"]["fixed_height"]["height"]
+                })
+            
+            return {"gifs": gifs}
+    except Exception as e:
+        logger.error(f"GIF search error: {e}")
+        return {"gifs": [], "error": str(e)}
+
+# GIF Trending
+@api_router.get("/gifs/trending")
+async def trending_gifs(limit: int = 20):
+    """Get trending GIFs"""
+    api_key = "dc6zaTOxFJmzC"
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.get(
+                "https://api.giphy.com/v1/gifs/trending",
+                params={
+                    "api_key": api_key,
+                    "limit": limit,
+                    "rating": "g"
+                },
+                timeout=10
+            )
+            res.raise_for_status()
+            data = res.json()
+            
+            gifs = []
+            for gif in data.get("data", []):
+                gifs.append({
+                    "id": gif["id"],
+                    "title": gif.get("title", ""),
+                    "url": gif["images"]["fixed_height"]["url"],
+                    "preview": gif["images"]["fixed_height_small"]["url"],
+                    "width": gif["images"]["fixed_height"]["width"],
+                    "height": gif["images"]["fixed_height"]["height"]
+                })
+            
+            return {"gifs": gifs}
+    except Exception as e:
+        logger.error(f"GIF trending error: {e}")
+        return {"gifs": [], "error": str(e)}
+
+# Advanced AI Chore Scheduling
+@api_router.post("/chores/ai-schedule")
+async def ai_schedule_chores(request: Request, data: dict):
+    """Use AI to create a fair chore schedule for the family"""
+    current_user = await get_current_user(request)
+    
+    if current_user.get('role') != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can schedule chores")
+    
+    family_id = current_user['user_id']
+    
+    # Get family members
+    members = await db.users.find(
+        {"$or": [{"user_id": family_id}, {"parent_id": family_id}]},
+        {"_id": 0, "user_id": 1, "name": 1, "role": 1}
+    ).to_list(20)
+    
+    children = [m for m in members if m.get('role') == 'child']
+    
+    # Get available chores
+    chores = await db.chore_types.find(
+        {"family_id": family_id},
+        {"_id": 0}
+    ).to_list(50)
+    
+    if not chores:
+        # Use default chores
+        chores = [
+            {"name": "Wash dishes", "points": 10, "frequency": "daily"},
+            {"name": "Take out trash", "points": 5, "frequency": "daily"},
+            {"name": "Clean room", "points": 15, "frequency": "weekly"},
+            {"name": "Vacuum living room", "points": 10, "frequency": "weekly"},
+            {"name": "Set the table", "points": 5, "frequency": "daily"},
+            {"name": "Feed pets", "points": 5, "frequency": "daily"},
+            {"name": "Do laundry", "points": 15, "frequency": "weekly"},
+            {"name": "Mow lawn", "points": 20, "frequency": "weekly"}
+        ]
+    
+    # Get recent chore history for fairness
+    week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    recent_assignments = await db.chores.find(
+        {"family_id": family_id, "created_at": {"$gte": week_ago}},
+        {"_id": 0, "assigned_to": 1, "chore_name": 1, "points": 1}
+    ).to_list(100)
+    
+    # Calculate points earned per child
+    child_points = {c['user_id']: 0 for c in children}
+    child_chores = {c['user_id']: [] for c in children}
+    for assignment in recent_assignments:
+        if assignment.get('assigned_to') in child_points:
+            child_points[assignment['assigned_to']] += assignment.get('points', 0)
+            child_chores[assignment['assigned_to']].append(assignment.get('chore_name'))
+    
+    # Build context for AI
+    children_info = []
+    for child in children:
+        points = child_points.get(child['user_id'], 0)
+        recent = child_chores.get(child['user_id'], [])[:5]
+        children_info.append(f"- {child['name']}: {points} points earned, recent chores: {', '.join(recent) if recent else 'none'}")
+    
+    chores_info = [f"- {c['name']} ({c.get('points', 10)} points, {c.get('frequency', 'daily')})" for c in chores[:15]]
+    
+    preferences = data.get('preferences', '')
+    schedule_days = data.get('days', 7)
+    
+    chat = LlmChat(
+        api_key=os.environ['EMERGENT_LLM_KEY'],
+        session_id=f"chore_schedule_{uuid.uuid4().hex[:8]}",
+        system_message="You are a helpful family chore scheduling assistant. Create fair and balanced chore schedules."
+    ).with_model("openai", "gpt-5.2")
+    
+    prompt = f"""Create a {schedule_days}-day chore schedule for this family.
+
+CHILDREN:
+{chr(10).join(children_info)}
+
+AVAILABLE CHORES:
+{chr(10).join(chores_info)}
+
+SCHEDULING PREFERENCES:
+{preferences if preferences else 'Balance workload fairly across all children'}
+
+RULES:
+1. Distribute chores fairly based on recent history (children with fewer points should get more)
+2. Rotate daily chores so no one does the same thing every day
+3. Consider age-appropriateness
+4. Include variety for each child
+5. Don't overload any single day
+
+Format the schedule clearly by day, showing which child does which chore."""
+    
+    response = await chat.send_message(UserMessage(text=prompt))
+    
+    # Store the schedule
+    schedule_id = f"schedule_{uuid.uuid4().hex[:12]}"
+    schedule_doc = {
+        "schedule_id": schedule_id,
+        "family_id": family_id,
+        "schedule": response,
+        "days": schedule_days,
+        "preferences": preferences,
+        "created_by": current_user['user_id'],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.chore_schedules.insert_one(schedule_doc)
+    
+    return {"schedule_id": schedule_id, "schedule": response}
+
+# Get chore schedules
+@api_router.get("/chores/schedules")
+async def get_chore_schedules(request: Request):
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    schedules = await db.chore_schedules.find(
+        {"family_id": family_id},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(10).to_list(10)
+    
+    return {"schedules": schedules}
+
+# Child nicknames
+@api_router.put("/users/{user_id}/nickname")
+async def update_nickname(user_id: str, request: Request, data: dict):
+    current_user = await get_current_user(request)
+    
+    # Only parents can set nicknames, or users can set their own
+    target_user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if current_user['role'] != 'parent' and current_user['user_id'] != user_id:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    nickname = data.get('nickname', '').strip()
+    if len(nickname) > 20:
+        raise HTTPException(status_code=400, detail="Nickname too long (max 20 chars)")
+    
+    await db.users.update_one(
+        {"user_id": user_id},
+        {"$set": {"nickname": nickname}}
+    )
+    
+    return await db.users.find_one({"user_id": user_id}, {"_id": 0})
+
 # WebSocket Connection Manager for Real-time Chat
 class ConnectionManager:
     def __init__(self):
