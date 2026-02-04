@@ -183,10 +183,14 @@ class ApiService {
     return this.get(API_ENDPOINTS.MESSAGES, 'messages');
   }
 
-  async sendMessage(content) {
+  async sendMessage(content, encryptedContent = null) {
+    const payload = { content };
+    if (encryptedContent) {
+      payload.encrypted_content = encryptedContent;
+    }
     return this.post(
       API_ENDPOINTS.MESSAGES, 
-      { content },
+      payload,
       { type: 'SEND_MESSAGE', content }
     );
   }
