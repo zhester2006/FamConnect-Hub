@@ -605,6 +605,12 @@ export default function ChatScreen({ navigation }) {
             <Text style={[styles.connectionText, { color: connected ? '#10b981' : '#f59e0b' }]}>
               {connected ? 'Live' : 'Connecting...'}
             </Text>
+            {encryptionEnabled && (
+              <View style={styles.encryptionBadge}>
+                <Ionicons name="lock-closed" size={10} color="#10b981" />
+                <Text style={styles.encryptionText}>E2E</Text>
+              </View>
+            )}
           </View>
         </View>
         <View style={{ width: 40 }} />
