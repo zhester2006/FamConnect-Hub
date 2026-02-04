@@ -122,6 +122,11 @@ export default function Settings({ user }) {
   const profileInputRef = useRef(null);
   const backgroundInputRef = useRef(null);
 
+  // Battery permission state (for children)
+  const [shareBattery, setShareBattery] = useState(false);
+  const [batteryLevel, setBatteryLevel] = useState(null);
+  const [isCharging, setIsCharging] = useState(false);
+
   useEffect(() => {
     applyTheme(theme, themeMode);
   }, [theme, themeMode]);
@@ -136,7 +141,85 @@ export default function Settings({ user }) {
       setPushEnabled(subscribed);
     };
     checkPushStatus();
+    
+    // Fetch permissions
+    fetchPermissions();
+    
+    // Get current battery status
+    if ('getBattery' in navigator) {
+      navigator.getBattery().then(battery => {
+        setBatteryLevel(Math.round(battery.level * 100));
+        setIsCharging(battery.charging);
+        
+        battery.addEventListener('levelchange', () => {
+          setBatteryLevel(Math.round(battery.level * 100));
+        });
+        battery.addEventListener('chargingchange', () => {
+          setIsCharging(battery.charging);
+        });
+      });
+    }
   }, []);
+
+  const fetchPermissions = async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/permissions`, { credentials: 'include' });
+      const data = await res.json();
+      setShareBattery(data.permissions?.share_battery || false);
+    } catch (error) {
+      console.error('Failed to fetch permissions:', error);
+    }
+  };
+
+  const handleToggleBattery = async () => {
+    const newValue = !shareBattery;
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/permissions/battery`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ share_battery: newValue })
+      });
+      
+      if (res.ok) {
+        setShareBattery(newValue);
+        toast.success(newValue ? 'Battery sharing enabled' : 'Battery sharing disabled');
+        
+        // If enabled, send initial battery status
+        if (newValue && batteryLevel !== null) {
+          await updateBatteryStatus();
+        }
+      }
+    } catch (error) {
+      console.error('Failed to toggle battery permission:', error);
+      toast.error('Failed to update permission');
+    }
+  };
+
+  const updateBatteryStatus = async () => {
+    if (batteryLevel === null) return;
+    
+    try {
+      await fetch(`${BACKEND_URL}/api/battery/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          level: batteryLevel,
+          is_charging: isCharging
+        })
+      });
+    } catch (error) {
+      console.error('Failed to update battery:', error);
+    }
+  };
+
+  // Auto-update battery status when it changes
+  useEffect(() => {
+    if (shareBattery && batteryLevel !== null) {
+      updateBatteryStatus();
+    }
+  }, [batteryLevel, isCharging, shareBattery]);
 
   const handleTogglePush = async () => {
     setPushLoading(true);
