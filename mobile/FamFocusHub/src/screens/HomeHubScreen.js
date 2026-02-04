@@ -383,6 +383,7 @@ export default function HomeHubScreen({ navigation }) {
                 events={events}
                 currentDate={calendarDate}
                 setCurrentDate={setCalendarDate}
+                onDayPress={handleDayPress}
               />
             </View>
 
