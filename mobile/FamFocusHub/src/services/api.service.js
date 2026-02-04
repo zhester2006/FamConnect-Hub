@@ -31,9 +31,10 @@ class ApiService {
   getHeaders() {
     const headers = {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
     };
     if (this.sessionToken) {
-      headers['Cookie'] = `session_token=${this.sessionToken}`;
+      headers['Authorization'] = `Bearer ${this.sessionToken}`;
     }
     return headers;
   }
