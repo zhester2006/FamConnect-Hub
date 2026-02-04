@@ -213,6 +213,26 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 ### Profile (NEW - Session 4)
 - `POST /api/users/{id}/upload-picture` - Upload profile/background picture
 
+### Analytics (NEW - Session 6)
+- `GET /api/analytics/overview` - Weekly/monthly stats, children performance, daily activity
+- `GET /api/analytics/trends?days=X` - Weekly trends over specified days
+
+### Data Export (NEW - Session 6)
+- `GET /api/export/chores` - Export chores as CSV
+- `GET /api/export/events` - Export events as CSV
+- `GET /api/export/full` - Export all family data as JSON
+
+### Tutorial (NEW - Session 6)
+- `GET /api/tutorial/content` - Get role-specific tutorial slides
+- `POST /api/tutorial/complete` - Mark tutorial as completed
+- `POST /api/tutorial/reset` - Reset tutorial for testing
+
+### Multiple Family Support (NEW - Session 6)
+- `GET /api/families` - Get user's families
+- `POST /api/families` - Create new family
+- `POST /api/families/{id}/invite` - Invite user to family
+- `POST /api/families/switch/{id}` - Switch active family
+
 ### AI Features (NEW - Session 5)
 - `POST /api/chores/ai-schedule` - AI-powered fair chore scheduling
 - `GET /api/chores/schedules` - Get saved chore schedules
