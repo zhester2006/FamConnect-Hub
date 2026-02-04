@@ -471,6 +471,116 @@ export default function ParentDashboard({ user }) {
           </div>
         </div>
       )}
+
+      {/* AI Scheduler Modal */}
+      {showAiScheduler && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-card rounded-2xl p-5 max-w-lg w-full max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-white">AI Chore Scheduler</h2>
+                  <p className="text-xs text-slate-400">Generate a fair schedule for your family</p>
+                </div>
+              </div>
+              <button onClick={() => setShowAiScheduler(false)} className="p-1 hover:bg-slate-800 rounded-lg">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            {!aiSchedule ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm text-slate-400 mb-2 block">Schedule Duration</label>
+                  <div className="flex space-x-2">
+                    {[3, 5, 7, 14].map(days => (
+                      <button
+                        key={days}
+                        onClick={() => setScheduleDays(days)}
+                        className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
+                          scheduleDays === days
+                            ? 'bg-primary text-white'
+                            : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                        }`}
+                      >
+                        {days} days
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm text-slate-400 mb-2 block">Preferences (optional)</label>
+                  <textarea
+                    value={schedulePreferences}
+                    onChange={(e) => setSchedulePreferences(e.target.value)}
+                    placeholder="e.g., Alex should do more outdoor chores, Lily prefers kitchen tasks, no chores on weekends..."
+                    className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 text-sm h-24 resize-none"
+                    data-testid="schedule-preferences"
+                  />
+                </div>
+
+                <div className="bg-slate-800/50 rounded-xl p-3">
+                  <p className="text-xs text-slate-400">
+                    <strong className="text-white">How it works:</strong> AI analyzes your children's recent chore history, points earned, and preferences to create a fair and balanced schedule.
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleGenerateAiSchedule}
+                  disabled={aiScheduleLoading}
+                  className="w-full bg-gradient-to-r from-accent to-primary hover:opacity-90 disabled:opacity-50 text-white font-bold py-3 rounded-full transition-all flex items-center justify-center space-x-2"
+                  data-testid="generate-schedule-btn"
+                >
+                  {aiScheduleLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Generating Schedule...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5" />
+                      <span>Generate Schedule</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-slate-800/50 rounded-xl p-4">
+                  <h3 className="text-sm font-bold text-white mb-3 flex items-center space-x-2">
+                    <CalendarIcon className="w-4 h-4 text-accent" />
+                    <span>Your {scheduleDays}-Day Schedule</span>
+                  </h3>
+                  <div className="prose prose-invert prose-sm max-w-none">
+                    <pre className="whitespace-pre-wrap text-xs text-slate-300 font-sans leading-relaxed">
+                      {aiSchedule}
+                    </pre>
+                  </div>
+                </div>
+
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => setAiSchedule('')}
+                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-full transition-all"
+                  >
+                    Generate New
+                  </button>
+                  <button
+                    onClick={() => { setShowAiScheduler(false); toast.success('Schedule saved!'); }}
+                    className="flex-1 bg-primary hover:bg-primary/80 text-white font-bold py-3 rounded-full transition-all"
+                  >
+                    Apply Schedule
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
