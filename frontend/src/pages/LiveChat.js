@@ -368,11 +368,21 @@ export default function LiveChat({ user }) {
           </div>
         </div>
 
+        {/* Online Users Bar */}
+        {familyMembers.length > 0 && (
+          <OnlineUsersBar 
+            onlineUsers={onlineUsers} 
+            familyMembers={familyMembers} 
+            currentUserId={user?.user_id} 
+          />
+        )}
+
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-3 lg:p-4 space-y-3 lg:space-y-4">
           {messages.map((message) => {
             const isOwn = message.user_id === user?.user_id;
             const isOnline = onlineUsers.includes(message.user_id);
+            const sender = familyMembers.find(m => m.user_id === message.user_id);
             return (
               <div
                 key={message.message_id}
@@ -381,16 +391,23 @@ export default function LiveChat({ user }) {
               >
                 <div className={`flex items-end space-x-2 max-w-[85%] lg:max-w-[75%] ${isOwn ? 'flex-row-reverse space-x-reverse' : ''}`}>
                   {!isOwn && (
-                    <div className="relative">
-                      <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xs font-black text-white flex-shrink-0">
-                        {message.user_name?.charAt(0)}
+                    <div className="relative flex-shrink-0">
+                      <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xs font-black text-white overflow-hidden">
+                        {sender?.picture ? (
+                          <img src={sender.picture} alt={message.user_name} className="w-full h-full object-cover" />
+                        ) : (
+                          message.user_name?.charAt(0)
+                        )}
                       </div>
                       <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-950 ${isOnline ? 'bg-green-400' : 'bg-slate-500'}`} />
                     </div>
                   )}
-                  <div>
+                  <div className="flex flex-col">
                     {!isOwn && (
-                      <span className="text-xs text-slate-400 font-medium ml-2 mb-1 block">{message.user_name}</span>
+                      <div className="flex items-center gap-2 ml-2 mb-1">
+                        <span className="text-xs text-slate-400 font-medium">{message.user_name}</span>
+                        {isOnline && <span className="text-[10px] text-green-400">online</span>}
+                      </div>
                     )}
                     <div
                       className={`rounded-2xl p-3 lg:p-4 ${
@@ -401,19 +418,15 @@ export default function LiveChat({ user }) {
                     >
                       <p className="text-sm break-words leading-relaxed">{message.content}</p>
                     </div>
-                    <div className={`flex items-center space-x-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`flex items-center gap-2 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
                       <span className="text-xs text-slate-500">
                         {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
-                      {isOwn && (
-                        <div className="text-xs text-slate-500">
-                          {message.read_by?.length > 1 ? (
-                            <CheckCheck className="w-3 h-3 text-primary" />
-                          ) : (
-                            <Check className="w-3 h-3" />
-                          )}
-                        </div>
-                      )}
+                      <ReadReceipt 
+                        message={message} 
+                        familyMembers={familyMembers} 
+                        currentUserId={user?.user_id} 
+                      />
                     </div>
                   </div>
                 </div>
