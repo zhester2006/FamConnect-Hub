@@ -355,6 +355,48 @@ class ApiService {
     return this.post('/location/geofence-alert', data);
   }
 
+  // Family Management Extended
+  async createFamily(data) {
+    return this.post('/families', data);
+  }
+
+  async inviteToFamily(familyId, data) {
+    return this.post(`/families/${familyId}/invite`, data);
+  }
+
+  async getPendingInvites() {
+    return this.get('/families/invites/pending', 'pending_invites');
+  }
+
+  async getFamilyMembers(familyId) {
+    if (familyId) {
+      return this.get(`/families/${familyId}/members`);
+    }
+    return this.get('/families/members', 'family_members');
+  }
+
+  // Reading Logs
+  async getReadingLogs() {
+    return this.get('/reading-logs', 'reading_logs');
+  }
+
+  async submitReadingLog(data) {
+    return this.post('/reading-logs', data);
+  }
+
+  async approveReadingLog(logId, approved) {
+    return this.post(`/reading-logs/${logId}/approve`, { approved });
+  }
+
+  // Themes
+  async updateUserTheme(theme) {
+    return this.put('/users/theme', { theme });
+  }
+
+  async updateProfile(data) {
+    return this.put('/users/profile', data);
+  }
+
   // Battery Monitoring
   async updateBattery(level, state) {
     return this.post('/battery/update', { level, state });
