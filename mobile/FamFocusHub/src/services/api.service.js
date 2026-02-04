@@ -326,6 +326,35 @@ class ApiService {
     return this.post('/dinner-plan/generate', {});
   }
 
+  // Location & Geofencing
+  async getGeofences() {
+    return this.get('/geofences', 'geofences');
+  }
+
+  async createGeofence(data) {
+    return this.post('/geofences', data);
+  }
+
+  async deleteGeofence(geofenceId) {
+    return this.delete(`/geofences/${geofenceId}`);
+  }
+
+  async getCheckins() {
+    return this.get('/checkins', 'checkins');
+  }
+
+  async createCheckin(data) {
+    return this.post('/checkins', data);
+  }
+
+  async getLocationAlerts() {
+    return this.get('/location/alerts', 'location_alerts');
+  }
+
+  async sendGeofenceAlert(data) {
+    return this.post('/location/geofence-alert', data);
+  }
+
   // Check pending sync actions
   async getPendingSyncCount() {
     const pending = await offlineService.getPendingActions();
