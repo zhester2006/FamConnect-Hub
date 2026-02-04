@@ -175,6 +175,7 @@ export default function AppNavigator() {
                 <Stack.Screen name="FamilyWall" component={FamilyWallScreen} />
                 <Stack.Screen name="Shopping" component={ShoppingListScreen} />
                 <Stack.Screen name="DinnerPlanner" component={DinnerPlannerScreen} />
+                <Stack.Screen name="Location" component={LocationScreen} />
                 <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
                 <Stack.Screen name="Settings" component={SettingsScreen} />
               </>
@@ -189,6 +190,7 @@ export default function AppNavigator() {
                 </Stack.Screen>
                 <Stack.Screen name="FamilyWall" component={FamilyWallScreen} />
                 <Stack.Screen name="Shopping" component={ShoppingListScreen} />
+                <Stack.Screen name="Location" component={LocationScreen} />
                 <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
                 <Stack.Screen name="Settings" component={SettingsScreen} />
               </>
