@@ -38,18 +38,26 @@ export default function FamilyWallScreen({ navigation }) {
 
   const fetchPosts = useCallback(async () => {
     try {
-      const [postsData, quoteData] = await Promise.all([
+      const [postsData, quoteData, leaderboardData] = await Promise.all([
         apiService.getFamilyWallPosts(),
         apiService.getDailyQuote().catch(() => ({ quote: '' })),
+        apiService.getLeaderboard().catch(() => ({ leaderboard: [] })),
       ]);
       setPosts(postsData.posts || []);
       setDailyQuote(quoteData.quote || '');
+      setLeaderboard(leaderboardData.leaderboard || []);
     } catch (error) {
       console.error('Failed to fetch posts:', error);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  // Get user's rank from leaderboard
+  const getUserRank = (userId) => {
+    const index = leaderboard.findIndex(u => u.user_id === userId);
+    return index !== -1 ? index + 1 : null;
+  };
 
   useEffect(() => {
     fetchPosts();
