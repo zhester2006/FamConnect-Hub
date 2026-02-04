@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, Calendar, MessageCircle, Users, ShoppingCart, Award, 
@@ -6,14 +6,8 @@ import {
   LayoutDashboard, Sparkles, ChevronLeft, ChevronRight, Move, GripVertical, BarChart3, Bell
 } from 'lucide-react';
 
-// Try to import notification context - may not be available during initial render
-let useNotifications = null;
-try {
-  const notificationModule = require('../context/NotificationContext');
-  useNotifications = notificationModule.useNotifications;
-} catch (e) {
-  // Context not available yet
-}
+// Import notification context directly
+import NotificationContext from '../context/NotificationContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
