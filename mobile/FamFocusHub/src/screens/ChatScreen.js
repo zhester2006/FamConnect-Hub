@@ -419,6 +419,7 @@ export default function ChatScreen({ navigation }) {
     const isImage = item.type === 'image';
     const isGif = item.type === 'gif';
     const reactions = item.reactions || {};
+    const userRank = getUserRank(item.user_id);
     
     return (
       <TouchableOpacity
@@ -433,6 +434,11 @@ export default function ChatScreen({ navigation }) {
                 <Text style={styles.avatarText}>{item.user_name?.charAt(0)}</Text>
               </View>
               {isOnline && <View style={styles.onlineDot} />}
+              {userRank && userRank <= 3 && (
+                <View style={styles.medalPosition}>
+                  <MedalEmblem rank={userRank} size="tiny" />
+                </View>
+              )}
             </View>
           )}
           <View style={[styles.messageBubble, isOwn ? styles.ownBubble : styles.otherBubble]}>
