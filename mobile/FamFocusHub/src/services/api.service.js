@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import API_BASE_URL, { API_ENDPOINTS } from './api.config';
+import offlineService from './offline.service';
 
 const SESSION_KEY = 'famfocus_session_token';
 
@@ -11,8 +12,9 @@ class ApiService {
   async init() {
     try {
       this.sessionToken = await SecureStore.getItemAsync(SESSION_KEY);
+      await offlineService.init();
     } catch (error) {
-      console.error('Failed to load session:', error);
+      console.error('Failed to init API service:', error);
     }
   }
 
@@ -36,7 +38,7 @@ class ApiService {
     return headers;
   }
 
-  async request(endpoint, options = {}) {
+  async request(endpoint, options = {}, cacheKey = null) {
     const url = `${API_BASE_URL}${endpoint}`;
     const config = {
       ...options,
@@ -47,6 +49,17 @@ class ApiService {
       credentials: 'include',
     };
 
+    // For GET requests, try cache first if offline
+    if (options.method === 'GET' || !options.method) {
+      if (!offlineService.isOnline && cacheKey) {
+        const cached = await offlineService.getCachedData(cacheKey);
+        if (cached) {
+          return cached;
+        }
+        throw new Error('No internet connection and no cached data available');
+      }
+    }
+
     try {
       const response = await fetch(url, config);
       const data = await response.json();
@@ -55,20 +68,39 @@ class ApiService {
         throw new Error(data.detail || 'Request failed');
       }
       
+      // Cache successful GET responses
+      if ((options.method === 'GET' || !options.method) && cacheKey) {
+        await offlineService.cacheData(cacheKey, data);
+      }
+      
       return data;
     } catch (error) {
+      // For GET requests, fall back to cache on network error
+      if ((options.method === 'GET' || !options.method) && cacheKey) {
+        const cached = await offlineService.getCachedData(cacheKey);
+        if (cached) {
+          console.log('Using cached data due to network error');
+          return cached;
+        }
+      }
+      
       console.error(`API Error [${endpoint}]:`, error);
       throw error;
     }
   }
 
-  // GET request
-  get(endpoint) {
-    return this.request(endpoint, { method: 'GET' });
+  // GET request with caching
+  get(endpoint, cacheKey = null) {
+    return this.request(endpoint, { method: 'GET' }, cacheKey || endpoint);
   }
 
-  // POST request
-  post(endpoint, data) {
+  // POST request (queue if offline)
+  async post(endpoint, data, offlineAction = null) {
+    if (!offlineService.isOnline && offlineAction) {
+      await offlineService.queueAction(offlineAction);
+      return { queued: true, message: 'Action queued for sync' };
+    }
+    
     return this.request(endpoint, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -90,7 +122,7 @@ class ApiService {
 
   // Auth
   async getCurrentUser() {
-    return this.get(API_ENDPOINTS.AUTH_ME);
+    return this.get(API_ENDPOINTS.AUTH_ME, 'current_user');
   }
 
   async logout() {
@@ -98,109 +130,129 @@ class ApiService {
     await this.clearSession();
   }
 
-  // Family
+  // Family (with caching)
   async getFamilies() {
-    return this.get(API_ENDPOINTS.FAMILIES);
+    return this.get(API_ENDPOINTS.FAMILIES, 'families');
   }
 
   async getFamilyMembers() {
-    return this.get(API_ENDPOINTS.FAMILY_MEMBERS);
+    return this.get(API_ENDPOINTS.FAMILY_MEMBERS, 'family_members');
   }
 
   async switchFamily(familyId) {
     return this.post(API_ENDPOINTS.FAMILY_SWITCH(familyId), {});
   }
 
-  // Chores
+  // Chores (with caching and offline support)
   async getChores() {
-    return this.get(API_ENDPOINTS.CHORES);
+    return this.get(API_ENDPOINTS.CHORES, 'chores');
   }
 
   async getChoreTypes() {
-    return this.get(API_ENDPOINTS.CHORE_TYPES);
+    return this.get(API_ENDPOINTS.CHORE_TYPES, 'chore_types');
   }
 
   async completeChore(choreId) {
-    return this.post(API_ENDPOINTS.CHORE_COMPLETE(choreId), {});
+    return this.post(
+      API_ENDPOINTS.CHORE_COMPLETE(choreId), 
+      {},
+      { type: 'COMPLETE_CHORE', choreId }
+    );
   }
 
   async createChore(choreData) {
     return this.post(API_ENDPOINTS.CHORES, choreData);
   }
 
-  // Tasks
+  // Tasks (with offline support)
   async getTasks() {
-    return this.get(API_ENDPOINTS.TASKS);
+    return this.get(API_ENDPOINTS.TASKS, 'tasks');
   }
 
   async completeTask(taskId) {
-    return this.post(API_ENDPOINTS.TASK_COMPLETE(taskId), {});
+    return this.post(
+      API_ENDPOINTS.TASK_COMPLETE(taskId), 
+      {},
+      { type: 'COMPLETE_TASK', taskId }
+    );
   }
 
-  // Messages
+  // Messages (with caching and offline support)
   async getMessages() {
-    return this.get(API_ENDPOINTS.MESSAGES);
+    return this.get(API_ENDPOINTS.MESSAGES, 'messages');
   }
 
   async sendMessage(content) {
-    return this.post(API_ENDPOINTS.MESSAGES, { content });
+    return this.post(
+      API_ENDPOINTS.MESSAGES, 
+      { content },
+      { type: 'SEND_MESSAGE', content }
+    );
   }
 
   async markMessageRead(messageId) {
     return this.put(API_ENDPOINTS.MESSAGE_READ(messageId), {});
   }
 
-  // Family Wall
+  // Family Wall (with caching)
   async getFamilyWall() {
-    return this.get(API_ENDPOINTS.FAMILY_WALL);
+    return this.get(API_ENDPOINTS.FAMILY_WALL, 'family_wall');
   }
 
   async createPost(content, type = 'text') {
-    return this.post(API_ENDPOINTS.FAMILY_WALL, { content, type });
+    return this.post(
+      API_ENDPOINTS.FAMILY_WALL, 
+      { content, type },
+      { type: 'CREATE_POST', content, postType: type }
+    );
   }
 
   async getDailyQuote(refresh = false) {
     const endpoint = refresh 
       ? `${API_ENDPOINTS.DAILY_QUOTE}?refresh=true`
       : API_ENDPOINTS.DAILY_QUOTE;
-    return this.get(endpoint);
+    return this.get(endpoint, refresh ? null : 'daily_quote');
   }
 
-  // Events
+  // Events (with caching)
   async getEvents() {
-    return this.get(API_ENDPOINTS.EVENTS);
+    return this.get(API_ENDPOINTS.EVENTS, 'events');
   }
 
   async createEvent(eventData) {
     return this.post(API_ENDPOINTS.EVENTS, eventData);
   }
 
-  // Rewards
+  // Rewards (with caching)
   async getRewards() {
-    return this.get(API_ENDPOINTS.REWARDS);
+    return this.get(API_ENDPOINTS.REWARDS, 'rewards');
   }
 
   async redeemReward(rewardId) {
     return this.post(API_ENDPOINTS.REDEEM_REWARD(rewardId), {});
   }
 
-  // Leaderboard
+  // Leaderboard (with caching)
   async getLeaderboard() {
-    return this.get(API_ENDPOINTS.LEADERBOARD);
+    return this.get(API_ENDPOINTS.LEADERBOARD, 'leaderboard');
   }
 
-  // Weather
+  // Weather (short cache)
   async getWeather() {
-    return this.get(API_ENDPOINTS.WEATHER);
+    return this.get(API_ENDPOINTS.WEATHER, 'weather');
   }
 
-  // Shopping
+  // Shopping (with caching and offline support)
   async getShoppingList() {
-    return this.get(API_ENDPOINTS.SHOPPING_LIST);
+    return this.get(API_ENDPOINTS.SHOPPING_LIST, 'shopping_list');
   }
 
   async addShoppingItem(item) {
-    return this.post(API_ENDPOINTS.SHOPPING_LIST, item);
+    return this.post(
+      API_ENDPOINTS.SHOPPING_LIST, 
+      item,
+      { type: 'ADD_SHOPPING_ITEM', item }
+    );
   }
 
   // Location
@@ -214,12 +266,36 @@ class ApiService {
   }
 
   async getBatteryStatus() {
-    return this.get(API_ENDPOINTS.BATTERY_STATUS);
+    return this.get(API_ENDPOINTS.BATTERY_STATUS, 'battery_status');
   }
 
   // Notifications
   async getNotifications() {
-    return this.get(API_ENDPOINTS.NOTIFICATIONS);
+    return this.get(API_ENDPOINTS.NOTIFICATIONS, 'notifications');
+  }
+
+  // Tutorial
+  async getTutorialContent() {
+    return this.get('/tutorial/content', 'tutorial_content');
+  }
+
+  async completeTutorial() {
+    return this.post('/tutorial/complete', {});
+  }
+
+  async resetTutorial() {
+    return this.post('/tutorial/reset', {});
+  }
+
+  // Check pending sync actions
+  async getPendingSyncCount() {
+    const pending = await offlineService.getPendingActions();
+    return pending.length;
+  }
+
+  // Force sync
+  async forceSync() {
+    return offlineService.syncPendingActions();
   }
 }
 
