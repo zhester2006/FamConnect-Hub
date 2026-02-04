@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { 
@@ -9,10 +9,8 @@ import {
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
-// Mobile Bottom Navigation Component
-function MobileBottomNav({ user, currentPath }) {
-  const navigate = useNavigate();
-  
+// Mobile Bottom Navigation Component - defined outside
+function MobileBottomNav({ user, currentPath, onNavigate }) {
   const navItems = user?.role === 'parent' ? [
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Calendar, label: 'Calendar', path: '/calendar' },
@@ -37,7 +35,7 @@ function MobileBottomNav({ user, currentPath }) {
             return (
               <button
                 key={item.path}
-                onClick={() => navigate(item.path)}
+                onClick={() => onNavigate(item.path)}
                 className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all ${
                   isActive 
                     ? 'text-primary bg-primary/10' 
@@ -56,7 +54,83 @@ function MobileBottomNav({ user, currentPath }) {
   );
 }
 
-// Dropdown Menu Portal Component
+// Dropdown Menu Content Component - defined outside
+function DropdownMenuContent({ 
+  user, 
+  menuItems, 
+  currentPath, 
+  onNavigate, 
+  onCollapse, 
+  onLogout,
+  menuRef 
+}) {
+  return (
+    <div 
+      ref={menuRef}
+      className="w-60 backdrop-blur-2xl bg-slate-900/95 border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+      style={{ maxHeight: 'calc(100vh - 120px)' }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* User Info */}
+      <div className="p-4 border-b border-white/10 bg-gradient-to-r from-primary/10 to-transparent">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-sm font-bold text-white shadow-lg">
+            {user?.name?.charAt(0) || 'U'}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-white text-sm truncate">{user?.name || 'User'}</p>
+            <p className="text-xs text-slate-400 capitalize">{user?.role || 'Member'}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Menu Items */}
+      <nav className="p-2 max-h-[45vh] overflow-y-auto scrollbar-hide">
+        {menuItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = currentPath === item.path;
+          return (
+            <button
+              key={item.path}
+              onClick={() => onNavigate(item.path)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
+                isActive
+                  ? 'bg-primary/20 text-primary'
+                  : 'text-slate-300 hover:bg-white/5 hover:text-white'
+              }`}
+              data-testid={`floating-menu-${item.label.toLowerCase().replace(/ /g, '-')}`}
+            >
+              <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-primary' : item.color}`} />
+              <span className="font-medium text-sm">{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Footer Actions */}
+      <div className="p-2 border-t border-white/10 flex gap-2">
+        <button
+          onClick={onCollapse}
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-white/5 hover:text-white transition-all"
+          title="Expand sidebar"
+        >
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-xs font-medium">Expand</span>
+        </button>
+        <button
+          onClick={onLogout}
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 transition-all"
+          data-testid="floating-logout"
+        >
+          <LogOut className="w-4 h-4" />
+          <span className="text-xs font-medium">Logout</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Dropdown Portal Component
 function DropdownPortal({ children, isOpen, position }) {
   if (!isOpen) return null;
   
@@ -103,7 +177,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     };
   }, [showMenu]);
 
-  // Load saved position and floating state
+  // Load saved position and floating state on mount only
   useEffect(() => {
     const saved = localStorage.getItem('sidebar-position');
     const savedFloating = localStorage.getItem('sidebar-floating');
@@ -112,28 +186,21 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
         const pos = JSON.parse(saved);
         const maxX = window.innerWidth - 64;
         const maxY = window.innerHeight - 64;
+        // Use functional update to avoid triggering re-render warnings
         setPosition({
           x: Math.min(Math.max(16, pos.x), maxX),
           y: Math.min(Math.max(16, pos.y), maxY)
         });
-      } catch (e) {
-        setPosition({ x: 16, y: 16 });
+      } catch {
+        // Keep default position
       }
     }
     if (savedFloating === 'true') {
       setIsFloating(true);
     }
-  }, []);
+  }, []); // Empty deps - only run on mount
 
-  // Auto-float when collapsed on desktop
-  useEffect(() => {
-    if (isCollapsed && !isFloating && window.innerWidth >= 1024) {
-      setIsFloating(true);
-      localStorage.setItem('sidebar-floating', 'true');
-    }
-  }, [isCollapsed, isFloating]);
-
-  const handleCollapse = () => {
+  const handleCollapse = useCallback(() => {
     const newState = !isCollapsed;
     setIsCollapsed(newState);
     if (setCollapsed) setCollapsed(newState);
@@ -144,10 +211,16 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
       setPosition({ x: 16, y: 16 });
       localStorage.setItem('sidebar-floating', 'false');
       localStorage.removeItem('sidebar-position');
+    } else {
+      // Auto-float when collapsed on desktop
+      if (window.innerWidth >= 1024) {
+        setIsFloating(true);
+        localStorage.setItem('sidebar-floating', 'true');
+      }
     }
-  };
+  }, [isCollapsed, setCollapsed]);
 
-  const toggleFloating = () => {
+  const toggleFloating = useCallback(() => {
     const newFloating = !isFloating;
     setIsFloating(newFloating);
     localStorage.setItem('sidebar-floating', newFloating.toString());
@@ -155,7 +228,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
       setPosition({ x: 16, y: 16 });
       localStorage.removeItem('sidebar-position');
     }
-  };
+  }, [isFloating]);
 
   const constrainPosition = useCallback((x, y) => {
     const maxX = window.innerWidth - 70;
@@ -166,7 +239,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     };
   }, []);
 
-  const handleDragStart = (e) => {
+  const handleDragStart = useCallback((e) => {
     if (!isFloating) return;
     e.preventDefault();
     e.stopPropagation();
@@ -180,7 +253,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
       x: clientX - position.x,
       y: clientY - position.y
     };
-  };
+  }, [isFloating, position]);
 
   const handleDragMove = useCallback((e) => {
     if (!isDragging || !isFloating) return;
@@ -235,7 +308,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     return () => window.removeEventListener('resize', handleResize);
   }, [isFloating, constrainPosition]);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       localStorage.removeItem('dev_session_token');
       localStorage.removeItem('dev_user');
@@ -248,9 +321,15 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
       console.error('Logout failed:', error);
       navigate('/login');
     }
-  };
+  }, [navigate]);
 
-  const parentMenuItems = [
+  const handleNavigate = useCallback((path) => {
+    navigate(path);
+    setShowMenu(false);
+    setIsOpen(false);
+  }, [navigate, setIsOpen]);
+
+  const parentMenuItems = useMemo(() => [
     { icon: Home, label: 'Dashboard', path: '/dashboard', color: 'text-blue-400' },
     { icon: Sparkles, label: 'Home Hub', path: '/hub', color: 'text-indigo-400' },
     { icon: Users, label: 'Family', path: '/family', color: 'text-cyan-400' },
@@ -266,9 +345,9 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     { icon: MapPin, label: 'Location', path: '/checkins', color: 'text-red-400' },
     { icon: BarChart3, label: 'Analytics', path: '/analytics', color: 'text-lime-400' },
     { icon: Settings, label: 'Settings', path: '/settings', color: 'text-slate-400' },
-  ];
+  ], []);
 
-  const childMenuItems = [
+  const childMenuItems = useMemo(() => [
     { icon: Home, label: 'My Space', path: '/space', color: 'text-blue-400' },
     { icon: Sparkles, label: 'Home Hub', path: '/hub', color: 'text-indigo-400' },
     { icon: Calendar, label: 'Calendar', path: '/calendar', color: 'text-emerald-400' },
@@ -279,90 +358,16 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     { icon: Award, label: 'Rewards', path: '/rewards', color: 'text-purple-400' },
     { icon: Book, label: 'Reading', path: '/reading', color: 'text-sky-400' },
     { icon: Settings, label: 'Settings', path: '/settings', color: 'text-slate-400' },
-  ];
+  ], []);
 
   const menuItems = user?.role === 'parent' ? parentMenuItems : childMenuItems;
 
-  // Dropdown Menu Content
-  const DropdownMenuContent = () => (
-    <div 
-      ref={menuRef}
-      className="w-60 backdrop-blur-2xl bg-slate-900/95 border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
-      style={{ maxHeight: 'calc(100vh - 120px)' }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      {/* User Info */}
-      <div className="p-4 border-b border-white/10 bg-gradient-to-r from-primary/10 to-transparent">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-sm font-bold text-white shadow-lg">
-            {user?.name?.charAt(0) || 'U'}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-white text-sm truncate">{user?.name || 'User'}</p>
-            <p className="text-xs text-slate-400 capitalize">{user?.role || 'Member'}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Menu Items */}
-      <nav className="p-2 max-h-[45vh] overflow-y-auto scrollbar-hide">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = location.pathname === item.path;
-          return (
-            <button
-              key={item.path}
-              onClick={() => {
-                navigate(item.path);
-                setShowMenu(false);
-                setIsOpen(false);
-              }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                isActive
-                  ? 'bg-primary/20 text-primary'
-                  : 'text-slate-300 hover:bg-white/5 hover:text-white'
-              }`}
-              data-testid={`floating-menu-${item.label.toLowerCase().replace(/ /g, '-')}`}
-            >
-              <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-primary' : item.color}`} />
-              <span className="font-medium text-sm">{item.label}</span>
-            </button>
-          );
-        })}
-      </nav>
-
-      {/* Footer Actions */}
-      <div className="p-2 border-t border-white/10 flex gap-2">
-        <button
-          onClick={handleCollapse}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-white/5 hover:text-white transition-all"
-          title="Expand sidebar"
-        >
-          <ChevronRight className="w-4 h-4" />
-          <span className="text-xs font-medium">Expand</span>
-        </button>
-        <button
-          onClick={handleLogout}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 transition-all"
-          data-testid="floating-logout"
-        >
-          <LogOut className="w-4 h-4" />
-          <span className="text-xs font-medium">Logout</span>
-        </button>
-      </div>
-    </div>
-  );
-
-  // Mobile: Show bottom nav + optional floating pill
-  // Desktop: Show sidebar or floating pill
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-
-  // Floating collapsed pill (desktop only when collapsed, or when explicitly enabled)
+  // Floating collapsed pill (desktop only when collapsed)
   if (isCollapsed && isFloating) {
     return (
       <>
         {/* Mobile Bottom Navigation */}
-        <MobileBottomNav user={user} currentPath={location.pathname} />
+        <MobileBottomNav user={user} currentPath={location.pathname} onNavigate={handleNavigate} />
 
         {/* Floating Pill - Hidden on mobile, shown on desktop */}
         <div
@@ -409,7 +414,15 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
 
         {/* Dropdown Menu using Portal */}
         <DropdownPortal isOpen={showMenu} position={position}>
-          <DropdownMenuContent />
+          <DropdownMenuContent 
+            user={user}
+            menuItems={menuItems}
+            currentPath={location.pathname}
+            onNavigate={handleNavigate}
+            onCollapse={handleCollapse}
+            onLogout={handleLogout}
+            menuRef={menuRef}
+          />
         </DropdownPortal>
       </>
     );
@@ -427,7 +440,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
   return (
     <>
       {/* Mobile Bottom Navigation */}
-      <MobileBottomNav user={user} currentPath={location.pathname} />
+      <MobileBottomNav user={user} currentPath={location.pathname} onNavigate={handleNavigate} />
 
       {/* Mobile Menu Toggle */}
       <button
@@ -539,10 +552,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
               return (
                 <button
                   key={item.path}
-                  onClick={() => {
-                    navigate(item.path);
-                    setIsOpen(false);
-                  }}
+                  onClick={() => handleNavigate(item.path)}
                   className={`w-full flex items-center ${isCollapsed ? 'justify-center' : ''} gap-3 px-3 py-2.5 rounded-xl transition-all ${
                     isActive
                       ? 'bg-primary/20 text-primary'
