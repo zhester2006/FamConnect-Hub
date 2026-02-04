@@ -816,8 +816,13 @@ async def vote_on_poll(post_id: str, request: Request, data: dict):
         if current_user['user_id'] in opt.get('votes', []):
             raise HTTPException(status_code=400, detail="Already voted")
     
-    # Add vote
+    # Add vote with voter info
+    voter_info = {
+        "user_id": current_user['user_id'],
+        "name": current_user.get('nickname') or current_user['name'],
+    }
     poll_options[option_index]['votes'] = poll_options[option_index].get('votes', []) + [current_user['user_id']]
+    poll_options[option_index]['voter_names'] = poll_options[option_index].get('voter_names', []) + [voter_info['name']]
     
     await db.family_wall.update_one(
         {"post_id": post_id},
