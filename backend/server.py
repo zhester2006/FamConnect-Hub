@@ -960,7 +960,7 @@ async def get_leaderboard(request: Request):
     
     children = await db.users.find(
         {"parent_id": parent_id, "role": "child"},
-        {"_id": 0, "user_id": 1, "name": 1, "picture": 1, "points": 1, "badges": 1}
+        {"_id": 0, "user_id": 1, "name": 1, "nickname": 1, "picture": 1, "points": 1, "badges": 1}
     ).sort("points", -1).to_list(100)
     
     return {"leaderboard": children}
