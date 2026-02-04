@@ -3,61 +3,56 @@ The user wants to create a comprehensive, family-oriented, mobile-friendly app c
 
 **PRODUCT REQUIREMENTS:**
 -   **Profiles:** Customizable parent and child profiles with nicknames.
--   **Dashboards:** Child-specific dashboards (chores, tasks, awards, etc.) and a Parent dashboard for management and analytics. A main Home Hub for large screens showing shared family info.
+-   **Dashboards:** Child-specific dashboards and a Parent dashboard for management. A main Home Hub for large screens.
 -   **Core Features:**
-    -   **Calendar:** Shared family calendar with multiple views and event popups.
-    -   **Chores:** AI-assisted, automated chore scheduling with parent override and approval system.
-    -   **Live Chat:** Real-time messenger with WebSockets, voice messages, and reactions.
-    -   **Family Wall:** A shared social space for posts, photos, polls, and GIFs.
-    -   **Shopping List:** Collaborative shopping list.
-    -   **Points & Rewards:** Gamified system for chores and tasks.
+    -   **Calendar:** Shared family calendar with event popups and categories.
+    -   **Chores:** AI-assisted chore scheduling with parent override, assignments, and approval.
+    -   **Live Chat:** Real-time messenger with WebSockets, reactions, and media sharing (photos/GIFs).
+    -   **Family Wall:** A shared social space for posts, photos, interactive polls, and GIFs.
+    -   **Shopping List:** Collaborative list with parent approval for items added by children.
+    -   **Points & Rewards:** Gamified system for chores/tasks, with parent approval for reward redemption. Ability for parents to add custom tasks and award points directly.
     -   **Reading Log:** Children submit book summaries for parent approval.
     -   **Dinner Planner:** AI-suggested weekly meals.
-    -   **Leaderboard:** Ranking based on points.
+    -   **Leaderboard:** Ranking based on points, with medal emblems displayed on profiles throughout the app.
+    -   **Location:** Safe zones with Google Maps integration.
 -   **Technical & UX Requirements:**
-    -   **Authentication:** Google account login (and a dev login for testing).
-    -   **UI:** Vibrant, mobile-friendly, animated, and themeable UI (light, dark, custom). The mobile app should look and function just like the web app, but adapted for a mobile-friendly UX.
-    -   **Family Management:** Support for a single family with multiple members, where roles (parent, child) can be managed.
-    -   **Home Hub:** Should feature a screensaver with random nature/historical images and hourly weather updates.
+    -   **Authentication:** Dev login for testing.
+    -   **UI:** Vibrant, mobile-friendly, animated UI. Mobile app should mirror web app functionality.
+    -   **Themes:** A default (Standard) theme and a user-customizable theme that applies app-wide.
+    -   **Onboarding:** A tutorial for first-time users.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The project has a mature full-stack web application (React/FastAPI/MongoDB) and a React Native mobile app. The previous session's focus was a massive overhaul of the mobile app to align its UI/UX and functionality with the web version, addressing a comprehensive list of user-reported issues. A successful  build was generated, but the user immediately followed up with a very long list of additional required fixes and features for the mobile app, plus some UI issues on the web app. The agent has implemented a large number of these changes and has submitted a new mobile build.
+The project is a full-stack application with a React frontend, FastAPI backend, and a React Native mobile app. The previous session focused on a major overhaul of both the web and mobile apps to address an extensive list of user-reported bugs and feature requests. The agent has rewritten the web sidebar, implemented numerous fixes on the mobile app across almost every screen, added new backend endpoints, and populated the app with sample data. A mobile build was successful, but the user immediately provided another long list of issues and requested the agent to continue working without submitting a new build yet.
 
 **Last working item**:
-    - Last item agent was working: The agent was working through an extensive list of mobile app bugs and feature parity requests from the user. It implemented fixes across numerous screens (Calendar, Dinner, Chores, Rewards, Settings, etc.), added a theme context, and submitted a new Android build () to Expo Application Services (EAS).
+    - Last item agent was working: The agent was addressing the user's request for an AI onboarding screen and tutorial not showing up on the first login. It diagnosed that dev users had already completed the tutorial and implemented a fix by resetting the  flag on dev login and adding a Show Tutorial button in the Settings screen.
     - Status: IN PROGRESS
     - Agent Testing Done: N
-    - Which testing method agent to use? The immediate next step is to monitor the EAS build status. Once the  is available, it requires manual testing by the user on a physical Android device to verify the extensive fixes.
+    - Which testing method agent to use? The current batch of fixes is large and un-built. Once all pending items from the user's list are addressed, a new EAS build should be triggered. Then, manual user testing on a device will be required to verify all the changes.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1:  (P0) Comprehensive Mobile App Bug Bash
+  - Issue 1:  (P0) Comprehensive Mobile App Feature and Bug Fixes
   - Issue 2:  (P1) Web App Sidebar UI/UX Polish
   
   Issues Detail:
   - Issue 1: 
-     - Attempted fixes: The agent has implemented a very large batch of fixes across the mobile app in response to user message #158. This includes overwriting/updating: , , , , , , , and . A  was created and integrated. A new build () is currently in progress.
-     - Next debug checklist: 
-        1. Check the status of the current EAS build ().
-        2. If the build is successful, provide the  link to the user for testing.
-        3. If the build fails, analyze the build logs from Expo to identify and fix the root cause.
-        4. Systematically work through the remaining unverified items from the user's list in message #158, as many features still need to be checked (Chat connection, Reading Log on child profile, image/GIF uploads, notification prompts, AI chore logic, etc.).
-     - Why fix this issue and what will be achieved with the fix? This is the user's highest priority. The goal is a stable, functional mobile app that has feature and design parity with the web application.
+     - Attempted fixes: The agent has implemented a massive number of fixes and features requested by the user across the mobile app and backend, including (but not limited to): WebSocket chat connection, GIF/photo sharing in chat, interactive polls on the Family Wall, a complete overhaul of the Rewards system with parent approvals and custom tasks, themeing logic, image upload fixes, and adding a calendar popup to the Home Hub.
+     - Next debug checklist: Continue working through the user's extensive list of pending items (see Upcoming and Future Tasks). The user explicitly requested to *not* submit a new build yet. The next agent should complete the remaining tasks before triggering a build.
+     - Why fix this issue and what will be achieved with the fix? To achieve a stable, feature-complete mobile application that matches the user's detailed requirements.
      - Status:  IN PROGRESS
      - Is recurring issue? Y
-     - Should Test frontend/backend/both after fix? User testing on a mobile device is required.
-     - Blocked on other issue: Successful completion of the EAS build.
+     - Should Test frontend/backend/both after fix? Backend, Frontend (Mobile)
+     - Blocked on other issue: None.
   - Issue 2: 
-     - Attempted fixes: The agent rewrote  to create a fixed, non-draggable sidebar and a cleaner dropdown menu to address user complaints about it moving and overlapping content. The agent's self-verification with screenshots indicated success.
-     - Next debug checklist: 
-        1. The user's last message (#126) stated the sidebar *...still moves and the top is clustered. it needs to not overlap...*. This contradicts the agent's findings.
-        2. The next agent must re-examine  and re-test its behavior, especially in collapsed mode and on different pages, to fully resolve the user's complaint. The fix is likely incomplete.
-     - Why fix this issue and what will be achieved with the fix? To provide a polished and non-intrusive navigation experience on the web app as requested by the user.
-     - Status:  IN PROGRESS
+     - Attempted fixes: The agent completely rewrote  to be a fixed, non-overlapping component. When collapsed, it shows icons only, and when expanded, it pushes content to the side. This addresses the user's previous complaints.
+     - Next debug checklist: The implemented fix appears correct based on screenshots, but it has not been verified by the user. The previous agent in the handoff considered it fixed, but it was a recurring problem.
+     - Why fix this issue and what will be achieved with the fix? To provide a stable and professional navigation experience on the web app.
+     - Status:  USER VERIFICATION PENDING
      - Is recurring issue? Y
-     - Should Test frontend/backend/both after fix? Frontend (screenshot tool).
+     - Should Test frontend/backend/both after fix? Frontend.
      - Blocked on other issue: none
 
 **In progress Task List**:
@@ -65,117 +60,128 @@ The project has a mature full-stack web application (React/FastAPI/MongoDB) and 
  
  Task Detail:
   - Task 1: 
-     - Where to resume: Resume after checking the status of the EAS build (). Once the build is verified as successful, the agent needs to continue addressing the long list of issues provided by the user in message #158.
-     - What will be achieved with this? A functional, stable mobile app that matches the web app's features and aesthetics.
+     - Where to resume: The user has requested to continue working on the remaining issues without submitting a new build. The next agent should pick up from the Upcoming and Future Tasks list, starting with the highest priority items not yet addressed.
+     - What will be achieved with this? A stable and functional mobile app that meets all user requirements.
      - Status:  IN PROGRESS
-     - Should Test frontend/backend/both after fix? User testing on a mobile device.
-     - Blocked on something: Successful completion of the EAS build.
+     - Should Test frontend/backend/both after fix? Both
+     - Blocked on something: None.
 
 **Upcoming and Future Tasks**
--   **Mobile App (P0):** Verify and fix the remaining issues from the user's list in message #158:
-    -   Chat connectivity and functionality.
-    -   Navigation to child profile when icon is pressed.
-    -   Reading Log functionality on child profiles.
-    -   Functionality for adding photos or GIFs.
-    -   Weather auto-updates every hour on Home Hub.
-    -   Full AI chore scheduling logic (adjusting for missed chores, etc.).
-    -   Points awarding on chore approval.
-    -   Responsiveness of untouchable UI elements.
-    -   Notification prompts and functionality.
-    -   Profile picture and background customization.
--   **Web App (P2):** Address any remaining  warnings in the web frontend to prevent potential stale state issues.
+-   **Mobile App (P0):** Systematically implement and verify the following remaining user requests:
+    -   **Location:** In Add Safe Zone, add the ability to select a location using Google Maps.
+    -   **Chore Creation:** User reported the inability to assign chores. The agent found the UI exists but  might be empty on load. This needs verification and a robust fix.
+    -   **Leaderboard Medals:** The agent added medals to Chat and Family Wall. This needs to be applied consistently *throughout the app* wherever a child's profile picture appears.
+-   **Verification (P1):** Once a new build is made, the following implementations need to be thoroughly tested:
+    -   **Chat:** WebSocket connectivity, sending messages, and the GIF search functionality.
+    -   **Family Wall:** The enhanced interactive poll system (showing who voted).
+    -   **Rewards System:** Parent approval flow for redemptions, adding Earn More tasks, and direct point awards by parents.
+    -   **Home Hub:** The new calendar event popup.
+    -   **Theming:** The Standard vs Custom theme modes and ensuring custom themes apply app-wide.
+    -   **Image Uploads:** Profile and background photo uploads.
+    -   **Onboarding:** The tutorial flow for a genuinely new user.
+    -   **Navigation:** All the navigation fixes to prevent dead links or inaccessible screens.
+    -   **Sample Data:** Verify that the new sample data endpoint correctly populates all features for testing.
 
 **Completed work in this session**
--   **Mobile App Build:** Logged into Expo with a user-provided token and successfully submitted two EAS builds. The first () was successful. The second (), containing numerous fixes, is currently in progress.
--   **Mobile App Feature Parity (In Progress):**
-    -   Rewrote  to include event popups.
-    -   Updated , , , and  to better match web functionality.
-    -   Overhauled  with parent controls.
-    -   Created a  and updated  and  to handle light/dark/custom themes.
-    -   Updated  to include logic for weather updates and a screensaver.
-    -   Added  dependency and updated  for audio/microphone permissions.
--   **Web App UI Fixes:**
-    -   Rewrote  to be fixed, non-draggable, with a revised dropdown menu.
-    -   Rewrote  to enforce a single-family structure.
--   **Mobile App Sync:** Updated  on mobile to align with the new single-family logic.
+-   **Web App:**
+    -   Completely redesigned  to be a fixed component that does not overlap content, with a slim icon-only collapsed state. (USER VERIFICATION PENDING)
+-   **Mobile App & Backend (Large batch of fixes, not yet in a user-tested build):**
+    -   **Authentication:** Fixed mobile login 404 error by switching to Bearer token authentication in .
+    -   **Chat:** Attempted fix for WebSocket connection by using the token from . Implemented UI for sending images/GIFs. Added leaderboard medal emblems next to user avatars.
+    -   **Family Wall:** Rewrote poll display to show who voted for each option and added leaderboard medals.
+    -   **Rewards:** Overhauled  to include parent approval for redemptions, a section for Earn More tasks, and the ability for parents to award points directly.
+    -   **Chores:** Verified that the Assign To dropdown exists in the UI.
+    -   **Theming:** Refactored theme context to use Standard and Custom modes and updated .
+    -   **Home Hub:** Added a day-press event popup to the mini-calendar. Updated screensaver images to exclude photos with people.
+    -   **Image Uploads:** Added a new backend endpoint () to handle  and updated  to use it.
+    -   **Navigation:** Corrected navigation stacks in  to ensure both parents and children can access shared screens (like Calendar, HomeHub) and fixed broken links in .
+    -   **Onboarding:** Added backend logic to reset the tutorial for dev logins and added a Show Tutorial button in Settings.
+    -   **App Icon:** Removed the logo from the  header and set it as the official app icon in .
+-   **Backend:**
+    -   Added new endpoints for , , , and .
+    -   Updated the family wall vote endpoint to store voter details.
+    -   Fixed GIF search endpoint to return the correct data structure.
+    -   Restarted the backend service to apply all changes.
 
 **Earlier issues found/mentioned but not fixed**
-The majority of items from the user's comprehensive bug list in message #158 are still pending verification, even if the code has been implemented. Key unverified/unfixed items include:
--   Chat connectivity is broken.
--   Tapping a child's profile icon does not navigate to their profile.
--   The Reading Log is missing from the child's profile screen.
--   Adding photos/GIFs doesn't work.
--   Many UI elements are unresponsive to touch.
--   Notification permissions are not prompted, and notifications don't work.
--   The complex AI logic for re-assigning missed chores is not implemented/verified.
+-   **Location Screen:** User requested the ability to add a safe zone location via Google Maps. This has not been addressed.
+-   **Leaderboard Medals:** The implementation is partial (only Chat and Wall). The request was for it to be app-wide.
 
 **Known issue recurrence from previous fork**
--   **Mobile App Build Failures:** This was a blocker in the previous session. The agent managed to produce one successful build but has since run into timeouts, indicating the build process remains fragile.
--   **Web Sidebar Instability:** This was a recurring issue. The user's latest feedback confirms the agent's most recent fix was not sufficient, making it a persistent problem.
+-   **Mobile App Build Failures:** The agent encountered a build failure due to a syntax error in . After fixing it, the next build succeeded. This indicates the build process is sensitive to code quality and requires careful checking.
+-   **Web Sidebar Instability:** This was a major recurring issue. The agent's complete rewrite is a significant attempt to fix it permanently, but it remains a high-risk area until the user confirms the fix.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
 -   **Frontend (Web):** React, TailwindCSS.
--   **Frontend (Mobile):** React Native, Expo, EAS (Expo Application Services).
+-   **Frontend (Mobile):** React Native, Expo, EAS.
 -   **Backend:** FastAPI (Python).
 -   **Database:** MongoDB.
--   **Real-time:** WebSockets.
+-   **Real-time:** WebSockets for Chat.
 
 **key DB schema**
--   No changes in this session.
+-   No direct schema changes, but new data models and fields were introduced implicitly through backend code:
+    -   **tasks:** Standalone tasks parents can create.
+    -   **rewards:**  field for redemptions ('pending', 'approved').
+    -   **polls:**  array within poll options now stores .
+    -   **users:**  flag.
 
 **changes in tech stack**
--   **Added (Mobile):**  for audio recording features.
+-   No new dependencies were added.
 
 **All files of reference**
--   **User Request Source:** User messages #126 (Sidebar/Family Mgmt) and #158 (Massive Mobile Bug List).
--   **Web (Modified):**
-    -   
-    -   
--   **Mobile (New):**
-    -   
-    -   
--   **Mobile (Modified):**
-    -   All files in 
-    -   
-    -   
-    -   
+-   
+-   
+-   
+-   
+-   
+-   All screen files under 
 
 **Areas that need refactoring**:
--   **Web :** Needs to be re-examined and fixed properly to satisfy the user's requirement of being completely static and non-overlapping.
--   **Mobile App:** The entire application is undergoing a heavy refactoring/bug-fixing pass. Code quality and consistency should be monitored.
+-   **:** This file has grown to over 3000 lines and is becoming unmanageable. It desperately needs to be broken down into a modular structure (e.g., separate routers for auth, chores, rewards, etc., and a separate models/schemas directory).
+-   **Mobile Screens:** Many screens contain complex state management, data fetching, and rendering logic directly. Refactoring to use custom hooks could improve readability and reusability.
 
 **key api endpoints**
--   No new backend API endpoints were created. The agent focused on implementing client-side code and services to consume existing endpoints.
+-   **New Endpoints Created:**
+    -   : Create a new standalone task.
+    -   : Allow a parent to give points to a child.
+    -   : Parent approval for a reward redemption.
+    -   : A utility endpoint to populate the DB with test data.
+    -   : New file upload endpoint for profile/background images.
+-   **Modified Endpoints:**
+    -   : Now stores voter's name in addition to ID.
+    -   : Now resets the  flag.
 
 **Critical Info for New Agent**
--   **Build Status is Priority #1:** Your first action must be to check the status of the EAS build: . The build ID is . All mobile testing is blocked until this build succeeds.
--   **Heed User Feedback:** The user has provided two extremely detailed lists of requirements in messages #126 and #158. Treat these as your primary source of truth. Do not assume a feature is fixed until it has been tested against these requirements.
--   **Web Sidebar is NOT Fixed:** Despite the previous agent's conclusion, the user has explicitly stated the web sidebar is still broken. You must re-investigate and fix it.
--   **Work Systematically:** The list of mobile fixes is huge. After unblocking the build, tackle one screen or feature at a time. Do not move on until you have high confidence it works as described by the user.
+-   **DO NOT BUILD YET:** The user's last instruction was to continue fixing issues *without* submitting a new build. Complete the remaining tasks first.
+-   **Monolithic Backend:** Be aware that  is extremely large. Finding and modifying endpoints requires careful searching. Propose refactoring this file as a future task.
+-   **Verify, Don't Assume:** Many fixes have been implemented but not tested by the user. The agent has been claiming features are correct or exist based on code review, but user feedback has previously contradicted this (e.g., chore assignment). Be prepared to debug these features further.
+-   **Systematic Approach Required:** The list of pending tasks is still long. Address them one by one, starting with the unaddressed items from the Upcoming Tasks list.
 
 **documents and test reports created in this job**
--   : Updated to reflect the work done in the session.
+-   : Updated with the latest fixes.
+-   No new test reports were generated in this session.
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **User**: Provides Expo token. (Completed)
-9.  **User**: Instructs agent to make mobile app look and function like web app, fix sidebar, and implement a long list of AI features and bug fixes. (In Progress)
-8.  **User**: Receives agent's summary and  link for the first build. (Completed)
-7.  **User**: Provides an extremely comprehensive list of bugs and missing features for the mobile app, covering Rewards, Dinner, Calendar, Chores, AI, Themes, Chat, and more. This is now the primary task. (In Progress)
-6.  **User**: Corrects agent's plan, stating Family Management should be a single family, and reiterates that the web sidebar is still broken (moves, clustered, overlaps). (In Progress)
-5.  **User**: Receives update that the first build is finished and web fixes are done. (Completed)
-4.  **User**: Provides . This was likely a response to a multi-choice question, continuing the agent's work. (Completed)
-3.  **User**: Receives update that the second, more comprehensive build is in progress. (Completed)
-2.  **User:** Provides . This was likely a response to a multi-choice question, continuing the agent's work. (Completed)
-1.  **User**: Receives agent's final summary about the in-progress build and implemented fixes. (Pending Action)
+10. **User:** Provides a massive list of mobile app bugs and feature requests, including chat, polls, rewards, themes, and more. (IN PROGRESS)
+9.  **User:** Asks agent to continue working on next steps but not to submit a new build. (IN PROGRESS)
+8.  **User:** Lists more issues: chore assignment not working, chat still broken, poll system needs work, tasks for Earn More, parent point awards, reward approval, Google Maps for safe zones, Home Hub calendar popup, screensaver image content, theme fixes, leaderboard medals, sample data, and image upload failures. (IN PROGRESS)
+7.  **User:** Asks agent to remove a logo from the login screen and use it as the app icon. (COMPLETED)
+6.  **User:** Reports that the AI onboarding screen and tutorial are not showing for first-time logins. (IN PROGRESS - Fix implemented, needs verification)
+5.  **User:** Acknowledges agent's work. (COMPLETED)
+4.  **User:** Confirms agent should proceed. (COMPLETED)
+3.  **User:** Asks agent to check the entire mobile app for any missing links or issues. (IN PROGRESS)
+2.  **User:** Receives the successful APK link from build  and is asked for next steps. (COMPLETED)
+1.  **User:** Provides , likely continuing the agent's work. (COMPLETED)
 
 **Project Health Check:**
 -   **Broken:**
-    -   The mobile application is in a highly volatile state. The user has reported numerous critical features as non-functional, including chat, notifications, themeing, and core gameplay loops like chores and rewards.
-    -   The web application's sidebar is not functioning as per the user's latest request.
--   **Mocked:** Web and mobile authentication uses a dev login flow for testing.
+    -   The mobile app remains in a non-production state with numerous user-reported issues. Key features like Chat, interactive Polls, and the full Rewards loop are pending verification after significant code changes.
+    -   Image uploading for profiles/backgrounds is reported as failing.
+-   **Mocked:**
+    -   Authentication relies on a Dev Login flow for testing purposes.
 
 **3rd Party Integrations**
 -   OpenWeatherMap (User API Key)
@@ -188,19 +194,19 @@ The majority of items from the user's comprehensive bug list in message #158 are
     -   
     -   
     -   
-    -    (New)
+    -   
     -   EAS (Expo Application Services) for builds
 
 **Testing status**
   - Testing agent used after significant changes: NO
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None
-  - Known regressions: The user has reported massive regressions and/or previously non-functional features across the entire mobile app. The web sidebar fix has regressed or was incomplete.
+  - Known regressions: The user has reported a wide range of issues that could be considered regressions or incomplete features across the entire mobile app.
 
 **Credentials to test flow:**
 -   **Web App:** Use the Dev: Parent Login or Dev: Child Login buttons on the welcome page.
--   **Mobile App:** Once a build is successful, the same dev login buttons should be available on the mobile login screen.
+-   **Mobile App:** The same dev login buttons are available on the mobile login screen. The  endpoint can be used to ensure the app has test data.
 
 **What agent forgot to execute**
--   The agent failed to correctly interpret the user's feedback regarding the web sidebar. It considered the task finished, but the user explicitly stated the issue persists.
--   Due to being stuck in a build-fix-build cycle, the agent has not been able to perform any verification on the vast majority of mobile app changes it has implemented. It is proceeding on the assumption its code works, which is a significant risk given the project's complexity.</analysis>
+-   **Google Maps for Safe Zones:** The user requested the ability to add a location through Google Maps when creating a Safe Zone. The agent did not address or plan for this feature.
+-   **App-wide Leaderboard Medals:** The user asked for the leaderboard medal emblem to appear next to a child's profile picture *throughout the app*. The agent implemented this for the Chat and Family Wall screens but did not check other areas where a child's avatar appears. This task is only partially complete.</analysis>
