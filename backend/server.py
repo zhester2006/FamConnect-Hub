@@ -1389,13 +1389,15 @@ async def trending_gifs(limit: int = 20):
 @api_router.post("/chores/ai-schedule")
 async def ai_schedule_chores(request: Request, data: dict):
     """Use AI to create a fair chore schedule for the family"""
-    current_user = await get_current_user(request)
-    
-    if current_user.get('role') != 'parent':
-        raise HTTPException(status_code=403, detail="Only parents can schedule chores")
-    
-    family_id = current_user['user_id']
-    logger.info(f"AI Schedule: family_id={family_id}")
+    try:
+        current_user = await get_current_user(request)
+        print(f"DEBUG: Got current_user: {current_user.get('user_id')}", flush=True)
+        
+        if current_user.get('role') != 'parent':
+            raise HTTPException(status_code=403, detail="Only parents can schedule chores")
+        
+        family_id = current_user['user_id']
+        print(f"DEBUG: family_id={family_id}", flush=True)
     
     # Get family members
     members = await db.users.find(
