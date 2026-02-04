@@ -89,13 +89,20 @@ export default function ChildSpace({ navigation, route }) {
       >
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Hey there,</Text>
-            <Text style={styles.userName}>{user?.nickname || user?.name || 'Champ'}! 🌟</Text>
+          {isParentViewing && (
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
+          )}
+          <View style={isParentViewing ? { flex: 1, marginLeft: 8 } : {}}>
+            <Text style={styles.greeting}>{isParentViewing ? `${targetChild?.name}'s Space` : 'Hey there,'}</Text>
+            {!isParentViewing && (
+              <Text style={styles.userName}>{targetChild?.nickname || targetChild?.name || 'Champ'}! 🌟</Text>
+            )}
           </View>
           <View style={styles.pointsBadge}>
             <Ionicons name="star" size={20} color="#fbbf24" />
-            <Text style={styles.pointsText}>{user?.points || 0}</Text>
+            <Text style={styles.pointsText}>{targetChild?.points || 0}</Text>
           </View>
         </View>
 
