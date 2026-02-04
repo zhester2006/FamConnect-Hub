@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import apiService from '../services/api.service';
 
 // Screens
 import LoginScreen from '../screens/LoginScreen';
+import OnboardingScreen from '../screens/OnboardingScreen';
 import ParentDashboard from '../screens/ParentDashboard';
 import ChildSpace from '../screens/ChildSpace';
 import ChatScreen from '../screens/ChatScreen';
@@ -34,26 +37,15 @@ function ParentTabs() {
         },
         tabBarActiveTintColor: '#818cf8',
         tabBarInactiveTintColor: '#6b7280',
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarIcon: ({ focused, color }) => {
           let iconName;
           switch (route.name) {
-            case 'Home':
-              iconName = focused ? 'home' : 'home-outline';
-              break;
-            case 'Chores':
-              iconName = focused ? 'checkbox' : 'checkbox-outline';
-              break;
-            case 'Chat':
-              iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
-              break;
-            case 'Calendar':
-              iconName = focused ? 'calendar' : 'calendar-outline';
-              break;
-            case 'More':
-              iconName = focused ? 'grid' : 'grid-outline';
-              break;
-            default:
-              iconName = 'home';
+            case 'Home': iconName = focused ? 'home' : 'home-outline'; break;
+            case 'Chores': iconName = focused ? 'checkbox' : 'checkbox-outline'; break;
+            case 'Chat': iconName = focused ? 'chatbubbles' : 'chatbubbles-outline'; break;
+            case 'Calendar': iconName = focused ? 'calendar' : 'calendar-outline'; break;
+            case 'More': iconName = focused ? 'grid' : 'grid-outline'; break;
+            default: iconName = 'home';
           }
           return <Ionicons name={iconName} size={24} color={color} />;
         },
@@ -82,26 +74,15 @@ function ChildTabs() {
         },
         tabBarActiveTintColor: '#10b981',
         tabBarInactiveTintColor: '#6b7280',
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarIcon: ({ focused, color }) => {
           let iconName;
           switch (route.name) {
-            case 'MySpace':
-              iconName = focused ? 'home' : 'home-outline';
-              break;
-            case 'Chores':
-              iconName = focused ? 'checkbox' : 'checkbox-outline';
-              break;
-            case 'Chat':
-              iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
-              break;
-            case 'Rewards':
-              iconName = focused ? 'gift' : 'gift-outline';
-              break;
-            case 'More':
-              iconName = focused ? 'grid' : 'grid-outline';
-              break;
-            default:
-              iconName = 'home';
+            case 'MySpace': iconName = focused ? 'home' : 'home-outline'; break;
+            case 'Chores': iconName = focused ? 'checkbox' : 'checkbox-outline'; break;
+            case 'Chat': iconName = focused ? 'chatbubbles' : 'chatbubbles-outline'; break;
+            case 'Rewards': iconName = focused ? 'gift' : 'gift-outline'; break;
+            case 'More': iconName = focused ? 'grid' : 'grid-outline'; break;
+            default: iconName = 'home';
           }
           return <Ionicons name={iconName} size={24} color={color} />;
         },
@@ -116,11 +97,58 @@ function ChildTabs() {
   );
 }
 
+function OnboardingWrapper({ children, onComplete }) {
+  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+
+  useEffect(() => {
+    checkOnboarding();
+  }, []);
+
+  const checkOnboarding = async () => {
+    try {
+      const data = await apiService.getTutorialContent();
+      setShowOnboarding(!data.completed && data.slides?.length > 0);
+    } catch (error) {
+      setShowOnboarding(false);
+    } finally {
+      setCheckingOnboarding(false);
+    }
+  };
+
+  if (checkingOnboarding) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#818cf8" />
+      </View>
+    );
+  }
+
+  if (showOnboarding) {
+    return (
+      <OnboardingScreen 
+        onComplete={() => {
+          setShowOnboarding(false);
+          onComplete?.();
+        }} 
+      />
+    );
+  }
+
+  return children;
+}
+
 export default function AppNavigator() {
   const { isAuthenticated, user, loading } = useAuth();
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
 
   if (loading) {
-    return null; // Or a loading screen
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#818cf8" />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
   }
 
   return (
@@ -128,21 +156,51 @@ export default function AppNavigator() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!isAuthenticated ? (
           <Stack.Screen name="Login" component={LoginScreen} />
-        ) : user?.role === 'parent' ? (
-          <>
-            <Stack.Screen name="ParentMain" component={ParentTabs} />
-            <Stack.Screen name="Family" component={FamilyScreen} />
-            <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
-            <Stack.Screen name="Settings" component={SettingsScreen} />
-          </>
         ) : (
           <>
-            <Stack.Screen name="ChildMain" component={ChildTabs} />
-            <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
-            <Stack.Screen name="Settings" component={SettingsScreen} />
+            {user?.role === 'parent' ? (
+              <>
+                <Stack.Screen name="ParentMain">
+                  {() => (
+                    <OnboardingWrapper onComplete={() => setOnboardingComplete(true)}>
+                      <ParentTabs />
+                    </OnboardingWrapper>
+                  )}
+                </Stack.Screen>
+                <Stack.Screen name="Family" component={FamilyScreen} />
+                <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
+                <Stack.Screen name="Settings" component={SettingsScreen} />
+              </>
+            ) : (
+              <>
+                <Stack.Screen name="ChildMain">
+                  {() => (
+                    <OnboardingWrapper onComplete={() => setOnboardingComplete(true)}>
+                      <ChildTabs />
+                    </OnboardingWrapper>
+                  )}
+                </Stack.Screen>
+                <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
+                <Stack.Screen name="Settings" component={SettingsScreen} />
+              </>
+            )}
           </>
         )}
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0f0d1a',
+  },
+  loadingText: {
+    color: '#a5b4fc',
+    marginTop: 16,
+    fontSize: 16,
+  },
+});
