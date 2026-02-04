@@ -1,74 +1,203 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, Text, StyleSheet, ScrollView, TouchableOpacity, 
-  ActivityIndicator, Dimensions, Image 
+  RefreshControl, ActivityIndicator, Modal, TextInput, Dimensions 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
-import { formatDate, formatTime, getDayName } from '../utils/dateUtils';
+import AnimatedBackground from '../components/AnimatedBackground';
+import { formatDate, formatTime } from '../utils/dateUtils';
 
 const { width } = Dimensions.get('window');
+
+const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Weather Icon Component
+const WeatherIcon = ({ condition, size = 32 }) => {
+  const iconMap = {
+    sunny: { name: 'sunny', color: '#fbbf24' },
+    cloudy: { name: 'cloudy', color: '#9ca3af' },
+    rainy: { name: 'rainy', color: '#60a5fa' },
+    windy: { name: 'cloudy-outline', color: '#67e8f9' },
+    snowy: { name: 'snow', color: '#e0f2fe' },
+    stormy: { name: 'thunderstorm', color: '#a78bfa' },
+  };
+  const icon = iconMap[condition] || iconMap.sunny;
+  return <Ionicons name={icon.name} size={size} color={icon.color} />;
+};
+
+// Mini Calendar Component
+const MiniCalendar = ({ events, currentDate, setCurrentDate, onDayPress }) => {
+  const today = new Date();
+  
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    const days = [];
+    for (let i = 0; i < startingDayOfWeek; i++) days.push(null);
+    for (let i = 1; i <= daysInMonth; i++) days.push(i);
+    return days;
+  };
+
+  const hasEvents = (day) => {
+    if (!day) return false;
+    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return events.some(e => e.event_date === dateStr);
+  };
+
+  return (
+    <View style={styles.miniCalendar}>
+      <View style={styles.calendarHeader}>
+        <TouchableOpacity 
+          onPress={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}
+        >
+          <Ionicons name="chevron-back" size={16} color="#6b7280" />
+        </TouchableOpacity>
+        <Text style={styles.calendarMonthText}>
+          {MONTH_NAMES[currentDate.getMonth()]} {currentDate.getFullYear()}
+        </Text>
+        <TouchableOpacity 
+          onPress={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}
+        >
+          <Ionicons name="chevron-forward" size={16} color="#6b7280" />
+        </TouchableOpacity>
+      </View>
+      
+      <View style={styles.calendarDayNames}>
+        {DAYS.map((d, i) => (
+          <Text key={i} style={styles.dayName}>{d}</Text>
+        ))}
+      </View>
+      
+      <View style={styles.calendarDays}>
+        {getDaysInMonth(currentDate).map((day, i) => {
+          const isToday = day === today.getDate() && 
+                         currentDate.getMonth() === today.getMonth() && 
+                         currentDate.getFullYear() === today.getFullYear();
+          return (
+            <TouchableOpacity
+              key={i}
+              style={[
+                styles.calendarDay,
+                isToday && styles.calendarDayToday,
+              ]}
+              onPress={() => day && onDayPress && onDayPress(day)}
+              disabled={!day}
+            >
+              <Text style={[
+                styles.calendarDayText,
+                isToday && styles.calendarDayTextToday,
+              ]}>
+                {day || ''}
+              </Text>
+              {hasEvents(day) && <View style={styles.eventDot} />}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+};
 
 export default function HomeHubScreen({ navigation }) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [weather, setWeather] = useState(null);
-  const [events, setEvents] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [time, setTime] = useState(new Date());
+  const [calendarDate, setCalendarDate] = useState(new Date());
   const [familyMembers, setFamilyMembers] = useState([]);
-  const [wallPosts, setWallPosts] = useState([]);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [events, setEvents] = useState([]);
+  const [quote, setQuote] = useState('');
+  const [shoppingItems, setShoppingItems] = useState([]);
+  const [todayChores, setTodayChores] = useState([]);
+  const [weather, setWeather] = useState({ condition: 'sunny', temp: 72 });
+  
+  // Modals
+  const [showAddEvent, setShowAddEvent] = useState(false);
+  const [showAddItem, setShowAddItem] = useState(false);
+  const [newEventTitle, setNewEventTitle] = useState('');
+  const [newItem, setNewItem] = useState('');
 
+  // Update time every second
   useEffect(() => {
-    fetchData();
-    
-    // Update time every minute
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
-
+    const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
-      const [weatherData, eventsData, membersData, wallData] = await Promise.all([
-        apiService.get('/weather').catch(() => null),
-        apiService.get('/events').catch(() => ({ events: [] })),
-        apiService.get('/family/members').catch(() => ({ members: [] })),
-        apiService.get('/family-wall?limit=5').catch(() => ({ posts: [] })),
+      const [membersData, eventsData, quoteData, shoppingData, choresData, weatherData] = await Promise.all([
+        apiService.getFamilyMembers().catch(() => ({ members: [] })),
+        apiService.getEvents().catch(() => ({ events: [] })),
+        apiService.getDailyQuote().catch(() => ({ quote: 'Family is not an important thing. It\'s everything.' })),
+        apiService.getShoppingList().catch(() => ({ items: [] })),
+        apiService.getChores().catch(() => ({ chores: [] })),
+        apiService.getWeather().catch(() => ({ temp: 72, condition: 'sunny' })),
       ]);
-      
-      setWeather(weatherData);
-      setEvents(eventsData.events || []);
+
       setFamilyMembers(membersData.members || []);
-      setWallPosts(wallData.posts || []);
+      setEvents(eventsData.events || []);
+      setQuote(quoteData.quote || 'Family is everything.');
+      setShoppingItems(shoppingData.items || []);
+      setWeather(weatherData || { temp: 72, condition: 'sunny' });
+      
+      const today = new Date().toISOString().split('T')[0];
+      setTodayChores((choresData.chores || []).filter(c => c.scheduled_date === today));
     } catch (error) {
       console.error('Failed to fetch hub data:', error);
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  }, [fetchData]);
+
+  const handleAddEvent = async () => {
+    if (!newEventTitle.trim()) return;
+    try {
+      await apiService.createEvent({
+        title: newEventTitle,
+        event_date: new Date().toISOString().split('T')[0],
+        event_type: 'event',
+      });
+      setShowAddEvent(false);
+      setNewEventTitle('');
+      fetchData();
+    } catch (error) {
+      console.error('Failed to add event:', error);
+    }
   };
 
-  const getTodayEvents = () => {
-    const today = new Date().toDateString();
-    return events.filter(e => new Date(e.date).toDateString() === today);
+  const handleAddItem = async () => {
+    if (!newItem.trim()) return;
+    try {
+      await apiService.addShoppingItem({ name: newItem });
+      setShowAddItem(false);
+      setNewItem('');
+      fetchData();
+    } catch (error) {
+      console.error('Failed to add item:', error);
+    }
   };
 
-  const getWeatherIcon = (condition) => {
-    const icons = {
-      'Clear': 'sunny',
-      'Clouds': 'cloudy',
-      'Rain': 'rainy',
-      'Snow': 'snow',
-      'Thunderstorm': 'thunderstorm',
-      'Drizzle': 'rainy',
-      'Mist': 'cloudy',
-      'Fog': 'cloudy',
-    };
-    return icons[condition] || 'partly-sunny';
-  };
+  const todayEvents = events.filter(e => e.event_date === new Date().toISOString().split('T')[0]);
+  const onlineMembers = familyMembers.filter(m => m.online_status);
 
   if (loading) {
     return (
@@ -78,255 +207,560 @@ export default function HomeHubScreen({ navigation }) {
     );
   }
 
-  const todayEvents = getTodayEvents();
-
   return (
-    <View style={styles.container}>
-      <LinearGradient 
-        colors={['#0f172a', '#1e1b4b', '#312e81']} 
-        style={styles.gradient}
-      />
-      
+    <AnimatedBackground page="homehub">
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.title}>Family Hub</Text>
-        <TouchableOpacity onPress={fetchData} style={styles.refreshButton}>
-          <Ionicons name="refresh" size={24} color="#fff" />
-        </TouchableOpacity>
+        <Text style={styles.title}>Home Hub</Text>
+        <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Date & Time Widget */}
-        <View style={styles.dateTimeWidget}>
-          <Text style={styles.timeText}>
-            {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </Text>
-          <Text style={styles.dateText}>
-            {getDayName(currentTime)}, {formatDate(currentTime)}
-          </Text>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#818cf8" />
+        }
+      >
+        {/* Weather & Time Row */}
+        <View style={styles.topRow}>
+          <View style={styles.weatherCard}>
+            <WeatherIcon condition={weather.condition} />
+            <Text style={styles.temperature}>{Math.round(weather.temp || 72)}°F</Text>
+          </View>
+          <View style={styles.timeCard}>
+            <Text style={styles.timeText}>
+              {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </Text>
+            <Text style={styles.dateText}>
+              {time.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+            </Text>
+          </View>
+          <View style={styles.onlineCard}>
+            <View style={styles.avatarRow}>
+              {familyMembers.slice(0, 4).map((member, i) => (
+                <View 
+                  key={member.user_id} 
+                  style={[styles.miniAvatar, { marginLeft: i > 0 ? -8 : 0 }]}
+                >
+                  <Text style={styles.miniAvatarText}>{member.name?.charAt(0)}</Text>
+                  <View style={[
+                    styles.onlineDot,
+                    { backgroundColor: member.online_status ? '#10b981' : '#6b7280' }
+                  ]} />
+                </View>
+              ))}
+            </View>
+            <Text style={styles.onlineText}>{onlineMembers.length} online</Text>
+          </View>
         </View>
 
-        {/* Weather Widget */}
-        {weather && (
-          <View style={styles.weatherWidget}>
-            <View style={styles.weatherMain}>
-              <Ionicons 
-                name={getWeatherIcon(weather.condition)} 
-                size={48} 
-                color="#f59e0b" 
-              />
-              <View style={styles.weatherInfo}>
-                <Text style={styles.temperature}>{Math.round(weather.temp || 0)}°F</Text>
-                <Text style={styles.weatherCondition}>{weather.condition || 'Clear'}</Text>
-              </View>
-            </View>
-            <View style={styles.weatherDetails}>
-              <View style={styles.weatherDetail}>
-                <Ionicons name="water" size={16} color="#60a5fa" />
-                <Text style={styles.weatherDetailText}>{weather.humidity || 0}%</Text>
-              </View>
-              <View style={styles.weatherDetail}>
-                <Ionicons name="speedometer" size={16} color="#60a5fa" />
-                <Text style={styles.weatherDetailText}>{weather.wind_speed || 0} mph</Text>
-              </View>
-              <View style={styles.weatherDetail}>
-                <Ionicons name="thermometer" size={16} color="#60a5fa" />
-                <Text style={styles.weatherDetailText}>Feels {Math.round(weather.feels_like || 0)}°</Text>
-              </View>
-            </View>
+        {/* Daily Inspiration */}
+        <View style={styles.quoteCard}>
+          <Ionicons name="sparkles" size={18} color="#f59e0b" style={{ marginRight: 8 }} />
+          <View style={styles.quoteContent}>
+            <Text style={styles.quoteLabel}>Daily Inspiration</Text>
+            <Text style={styles.quoteText}>"{quote}"</Text>
           </View>
-        )}
+        </View>
 
-        {/* Today's Events */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Today's Events</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Calendar')}>
-              <Text style={styles.seeAll}>See All</Text>
-            </TouchableOpacity>
+        {/* Main Content Grid */}
+        <View style={styles.contentGrid}>
+          {/* Left Column: Calendar + Today's Events */}
+          <View style={styles.leftColumn}>
+            {/* Calendar */}
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="calendar" size={16} color="#06b6d4" />
+                <Text style={styles.cardTitle}>Calendar</Text>
+                <TouchableOpacity 
+                  onPress={() => setShowAddEvent(true)}
+                  style={styles.addButton}
+                >
+                  <Ionicons name="add" size={16} color="#06b6d4" />
+                </TouchableOpacity>
+              </View>
+              <MiniCalendar 
+                events={events}
+                currentDate={calendarDate}
+                setCurrentDate={setCalendarDate}
+              />
+            </View>
+
+            {/* Today's Events */}
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="notifications" size={16} color="#f59e0b" />
+                <Text style={styles.cardTitle}>Today</Text>
+                <Text style={styles.cardBadge}>{todayEvents.length}</Text>
+              </View>
+              {todayEvents.length === 0 ? (
+                <Text style={styles.emptyText}>No events today</Text>
+              ) : (
+                todayEvents.slice(0, 3).map(event => (
+                  <View key={event.event_id} style={styles.eventItem}>
+                    <View style={styles.eventDotLarge} />
+                    <Text style={styles.eventTitle} numberOfLines={1}>{event.title}</Text>
+                  </View>
+                ))
+              )}
+            </View>
           </View>
-          
-          {todayEvents.length > 0 ? (
-            <View style={styles.eventsList}>
-              {todayEvents.slice(0, 4).map((event, index) => (
-                <View key={event.event_id || index} style={styles.eventCard}>
-                  <View style={[styles.eventDot, { backgroundColor: event.color || '#818cf8' }]} />
-                  <View style={styles.eventInfo}>
-                    <Text style={styles.eventTitle}>{event.title}</Text>
-                    <Text style={styles.eventTime}>
-                      {event.time || formatTime(event.date)}
+
+          {/* Right Column: Chores + Shopping */}
+          <View style={styles.rightColumn}>
+            {/* Chores */}
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="checkbox" size={16} color="#10b981" />
+                <Text style={styles.cardTitle}>Chores</Text>
+                <Text style={styles.cardBadge}>
+                  {todayChores.filter(c => c.status === 'approved').length}/{todayChores.length}
+                </Text>
+              </View>
+              {todayChores.length === 0 ? (
+                <Text style={styles.emptyText}>No chores today!</Text>
+              ) : (
+                todayChores.slice(0, 4).map(chore => (
+                  <View key={chore.chore_id} style={styles.choreItem}>
+                    <Ionicons 
+                      name={chore.status === 'approved' ? 'checkmark-circle' : 'ellipse-outline'} 
+                      size={16} 
+                      color={chore.status === 'approved' ? '#10b981' : '#6b7280'} 
+                    />
+                    <View style={styles.choreInfo}>
+                      <Text style={styles.choreTitle} numberOfLines={1}>{chore.title}</Text>
+                      <Text style={styles.chorePoints}>+{chore.points || 10}pts</Text>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
+
+            {/* Shopping */}
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="cart" size={16} color="#3b82f6" />
+                <Text style={styles.cardTitle}>Shopping</Text>
+                <TouchableOpacity 
+                  onPress={() => setShowAddItem(true)}
+                  style={styles.addButton}
+                >
+                  <Ionicons name="add" size={16} color="#3b82f6" />
+                </TouchableOpacity>
+              </View>
+              {shoppingItems.length === 0 ? (
+                <Text style={styles.emptyText}>List empty</Text>
+              ) : (
+                shoppingItems.slice(0, 6).map(item => (
+                  <View key={item.item_id} style={styles.shoppingItem}>
+                    <View style={[
+                      styles.shoppingDot,
+                      { backgroundColor: item.status === 'purchased' ? '#6b7280' : '#fbbf24' }
+                    ]} />
+                    <Text 
+                      style={[
+                        styles.shoppingText,
+                        item.status === 'purchased' && styles.shoppingTextDone
+                      ]} 
+                      numberOfLines={1}
+                    >
+                      {item.name}
                     </Text>
                   </View>
-                </View>
-              ))}
+                ))
+              )}
             </View>
-          ) : (
-            <View style={styles.emptyEvents}>
-              <Ionicons name="calendar-outline" size={32} color="#4b5563" />
-              <Text style={styles.emptyText}>No events today</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Family Members */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Family</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Family')}>
-              <Text style={styles.seeAll}>Manage</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.membersScroll}>
-            {familyMembers.map((member, index) => (
-              <TouchableOpacity 
-                key={member.user_id || index} 
-                style={styles.memberCard}
-                onPress={() => {
-                  if (member.role === 'child' && user?.role === 'parent') {
-                    navigation.navigate('ChildDetail', { childId: member.user_id });
-                  }
-                }}
-              >
-                <View style={styles.memberAvatar}>
-                  {member.picture ? (
-                    <Image source={{ uri: member.picture }} style={styles.memberImage} />
-                  ) : (
-                    <Text style={styles.memberAvatarText}>{member.name?.charAt(0)}</Text>
-                  )}
-                  <View style={[styles.statusDot, { backgroundColor: member.online ? '#10b981' : '#6b7280' }]} />
-                </View>
-                <Text style={styles.memberName} numberOfLines={1}>{member.name}</Text>
-                <Text style={styles.memberRole}>{member.role}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Family Wall Preview */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Family Wall</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('FamilyWall')}>
-              <Text style={styles.seeAll}>View All</Text>
-            </TouchableOpacity>
-          </View>
-          
-          {wallPosts.length > 0 ? (
-            <View style={styles.wallPreview}>
-              {wallPosts.slice(0, 3).map((post, index) => (
-                <View key={post.post_id || index} style={styles.wallPost}>
-                  <View style={styles.postHeader}>
-                    <View style={styles.postAvatar}>
-                      <Text style={styles.postAvatarText}>{post.user_name?.charAt(0)}</Text>
-                    </View>
-                    <View>
-                      <Text style={styles.postAuthor}>{post.user_name}</Text>
-                      <Text style={styles.postTime}>{formatTime(post.created_at)}</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.postContent} numberOfLines={2}>{post.content}</Text>
-                </View>
-              ))}
-            </View>
-          ) : (
-            <View style={styles.emptyEvents}>
-              <Ionicons name="chatbubbles-outline" size={32} color="#4b5563" />
-              <Text style={styles.emptyText}>No posts yet</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.quickActions}>
-            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('Chat')}>
-              <View style={[styles.actionIcon, { backgroundColor: '#6366f120' }]}>
-                <Ionicons name="chatbubbles" size={24} color="#6366f1" />
-              </View>
-              <Text style={styles.actionLabel}>Chat</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('Chores')}>
-              <View style={[styles.actionIcon, { backgroundColor: '#10b98120' }]}>
-                <Ionicons name="checkbox" size={24} color="#10b981" />
-              </View>
-              <Text style={styles.actionLabel}>Chores</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('Shopping')}>
-              <View style={[styles.actionIcon, { backgroundColor: '#f59e0b20' }]}>
-                <Ionicons name="cart" size={24} color="#f59e0b" />
-              </View>
-              <Text style={styles.actionLabel}>Shopping</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('Location')}>
-              <View style={[styles.actionIcon, { backgroundColor: '#ef444420' }]}>
-                <Ionicons name="location" size={24} color="#ef4444" />
-              </View>
-              <Text style={styles.actionLabel}>Location</Text>
-            </TouchableOpacity>
           </View>
         </View>
 
         <View style={{ height: 100 }} />
       </ScrollView>
-    </View>
+
+      {/* Add Event Modal */}
+      <Modal visible={showAddEvent} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Event</Text>
+              <TouchableOpacity onPress={() => setShowAddEvent(false)}>
+                <Ionicons name="close" size={24} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Event title"
+              placeholderTextColor="#6b7280"
+              value={newEventTitle}
+              onChangeText={setNewEventTitle}
+            />
+            <TouchableOpacity style={styles.submitButton} onPress={handleAddEvent}>
+              <Text style={styles.submitButtonText}>Add Event</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Add Shopping Item Modal */}
+      <Modal visible={showAddItem} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Item</Text>
+              <TouchableOpacity onPress={() => setShowAddItem(false)}>
+                <Ionicons name="close" size={24} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Item name"
+              placeholderTextColor="#6b7280"
+              value={newItem}
+              onChangeText={setNewItem}
+            />
+            <TouchableOpacity style={[styles.submitButton, { backgroundColor: '#3b82f6' }]} onPress={handleAddItem}>
+              <Text style={styles.submitButtonText}>Add Item</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </AnimatedBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f0d1a' },
-  gradient: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f0d1a' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 48, paddingBottom: 16 },
-  backButton: { padding: 8 },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
-  refreshButton: { padding: 8 },
-  scrollView: { flex: 1, padding: 16 },
-  dateTimeWidget: { alignItems: 'center', marginBottom: 24 },
-  timeText: { fontSize: 56, fontWeight: '200', color: '#fff', letterSpacing: 4 },
-  dateText: { fontSize: 18, color: '#a5b4fc', marginTop: 4 },
-  weatherWidget: { backgroundColor: 'rgba(30, 27, 75, 0.8)', borderRadius: 20, padding: 20, marginBottom: 20 },
-  weatherMain: { flexDirection: 'row', alignItems: 'center' },
-  weatherInfo: { marginLeft: 16 },
-  temperature: { fontSize: 48, fontWeight: '300', color: '#fff' },
-  weatherCondition: { fontSize: 16, color: '#a5b4fc' },
-  weatherDetails: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' },
-  weatherDetail: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  weatherDetailText: { color: '#a5b4fc', fontSize: 14 },
-  section: { marginBottom: 24 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  seeAll: { color: '#818cf8', fontSize: 14 },
-  eventsList: { gap: 8 },
-  eventCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(30, 27, 75, 0.8)', borderRadius: 12, padding: 12 },
-  eventDot: { width: 12, height: 12, borderRadius: 6, marginRight: 12 },
-  eventInfo: { flex: 1 },
-  eventTitle: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  eventTime: { color: '#a5b4fc', fontSize: 13, marginTop: 2 },
-  emptyEvents: { alignItems: 'center', padding: 24, backgroundColor: 'rgba(30, 27, 75, 0.5)', borderRadius: 12 },
-  emptyText: { color: '#6b7280', marginTop: 8 },
-  membersScroll: { marginHorizontal: -4 },
-  memberCard: { alignItems: 'center', marginHorizontal: 8, width: 80 },
-  memberAvatar: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#6366f1', justifyContent: 'center', alignItems: 'center', position: 'relative' },
-  memberImage: { width: 60, height: 60, borderRadius: 30 },
-  memberAvatarText: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
-  statusDot: { position: 'absolute', bottom: 2, right: 2, width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: '#1e1b4b' },
-  memberName: { color: '#fff', fontSize: 12, marginTop: 8, textAlign: 'center' },
-  memberRole: { color: '#6b7280', fontSize: 10, textTransform: 'capitalize' },
-  wallPreview: { gap: 12 },
-  wallPost: { backgroundColor: 'rgba(30, 27, 75, 0.8)', borderRadius: 12, padding: 12 },
-  postHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  postAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#6366f1', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-  postAvatarText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
-  postAuthor: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  postTime: { color: '#6b7280', fontSize: 11 },
-  postContent: { color: '#a5b4fc', fontSize: 14 },
-  quickActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  actionCard: { width: (width - 56) / 4, alignItems: 'center' },
-  actionIcon: { width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  actionLabel: { color: '#fff', fontSize: 12 },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0f0d1a',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 48,
+    paddingBottom: 12,
+  },
+  backButton: {
+    padding: 8,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  scrollView: {
+    flex: 1,
+    padding: 12,
+  },
+  topRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  weatherCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(30, 27, 75, 0.8)',
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+  },
+  temperature: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  timeCard: {
+    flex: 1,
+    backgroundColor: 'rgba(30, 27, 75, 0.8)',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+  },
+  timeText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  dateText: {
+    fontSize: 10,
+    color: '#a5b4fc',
+  },
+  onlineCard: {
+    flex: 1,
+    backgroundColor: 'rgba(30, 27, 75, 0.8)',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+  },
+  avatarRow: {
+    flexDirection: 'row',
+  },
+  miniAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#6366f1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#0f0d1a',
+  },
+  miniAvatarText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  onlineDot: {
+    position: 'absolute',
+    bottom: -1,
+    right: -1,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#0f0d1a',
+  },
+  onlineText: {
+    fontSize: 10,
+    color: '#10b981',
+    marginTop: 4,
+  },
+  quoteCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.2)',
+  },
+  quoteContent: {
+    flex: 1,
+  },
+  quoteLabel: {
+    fontSize: 10,
+    color: '#f59e0b',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  quoteText: {
+    fontSize: 13,
+    color: '#fff',
+    fontStyle: 'italic',
+    lineHeight: 18,
+  },
+  contentGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  leftColumn: {
+    flex: 1,
+    gap: 12,
+  },
+  rightColumn: {
+    flex: 1,
+    gap: 12,
+  },
+  card: {
+    backgroundColor: 'rgba(30, 27, 75, 0.8)',
+    borderRadius: 12,
+    padding: 12,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 6,
+  },
+  cardTitle: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  cardBadge: {
+    fontSize: 10,
+    color: '#6b7280',
+  },
+  addButton: {
+    padding: 4,
+  },
+  emptyText: {
+    fontSize: 11,
+    color: '#6b7280',
+    textAlign: 'center',
+    paddingVertical: 8,
+  },
+  // Mini Calendar
+  miniCalendar: {},
+  calendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  calendarMonthText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  calendarDayNames: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  dayName: {
+    flex: 1,
+    fontSize: 9,
+    color: '#6b7280',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  calendarDays: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  calendarDay: {
+    width: `${100/7}%`,
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  calendarDayToday: {
+    backgroundColor: '#6366f1',
+    borderRadius: 12,
+  },
+  calendarDayText: {
+    fontSize: 10,
+    color: '#9ca3af',
+  },
+  calendarDayTextToday: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  eventDot: {
+    position: 'absolute',
+    bottom: 2,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#f59e0b',
+  },
+  // Event Items
+  eventItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  eventDotLarge: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#f59e0b',
+  },
+  eventTitle: {
+    flex: 1,
+    fontSize: 12,
+    color: '#fff',
+  },
+  // Chore Items
+  choreItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  choreInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  choreTitle: {
+    flex: 1,
+    fontSize: 11,
+    color: '#fff',
+  },
+  chorePoints: {
+    fontSize: 10,
+    color: '#f59e0b',
+    fontWeight: '600',
+  },
+  // Shopping Items
+  shoppingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 5,
+  },
+  shoppingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  shoppingText: {
+    flex: 1,
+    fontSize: 11,
+    color: '#fff',
+  },
+  shoppingTextDone: {
+    color: '#6b7280',
+    textDecorationLine: 'line-through',
+  },
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#1e1b4b',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  input: {
+    backgroundColor: 'rgba(15, 13, 26, 0.5)',
+    borderRadius: 12,
+    padding: 16,
+    color: '#fff',
+    fontSize: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.3)',
+  },
+  submitButton: {
+    backgroundColor: '#6366f1',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
