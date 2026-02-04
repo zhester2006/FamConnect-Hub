@@ -2173,19 +2173,34 @@ async def websocket_chat(websocket: WebSocket, session_token: str):
 
 # Profile picture upload endpoint
 @api_router.post("/users/{user_id}/upload-picture")
-async def upload_profile_picture(user_id: str, request: Request, data: dict):
+async def upload_profile_picture(user_id: str, request: Request):
     current_user = await get_current_user(request)
     if current_user['user_id'] != user_id and current_user['role'] != 'parent':
         raise HTTPException(status_code=403, detail="Unauthorized")
     
-    image_data = data.get('image')  # Base64 encoded image
-    image_type = data.get('type', 'profile')  # 'profile' or 'background'
+    content_type = request.headers.get('content-type', '')
     
-    if not image_data:
-        raise HTTPException(status_code=400, detail="No image data provided")
+    if 'multipart/form-data' in content_type:
+        # Handle FormData upload
+        form = await request.form()
+        file = form.get('file')
+        image_type = form.get('type', 'profile')
+        
+        if file:
+            import base64
+            contents = await file.read()
+            image_data = f"data:image/jpeg;base64,{base64.b64encode(contents).decode()}"
+        else:
+            raise HTTPException(status_code=400, detail="No file provided")
+    else:
+        # Handle JSON upload
+        data = await request.json()
+        image_data = data.get('image')
+        image_type = data.get('type', 'profile')
+        
+        if not image_data:
+            raise HTTPException(status_code=400, detail="No image data provided")
     
-    # Store in database (for simplicity, storing base64 directly)
-    # In production, would upload to cloud storage
     update_field = 'picture' if image_type == 'profile' else 'profile_background'
     
     await db.users.update_one(
@@ -2194,6 +2209,31 @@ async def upload_profile_picture(user_id: str, request: Request, data: dict):
     )
     
     return await db.users.find_one({"user_id": user_id}, {"_id": 0})
+
+# General image upload endpoint
+@api_router.post("/upload/image")
+async def upload_image(request: Request):
+    current_user = await get_current_user(request)
+    
+    content_type = request.headers.get('content-type', '')
+    
+    if 'multipart/form-data' in content_type:
+        form = await request.form()
+        file = form.get('file')
+        
+        if file:
+            import base64
+            contents = await file.read()
+            image_data = f"data:image/jpeg;base64,{base64.b64encode(contents).decode()}"
+            return {"url": image_data, "success": True}
+        else:
+            raise HTTPException(status_code=400, detail="No file provided")
+    else:
+        data = await request.json()
+        image_data = data.get('image')
+        if image_data:
+            return {"url": image_data, "success": True}
+        raise HTTPException(status_code=400, detail="No image data provided")
 
 # Pixie AI Onboarding - Get onboarding steps
 @api_router.get("/onboarding/steps")
