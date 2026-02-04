@@ -261,8 +261,11 @@ export default function LocationScreen({ navigation }) {
       return;
     }
     
-    if (!currentLocation) {
-      Alert.alert('Error', 'Unable to get current location');
+    // Use selected location from map, or current location as fallback
+    const locationToUse = selectedLocation || currentLocation;
+    
+    if (!locationToUse) {
+      Alert.alert('Error', 'Please select a location on the map or enable location services');
       return;
     }
 
@@ -270,8 +273,8 @@ export default function LocationScreen({ navigation }) {
     try {
       const result = await apiService.createGeofence({
         name: newGeofence.name,
-        latitude: currentLocation.latitude,
-        longitude: currentLocation.longitude,
+        latitude: locationToUse.latitude,
+        longitude: locationToUse.longitude,
         radius_feet: newGeofence.radius,
       });
       
@@ -279,14 +282,16 @@ export default function LocationScreen({ navigation }) {
       await locationService.addGeofence({
         geofence_id: result.geofence_id,
         name: newGeofence.name,
-        latitude: currentLocation.latitude,
-        longitude: currentLocation.longitude,
+        latitude: locationToUse.latitude,
+        longitude: locationToUse.longitude,
         radius_feet: newGeofence.radius,
       });
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setShowAddGeofence(false);
+      setShowMapPicker(false);
       setNewGeofence({ name: '', radius: 300 });
+      setSelectedLocation(null);
       fetchData();
       Alert.alert('Success', 'Safe zone created! You\'ll be notified when entering or leaving.');
     } catch (error) {
