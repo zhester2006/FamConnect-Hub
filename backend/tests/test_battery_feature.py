@@ -20,15 +20,27 @@ PARENT_SESSION = "test_session_1770163520318"  # user_parent001 - Sarah Johnson
 CHILD_SESSION = "test_child_session_alex"  # user_child001 - Alex Johnson
 
 
+def get_parent_session():
+    """Get a requests session with parent cookie"""
+    session = requests.Session()
+    session.cookies.set('session_token', PARENT_SESSION)
+    return session
+
+
+def get_child_session():
+    """Get a requests session with child cookie"""
+    session = requests.Session()
+    session.cookies.set('session_token', CHILD_SESSION)
+    return session
+
+
 class TestBatteryPermissions:
     """Test battery permission endpoints"""
     
     def test_get_permissions_child(self):
         """GET /api/permissions - Child can get their permissions"""
-        response = requests.get(
-            f"{BASE_URL}/api/permissions",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"}
-        )
+        session = get_child_session()
+        response = session.get(f"{BASE_URL}/api/permissions")
         assert response.status_code == 200
         data = response.json()
         assert "permissions" in data
@@ -37,10 +49,8 @@ class TestBatteryPermissions:
     
     def test_get_permissions_parent(self):
         """GET /api/permissions - Parent can get their permissions"""
-        response = requests.get(
-            f"{BASE_URL}/api/permissions",
-            headers={"Authorization": f"Bearer {PARENT_SESSION}"}
-        )
+        session = get_parent_session()
+        response = session.get(f"{BASE_URL}/api/permissions")
         assert response.status_code == 200
         data = response.json()
         assert "permissions" in data
@@ -53,9 +63,9 @@ class TestBatteryPermissions:
     
     def test_toggle_battery_permission_enable(self):
         """PUT /api/permissions/battery - Enable battery sharing"""
-        response = requests.put(
+        session = get_child_session()
+        response = session.put(
             f"{BASE_URL}/api/permissions/battery",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"},
             json={"share_battery": True}
         )
         assert response.status_code == 200
@@ -66,9 +76,9 @@ class TestBatteryPermissions:
     
     def test_toggle_battery_permission_disable(self):
         """PUT /api/permissions/battery - Disable battery sharing"""
-        response = requests.put(
+        session = get_child_session()
+        response = session.put(
             f"{BASE_URL}/api/permissions/battery",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"},
             json={"share_battery": False}
         )
         assert response.status_code == 200
@@ -78,9 +88,8 @@ class TestBatteryPermissions:
         print("Battery sharing disabled successfully")
         
         # Re-enable for subsequent tests
-        requests.put(
+        session.put(
             f"{BASE_URL}/api/permissions/battery",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"},
             json={"share_battery": True}
         )
     
@@ -98,9 +107,12 @@ class TestBatteryUpdate:
     
     def test_update_battery_valid(self):
         """POST /api/battery/update - Update battery with valid level"""
-        response = requests.post(
+        session = get_child_session()
+        # Ensure battery sharing is enabled first
+        session.put(f"{BASE_URL}/api/permissions/battery", json={"share_battery": True})
+        
+        response = session.post(
             f"{BASE_URL}/api/battery/update",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"},
             json={"level": 75, "is_charging": False}
         )
         assert response.status_code == 200
@@ -111,9 +123,9 @@ class TestBatteryUpdate:
     
     def test_update_battery_charging(self):
         """POST /api/battery/update - Update battery with charging status"""
-        response = requests.post(
+        session = get_child_session()
+        response = session.post(
             f"{BASE_URL}/api/battery/update",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"},
             json={"level": 50, "is_charging": True}
         )
         assert response.status_code == 200
@@ -124,9 +136,9 @@ class TestBatteryUpdate:
     
     def test_update_battery_invalid_level_negative(self):
         """POST /api/battery/update - Reject negative battery level"""
-        response = requests.post(
+        session = get_child_session()
+        response = session.post(
             f"{BASE_URL}/api/battery/update",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"},
             json={"level": -10, "is_charging": False}
         )
         assert response.status_code == 400
@@ -134,9 +146,9 @@ class TestBatteryUpdate:
     
     def test_update_battery_invalid_level_over_100(self):
         """POST /api/battery/update - Reject battery level over 100"""
-        response = requests.post(
+        session = get_child_session()
+        response = session.post(
             f"{BASE_URL}/api/battery/update",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"},
             json={"level": 150, "is_charging": False}
         )
         assert response.status_code == 400
@@ -144,9 +156,9 @@ class TestBatteryUpdate:
     
     def test_update_battery_missing_level(self):
         """POST /api/battery/update - Reject missing battery level"""
-        response = requests.post(
+        session = get_child_session()
+        response = session.post(
             f"{BASE_URL}/api/battery/update",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"},
             json={"is_charging": False}
         )
         assert response.status_code == 400
@@ -162,17 +174,17 @@ class TestBatteryUpdate:
     
     def test_update_battery_without_permission(self):
         """POST /api/battery/update - Returns message when permission not enabled"""
+        session = get_child_session()
+        
         # First disable battery sharing
-        requests.put(
+        session.put(
             f"{BASE_URL}/api/permissions/battery",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"},
             json={"share_battery": False}
         )
         
         # Try to update battery
-        response = requests.post(
+        response = session.post(
             f"{BASE_URL}/api/battery/update",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"},
             json={"level": 60, "is_charging": False}
         )
         assert response.status_code == 200
@@ -182,9 +194,8 @@ class TestBatteryUpdate:
         print("Correctly returned message when permission not enabled")
         
         # Re-enable for subsequent tests
-        requests.put(
+        session.put(
             f"{BASE_URL}/api/permissions/battery",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"},
             json={"share_battery": True}
         )
 
@@ -194,23 +205,21 @@ class TestFamilyBatteryStatus:
     
     def test_get_family_battery_parent(self):
         """GET /api/battery/family - Parent can view family battery status"""
+        child_session = get_child_session()
+        parent_session = get_parent_session()
+        
         # First ensure child has battery sharing enabled and updated
-        requests.put(
+        child_session.put(
             f"{BASE_URL}/api/permissions/battery",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"},
             json={"share_battery": True}
         )
-        requests.post(
+        child_session.post(
             f"{BASE_URL}/api/battery/update",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"},
             json={"level": 45, "is_charging": False}
         )
         
         # Parent fetches family battery status
-        response = requests.get(
-            f"{BASE_URL}/api/battery/family",
-            headers={"Authorization": f"Bearer {PARENT_SESSION}"}
-        )
+        response = parent_session.get(f"{BASE_URL}/api/battery/family")
         assert response.status_code == 200
         data = response.json()
         assert "battery_status" in data
@@ -229,10 +238,8 @@ class TestFamilyBatteryStatus:
     
     def test_get_family_battery_child_forbidden(self):
         """GET /api/battery/family - Child cannot view family battery status"""
-        response = requests.get(
-            f"{BASE_URL}/api/battery/family",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"}
-        )
+        session = get_child_session()
+        response = session.get(f"{BASE_URL}/api/battery/family")
         assert response.status_code == 403
         print("Correctly denied child access to family battery status")
     
@@ -247,17 +254,18 @@ class TestLowBatteryNotification:
     
     def test_low_battery_creates_notification(self):
         """POST /api/battery/update - Creates notification when battery <= 15%"""
+        child_session = get_child_session()
+        parent_session = get_parent_session()
+        
         # Ensure battery sharing is enabled
-        requests.put(
+        child_session.put(
             f"{BASE_URL}/api/permissions/battery",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"},
             json={"share_battery": True}
         )
         
         # Update battery to critically low level
-        response = requests.post(
+        response = child_session.post(
             f"{BASE_URL}/api/battery/update",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"},
             json={"level": 10, "is_charging": False}
         )
         assert response.status_code == 200
@@ -267,10 +275,7 @@ class TestLowBatteryNotification:
         print("Low battery update successful")
         
         # Check if notification was created for parent
-        notif_response = requests.get(
-            f"{BASE_URL}/api/notifications",
-            headers={"Authorization": f"Bearer {PARENT_SESSION}"}
-        )
+        notif_response = parent_session.get(f"{BASE_URL}/api/notifications")
         assert notif_response.status_code == 200
         notifications = notif_response.json().get("notifications", [])
         
@@ -284,10 +289,11 @@ class TestLowBatteryNotification:
     
     def test_low_battery_no_notification_when_charging(self):
         """POST /api/battery/update - No notification when charging even if low"""
+        session = get_child_session()
+        
         # Update battery to low level but charging
-        response = requests.post(
+        response = session.post(
             f"{BASE_URL}/api/battery/update",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"},
             json={"level": 5, "is_charging": True}
         )
         assert response.status_code == 200
@@ -296,9 +302,8 @@ class TestLowBatteryNotification:
         print("Low battery while charging - no notification expected")
         
         # Reset battery to normal level
-        requests.post(
+        session.post(
             f"{BASE_URL}/api/battery/update",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"},
             json={"level": 45, "is_charging": False}
         )
 
@@ -308,19 +313,21 @@ class TestBatteryDataPersistence:
     
     def test_battery_data_persists(self):
         """Verify battery data is saved and retrievable"""
+        child_session = get_child_session()
+        parent_session = get_parent_session()
+        
+        # Ensure battery sharing is enabled
+        child_session.put(f"{BASE_URL}/api/permissions/battery", json={"share_battery": True})
+        
         # Update battery
-        update_response = requests.post(
+        update_response = child_session.post(
             f"{BASE_URL}/api/battery/update",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"},
             json={"level": 67, "is_charging": True}
         )
         assert update_response.status_code == 200
         
         # Fetch family battery status to verify persistence
-        family_response = requests.get(
-            f"{BASE_URL}/api/battery/family",
-            headers={"Authorization": f"Bearer {PARENT_SESSION}"}
-        )
+        family_response = parent_session.get(f"{BASE_URL}/api/battery/family")
         assert family_response.status_code == 200
         
         battery_status = family_response.json().get("battery_status", [])
@@ -335,9 +342,8 @@ class TestBatteryDataPersistence:
             print("Alex not found in battery status - may need to check permissions")
         
         # Reset to original state
-        requests.post(
+        child_session.post(
             f"{BASE_URL}/api/battery/update",
-            headers={"Authorization": f"Bearer {CHILD_SESSION}"},
             json={"level": 45, "is_charging": False}
         )
 
