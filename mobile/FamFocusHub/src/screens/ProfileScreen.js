@@ -82,7 +82,7 @@ export default function ProfileScreen({ navigation }) {
       await fetch(`${apiService.baseUrl}/users/${user.user_id}/upload-picture`, {
         method: 'POST',
         headers: {
-          'Cookie': `session_token=${apiService.sessionToken}`,
+          'Authorization': `Bearer ${apiService.sessionToken}`,
         },
         body: formData,
       });
