@@ -897,6 +897,7 @@ async def send_message(request: Request, data: dict):
         "user_name": current_user['name'],
         "user_picture": current_user.get('picture'),
         "content": data['content'],
+        "encrypted_content": data.get('encrypted_content'),  # E2E encrypted content
         "media_url": data.get('media_url'),
         "media_type": data.get('media_type'),
         "read_by": [current_user['user_id']],
