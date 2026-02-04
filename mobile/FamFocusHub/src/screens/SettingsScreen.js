@@ -32,13 +32,16 @@ export default function SettingsScreen({ navigation }) {
     }
 
     // Check pending syncs
-    const pending = await apiService.getPendingSyncCount();
-    setPendingSyncs(pending);
+    try {
+      const pending = await apiService.getPendingSyncCount();
+      setPendingSyncs(pending || 0);
+    } catch (e) {
+      setPendingSyncs(0);
+    }
   };
 
   const handleBiometricToggle = async (enabled) => {
     if (enabled) {
-      // Get current session token
       const SecureStore = require('expo-secure-store');
       const token = await SecureStore.getItemAsync('famfocus_session_token');
       
@@ -67,7 +70,7 @@ export default function SettingsScreen({ navigation }) {
     try {
       await apiService.forceSync();
       const pending = await apiService.getPendingSyncCount();
-      setPendingSyncs(pending);
+      setPendingSyncs(pending || 0);
       Alert.alert('Sync Complete', pending === 0 ? 'All data synced!' : `${pending} items still pending`);
     } catch (error) {
       Alert.alert('Sync Failed', 'Please try again later');
@@ -118,22 +121,27 @@ export default function SettingsScreen({ navigation }) {
     return 'lock-closed';
   };
 
+  const isParent = user?.role === 'parent';
+
   const settingsSections = [
     {
       title: 'Account',
       items: [
-        { icon: 'person-outline', label: 'Profile', onPress: () => {} },
+        { icon: 'person-outline', label: 'Profile', onPress: () => navigation.navigate('Profile') },
         { icon: 'people-outline', label: 'Family Management', onPress: () => navigation.navigate('Family') },
       ]
     },
     {
       title: 'Features',
       items: [
+        ...(isParent ? [{ icon: 'home-outline', label: 'Family Hub', onPress: () => navigation.navigate('HomeHub') }] : []),
         { icon: 'chatbubbles-outline', label: 'Family Wall', onPress: () => navigation.navigate('FamilyWall') },
         { icon: 'cart-outline', label: 'Shopping List', onPress: () => navigation.navigate('Shopping') },
         { icon: 'restaurant-outline', label: 'Dinner Planner', onPress: () => navigation.navigate('DinnerPlanner') },
+        { icon: 'book-outline', label: 'Reading Logs', onPress: () => navigation.navigate('ReadingLogs') },
         { icon: 'location-outline', label: 'Location & Check-in', onPress: () => navigation.navigate('Location') },
         { icon: 'trophy-outline', label: 'Leaderboard', onPress: () => navigation.navigate('Leaderboard') },
+        ...(isParent ? [{ icon: 'person-circle-outline', label: 'View as Child', onPress: () => navigation.navigate('ChildSpace') }] : []),
       ]
     },
     {
@@ -184,16 +192,17 @@ export default function SettingsScreen({ navigation }) {
       <LinearGradient colors={['#1e1b4b', '#312e81', '#1e1b4b']} style={styles.gradient} />
       
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
+        <View style={{ width: 40 }} />
         <Text style={styles.title}>Settings</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView style={styles.scrollView}>
         {/* User Info Card */}
-        <View style={styles.userCard}>
+        <TouchableOpacity 
+          style={styles.userCard}
+          onPress={() => navigation.navigate('Profile')}
+        >
           <View style={styles.userAvatar}>
             <Text style={styles.userAvatarText}>{user?.name?.charAt(0) || 'U'}</Text>
           </View>
@@ -201,15 +210,12 @@ export default function SettingsScreen({ navigation }) {
             <Text style={styles.userName}>{user?.name || 'User'}</Text>
             <Text style={styles.userEmail}>{user?.email || ''}</Text>
             <View style={styles.roleBadge}>
+              <Ionicons name={isParent ? 'shield' : 'person'} size={12} color="#818cf8" />
               <Text style={styles.roleText}>{user?.role || 'Member'}</Text>
             </View>
           </View>
-          {biometricEnabled && (
-            <View style={styles.biometricBadge}>
-              <Ionicons name={getBiometricIcon()} size={16} color="#10b981" />
-            </View>
-          )}
-        </View>
+          <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+        </TouchableOpacity>
 
         {/* Settings Sections */}
         {settingsSections.map((section, sectionIndex) => (
@@ -271,7 +277,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0f0d1a' },
   gradient: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 48, paddingBottom: 16 },
-  backButton: { padding: 8 },
   title: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
   scrollView: { flex: 1, padding: 16 },
   userCard: { backgroundColor: 'rgba(30, 27, 75, 0.8)', borderRadius: 16, padding: 20, flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
@@ -280,9 +285,8 @@ const styles = StyleSheet.create({
   userInfo: { flex: 1, marginLeft: 16 },
   userName: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
   userEmail: { color: '#a5b4fc', fontSize: 14, marginTop: 2 },
-  roleBadge: { backgroundColor: 'rgba(99, 102, 241, 0.3)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start', marginTop: 8 },
+  roleBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(99, 102, 241, 0.3)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start', marginTop: 8 },
   roleText: { color: '#818cf8', fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },
-  biometricBadge: { backgroundColor: 'rgba(16, 185, 129, 0.2)', padding: 8, borderRadius: 8 },
   section: { marginBottom: 24 },
   sectionTitle: { color: '#a5b4fc', fontSize: 13, fontWeight: '600', marginBottom: 8, marginLeft: 4, textTransform: 'uppercase' },
   sectionContent: { backgroundColor: 'rgba(30, 27, 75, 0.8)', borderRadius: 12, overflow: 'hidden' },
