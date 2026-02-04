@@ -20,6 +20,13 @@ export default function ParentDashboard({ user }) {
   const [selectedChild, setSelectedChild] = useState(null);
   const [childDetails, setChildDetails] = useState(null);
   const [childChoreSettings, setChildChoreSettings] = useState(null);
+  
+  // AI Scheduler state
+  const [showAiScheduler, setShowAiScheduler] = useState(false);
+  const [aiScheduleLoading, setAiScheduleLoading] = useState(false);
+  const [aiSchedule, setAiSchedule] = useState('');
+  const [schedulePreferences, setSchedulePreferences] = useState('');
+  const [scheduleDays, setScheduleDays] = useState(7);
 
   useEffect(() => {
     fetchDashboardData();
