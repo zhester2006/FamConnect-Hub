@@ -293,7 +293,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
         const pos = JSON.parse(saved);
         const maxX = window.innerWidth - 64;
         const maxY = window.innerHeight - 64;
-        // Use functional update to avoid triggering re-render warnings
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial state from localStorage on mount is valid
         setPosition({
           x: Math.min(Math.max(16, pos.x), maxX),
           y: Math.min(Math.max(16, pos.y), maxY)
@@ -303,6 +303,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
       }
     }
     if (savedFloating === 'true') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial state from localStorage on mount is valid
       setIsFloating(true);
     }
   }, []); // Empty deps - only run on mount
