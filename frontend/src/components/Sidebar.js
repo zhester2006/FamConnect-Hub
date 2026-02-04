@@ -3,8 +3,17 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, Calendar, MessageCircle, Users, ShoppingCart, Award, 
   Settings, LogOut, Utensils, Trophy, Book, MapPin, Menu, X,
-  LayoutDashboard, Sparkles, ChevronLeft, ChevronRight, Move, GripVertical, BarChart3
+  LayoutDashboard, Sparkles, ChevronLeft, ChevronRight, Move, GripVertical, BarChart3, Bell
 } from 'lucide-react';
+
+// Try to import notification context - may not be available during initial render
+let useNotifications = null;
+try {
+  const notificationModule = require('../context/NotificationContext');
+  useNotifications = notificationModule.useNotifications;
+} catch (e) {
+  // Context not available yet
+}
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
