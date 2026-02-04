@@ -124,10 +124,11 @@ function ProtectedRoute({ children }) {
   }
 
   return isAuthenticated ? (
-    <>
+    <NotificationProvider user={user}>
       <WelcomeTutorial user={user} />
+      <NotificationPanel />
       {React.cloneElement(children, { user })}
-    </>
+    </NotificationProvider>
   ) : null;
 }
 
