@@ -117,10 +117,29 @@ export default function Calendar({ user }) {
   const selectedDateEvents = selectedDate ? getEventsForDay(selectedDate) : [];
 
   return (
-    <div className="flex h-screen bg-slate-950">
+    <div className="flex h-screen relative">
+      {/* Blue gradient background */}
+      <div className="fixed inset-0 bg-gradient-to-br from-blue-900/30 via-cyan-900/20 to-slate-950 pointer-events-none" />
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        {[...Array(10)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full bg-blue-500/10 animate-float-slow"
+            style={{
+              width: Math.random() * 120 + 40,
+              height: Math.random() * 120 + 40,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 5}s`,
+              animationDuration: `${Math.random() * 18 + 12}s`
+            }}
+          />
+        ))}
+      </div>
+      
       <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
-      <main className={`flex-1 overflow-y-auto transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
+      <main className={`flex-1 overflow-y-auto transition-all duration-300 relative z-10 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
         <div className="p-4 lg:p-6 space-y-4" data-testid="calendar-page">
           {/* Header */}
           <header className="flex items-center justify-between flex-wrap gap-3">
