@@ -242,6 +242,23 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - [x] Mark messages as read API (PUT /api/messages/{id}/read)
 - [x] Profile background customization (already existed, verified working)
 
+### Session 11 - Family Management & Mobile App (Feb 2026) ✅
+- [x] Family Switching UI - FamilyManagement.js page
+- [x] GET /api/families/invites/pending endpoint
+- [x] POST /api/families/invites/{id}/accept endpoint
+- [x] POST /api/families/invites/{id}/decline endpoint
+- [x] DELETE /api/families/{id}/leave endpoint
+- [x] Create Family modal with validation
+- [x] Invite modal with role selection (member/parent)
+- [x] Switch family button with loading states
+- [x] Pending invitations section with accept/decline
+- [x] Leave family functionality
+- [x] React Native Expo mobile app created at /app/mobile/FamFocusHub
+- [x] Mobile app screens: Login, ParentDashboard, ChildSpace, Chat, Chores, Calendar, Rewards, Leaderboard, Settings, FamilyManagement
+- [x] Mobile app navigation with bottom tabs (different for parent/child)
+- [x] Mobile API service layer with all endpoints
+- [x] Mobile auth context with SecureStore session persistence
+
 ## API Endpoints
 
 ### Chat & Real-time (NEW - Session 4)
