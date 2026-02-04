@@ -126,6 +126,7 @@ export default function LiveChat({ user }) {
   const wsRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
+  const connectWebSocketRef = useRef(null);
 
   // Get session token from cookies
   const getSessionToken = () => {
