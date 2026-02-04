@@ -94,9 +94,15 @@ export default function ChatScreen({ navigation }) {
     webSocketService.on('disconnect', () => setConnected(false));
 
     webSocketService.on('message', (message) => {
+      // Decrypt message if encrypted
+      const decryptedMessage = { ...message };
+      if (message.encrypted_content) {
+        decryptedMessage.content = encryptionService.decrypt(message.encrypted_content);
+      }
+      
       setMessages(prev => {
-        if (prev.find(m => m.message_id === message.message_id)) return prev;
-        return [...prev, message];
+        if (prev.find(m => m.message_id === decryptedMessage.message_id)) return prev;
+        return [...prev, decryptedMessage];
       });
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     });
