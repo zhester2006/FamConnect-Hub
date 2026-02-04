@@ -1479,7 +1479,6 @@ Format the schedule clearly by day, showing which child does which chore."""
     logger.info(f"AI Schedule prompt has {len(children_info)} children, {len(chores_info)} chores")
     
     response = await chat.send_message(UserMessage(text=prompt))
-    logger.info(f"AI Schedule: Got response of type {type(response)}, length {len(str(response)) if response else 0}")
     
     # Ensure response is a string
     schedule_text = str(response) if response else "Unable to generate schedule"
