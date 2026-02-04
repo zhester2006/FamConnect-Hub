@@ -463,7 +463,7 @@ export default function LiveChat({ user }) {
         </div>
 
         {/* Input */}
-        <div className="sticky bottom-0 z-20 p-3 lg:p-4 glass-card border-t border-white/10 backdrop-blur-2xl bg-slate-950/90">
+        <div className="sticky bottom-0 z-20 p-3 lg:p-4 pb-20 md:pb-4 glass-card border-t border-white/10 backdrop-blur-2xl bg-slate-950/90">
           <form onSubmit={handleSendMessage} className="flex items-center space-x-2" data-testid="message-form">
             <button
               type="button"
