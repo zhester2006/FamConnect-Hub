@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
 import locationService from '../services/location.service';
 import batteryService from '../services/battery.service';
+import MedalEmblem from '../components/MedalEmblem';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
