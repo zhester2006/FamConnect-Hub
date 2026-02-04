@@ -325,6 +325,36 @@ export default function LocationScreen({ navigation }) {
     );
   };
 
+  const handleMapPress = (e) => {
+    const { latitude, longitude } = e.nativeEvent.coordinate;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedLocation({ latitude, longitude });
+  };
+
+  const handleOpenMapPicker = () => {
+    // Initialize selected location to current location
+    if (currentLocation && !selectedLocation) {
+      setSelectedLocation({
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+      });
+    }
+    setShowMapPicker(true);
+  };
+
+  const handleUseCurrentLocation = async () => {
+    const location = await locationService.getCurrentLocation();
+    if (location) {
+      setSelectedLocation({
+        latitude: location.latitude,
+        longitude: location.longitude,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      Alert.alert('Error', 'Unable to get current location');
+    }
+  };
+
   const openMaps = (lat, lng, label) => {
     const scheme = Platform.OS === 'ios' ? 'maps:' : 'geo:';
     const url = Platform.OS === 'ios'
