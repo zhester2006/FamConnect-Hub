@@ -85,14 +85,28 @@ function ProtectedRoute({ children }) {
 
     const checkAuth = async () => {
       try {
+        // Check for dev session token in localStorage first
+        const devToken = localStorage.getItem('dev_session_token');
+        const devUser = localStorage.getItem('dev_user');
+        
+        const headers = { 'Content-Type': 'application/json' };
+        if (devToken) {
+          headers['Authorization'] = `Bearer ${devToken}`;
+        }
+        
         const response = await fetch(`${BACKEND_URL}/api/auth/me`, {
-          credentials: 'include'
+          credentials: 'include',
+          headers
         });
+        
         if (!response.ok) throw new Error('Not authenticated');
         const userData = await response.json();
         setUser(userData);
         setIsAuthenticated(true);
       } catch (error) {
+        // Clear dev session on auth failure
+        localStorage.removeItem('dev_session_token');
+        localStorage.removeItem('dev_user');
         setIsAuthenticated(false);
         navigate('/login');
       }
