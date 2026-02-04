@@ -77,9 +77,10 @@ export default function Analytics({ user }) {
 
   if (loading) {
     return (
-      <div className="flex h-screen bg-slate-950">
+      <div className="flex h-screen relative">
+        <div className="fixed inset-0 bg-gradient-to-br from-teal-900/30 via-cyan-900/20 to-slate-950 pointer-events-none" />
         <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
-        <main className={`flex-1 flex items-center justify-center transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
+        <main className={`flex-1 flex items-center justify-center transition-all duration-300 relative z-10 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </main>
       </div>
@@ -87,10 +88,29 @@ export default function Analytics({ user }) {
   }
 
   return (
-    <div className="flex h-screen bg-slate-950">
+    <div className="flex h-screen relative">
+      {/* Teal/Cyan gradient background */}
+      <div className="fixed inset-0 bg-gradient-to-br from-teal-900/30 via-cyan-900/20 to-slate-950 pointer-events-none" />
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        {[...Array(12)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full bg-teal-500/10 animate-float-slow"
+            style={{
+              width: Math.random() * 100 + 40,
+              height: Math.random() * 100 + 40,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 5}s`,
+              animationDuration: `${Math.random() * 16 + 12}s`
+            }}
+          />
+        ))}
+      </div>
+      
       <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
-      <main className={`flex-1 overflow-y-auto transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
+      <main className={`flex-1 overflow-y-auto transition-all duration-300 relative z-10 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
         <div className="p-4 lg:p-6 space-y-4 pb-24 lg:pb-8" data-testid="analytics-dashboard">
           {/* Header */}
           <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
