@@ -1888,6 +1888,511 @@ async def get_online_members(request: Request):
     
     return {"online": online_members}
 
+# ==================== ANALYTICS ====================
+
+@api_router.get("/analytics/overview")
+async def get_analytics_overview(request: Request):
+    """Get family analytics overview"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    # Get all family members
+    members = await db.users.find(
+        {"$or": [{"user_id": family_id}, {"parent_id": family_id}]},
+        {"_id": 0}
+    ).to_list(20)
+    
+    children = [m for m in members if m.get('role') == 'child']
+    
+    # Get chore completion stats
+    now = datetime.now(timezone.utc)
+    week_ago = (now - timedelta(days=7)).isoformat()
+    month_ago = (now - timedelta(days=30)).isoformat()
+    
+    # Weekly chores
+    weekly_chores = await db.chores.find({
+        "family_id": family_id,
+        "created_at": {"$gte": week_ago}
+    }, {"_id": 0}).to_list(500)
+    
+    weekly_completed = len([c for c in weekly_chores if c.get('status') == 'completed'])
+    weekly_total = len(weekly_chores)
+    
+    # Monthly chores
+    monthly_chores = await db.chores.find({
+        "family_id": family_id,
+        "created_at": {"$gte": month_ago}
+    }, {"_id": 0}).to_list(2000)
+    
+    monthly_completed = len([c for c in monthly_chores if c.get('status') == 'completed'])
+    monthly_total = len(monthly_chores)
+    
+    # Points by child
+    child_stats = []
+    for child in children:
+        child_chores = [c for c in monthly_chores if c.get('assigned_to') == child['user_id']]
+        completed = len([c for c in child_chores if c.get('status') == 'completed'])
+        total_points = sum(c.get('points', 0) for c in child_chores if c.get('status') == 'completed')
+        
+        child_stats.append({
+            "user_id": child['user_id'],
+            "name": child.get('nickname') or child['name'],
+            "display_name": child.get('nickname') or child['name'],
+            "chores_completed": completed,
+            "chores_total": len(child_chores),
+            "completion_rate": round((completed / len(child_chores) * 100) if child_chores else 0, 1),
+            "points_earned": total_points
+        })
+    
+    # Daily activity for the past 7 days
+    daily_activity = []
+    for i in range(7):
+        day = now - timedelta(days=i)
+        day_start = day.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        day_end = day.replace(hour=23, minute=59, second=59, microsecond=999999).isoformat()
+        
+        day_chores = [c for c in weekly_chores if day_start <= c.get('created_at', '') <= day_end]
+        day_completed = len([c for c in day_chores if c.get('status') == 'completed'])
+        
+        daily_activity.append({
+            "date": day.strftime("%Y-%m-%d"),
+            "day": day.strftime("%a"),
+            "completed": day_completed,
+            "total": len(day_chores)
+        })
+    
+    daily_activity.reverse()
+    
+    return {
+        "weekly": {
+            "completed": weekly_completed,
+            "total": weekly_total,
+            "completion_rate": round((weekly_completed / weekly_total * 100) if weekly_total else 0, 1)
+        },
+        "monthly": {
+            "completed": monthly_completed,
+            "total": monthly_total,
+            "completion_rate": round((monthly_completed / monthly_total * 100) if monthly_total else 0, 1)
+        },
+        "children": child_stats,
+        "daily_activity": daily_activity,
+        "total_family_members": len(members),
+        "total_children": len(children)
+    }
+
+@api_router.get("/analytics/trends")
+async def get_analytics_trends(request: Request, days: int = 30):
+    """Get points and activity trends over time"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    now = datetime.now(timezone.utc)
+    start_date = (now - timedelta(days=days)).isoformat()
+    
+    # Get all chores in the period
+    chores = await db.chores.find({
+        "family_id": family_id,
+        "created_at": {"$gte": start_date}
+    }, {"_id": 0}).to_list(5000)
+    
+    # Group by week
+    weeks = {}
+    for chore in chores:
+        if chore.get('created_at'):
+            date = datetime.fromisoformat(chore['created_at'].replace('Z', '+00:00'))
+            week_start = (date - timedelta(days=date.weekday())).strftime("%Y-%m-%d")
+            
+            if week_start not in weeks:
+                weeks[week_start] = {"completed": 0, "total": 0, "points": 0}
+            
+            weeks[week_start]["total"] += 1
+            if chore.get('status') == 'completed':
+                weeks[week_start]["completed"] += 1
+                weeks[week_start]["points"] += chore.get('points', 0)
+    
+    trends = [{"week": k, **v} for k, v in sorted(weeks.items())]
+    
+    return {"trends": trends, "period_days": days}
+
+# ==================== DATA EXPORT ====================
+
+@api_router.get("/export/chores")
+async def export_chores_csv(request: Request):
+    """Export chores data as CSV"""
+    current_user = await get_current_user(request)
+    
+    if current_user.get('role') != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can export data")
+    
+    family_id = current_user['user_id']
+    
+    # Get all chores
+    chores = await db.chores.find(
+        {"family_id": family_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(5000)
+    
+    # Get member names
+    members = await db.users.find(
+        {"$or": [{"user_id": family_id}, {"parent_id": family_id}]},
+        {"_id": 0, "user_id": 1, "name": 1, "nickname": 1}
+    ).to_list(50)
+    member_names = {m['user_id']: m.get('nickname') or m['name'] for m in members}
+    
+    # Build CSV
+    csv_lines = ["Date,Chore,Assigned To,Status,Points"]
+    for chore in chores:
+        date = chore.get('created_at', '')[:10]
+        name = chore.get('chore_name', chore.get('name', 'Unknown'))
+        assigned = member_names.get(chore.get('assigned_to'), 'Unassigned')
+        status = chore.get('status', 'pending')
+        points = chore.get('points', 0)
+        csv_lines.append(f'"{date}","{name}","{assigned}","{status}",{points}')
+    
+    csv_content = "\n".join(csv_lines)
+    
+    return {
+        "filename": f"famfocus_chores_{datetime.now().strftime('%Y%m%d')}.csv",
+        "content": csv_content,
+        "mime_type": "text/csv"
+    }
+
+@api_router.get("/export/events")
+async def export_events_csv(request: Request):
+    """Export events data as CSV"""
+    current_user = await get_current_user(request)
+    
+    if current_user.get('role') != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can export data")
+    
+    family_id = current_user['user_id']
+    
+    events = await db.events.find(
+        {"family_id": family_id},
+        {"_id": 0}
+    ).sort("start_date", -1).to_list(2000)
+    
+    csv_lines = ["Date,Title,Type,Time,Created By"]
+    for event in events:
+        date = event.get('start_date', event.get('date', ''))[:10]
+        title = event.get('title', 'Untitled')
+        event_type = event.get('event_type', 'event')
+        time = event.get('event_time', '')
+        created_by = event.get('created_by_name', '')
+        csv_lines.append(f'"{date}","{title}","{event_type}","{time}","{created_by}"')
+    
+    csv_content = "\n".join(csv_lines)
+    
+    return {
+        "filename": f"famfocus_events_{datetime.now().strftime('%Y%m%d')}.csv",
+        "content": csv_content,
+        "mime_type": "text/csv"
+    }
+
+@api_router.get("/export/full")
+async def export_all_data(request: Request):
+    """Export all family data as JSON"""
+    current_user = await get_current_user(request)
+    
+    if current_user.get('role') != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can export data")
+    
+    family_id = current_user['user_id']
+    
+    # Get all family data
+    members = await db.users.find(
+        {"$or": [{"user_id": family_id}, {"parent_id": family_id}]},
+        {"_id": 0, "password_hash": 0}
+    ).to_list(50)
+    
+    chores = await db.chores.find({"family_id": family_id}, {"_id": 0}).to_list(5000)
+    events = await db.events.find({"family_id": family_id}, {"_id": 0}).to_list(2000)
+    rewards = await db.rewards.find({"family_id": family_id}, {"_id": 0}).to_list(100)
+    reading_logs = await db.reading_logs.find({"family_id": family_id}, {"_id": 0}).to_list(1000)
+    
+    export_data = {
+        "export_date": datetime.now(timezone.utc).isoformat(),
+        "family_id": family_id,
+        "members": members,
+        "chores": chores,
+        "events": events,
+        "rewards": rewards,
+        "reading_logs": reading_logs
+    }
+    
+    return {
+        "filename": f"famfocus_full_export_{datetime.now().strftime('%Y%m%d')}.json",
+        "content": export_data,
+        "mime_type": "application/json"
+    }
+
+# ==================== MULTIPLE FAMILY SUPPORT ====================
+
+@api_router.get("/families")
+async def get_user_families(request: Request):
+    """Get all families the user belongs to"""
+    current_user = await get_current_user(request)
+    user_id = current_user['user_id']
+    
+    # Get families where user is parent or member
+    families = []
+    
+    # Check if user is a parent (owns a family)
+    if current_user.get('role') == 'parent':
+        member_count = await db.users.count_documents({"parent_id": user_id})
+        families.append({
+            "family_id": user_id,
+            "name": current_user.get('family_name', f"{current_user['name']}'s Family"),
+            "role": "parent",
+            "member_count": member_count + 1,
+            "is_current": True
+        })
+    
+    # Check family memberships
+    memberships = await db.family_memberships.find(
+        {"user_id": user_id},
+        {"_id": 0}
+    ).to_list(20)
+    
+    for membership in memberships:
+        family = await db.families.find_one(
+            {"family_id": membership['family_id']},
+            {"_id": 0}
+        )
+        if family:
+            member_count = await db.family_memberships.count_documents({"family_id": family['family_id']})
+            families.append({
+                "family_id": family['family_id'],
+                "name": family.get('name', 'Family'),
+                "role": membership.get('role', 'member'),
+                "member_count": member_count,
+                "is_current": family['family_id'] == current_user.get('current_family_id')
+            })
+    
+    return {"families": families}
+
+@api_router.post("/families")
+async def create_family(request: Request, data: dict):
+    """Create a new family"""
+    current_user = await get_current_user(request)
+    
+    family_id = f"family_{uuid.uuid4().hex[:12]}"
+    family_name = data.get('name', f"{current_user['name']}'s Family")
+    
+    family_doc = {
+        "family_id": family_id,
+        "name": family_name,
+        "created_by": current_user['user_id'],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.families.insert_one(family_doc)
+    
+    # Add creator as admin
+    membership_doc = {
+        "membership_id": f"mem_{uuid.uuid4().hex[:12]}",
+        "family_id": family_id,
+        "user_id": current_user['user_id'],
+        "role": "admin",
+        "joined_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.family_memberships.insert_one(membership_doc)
+    
+    return {"family_id": family_id, "name": family_name}
+
+@api_router.post("/families/{family_id}/invite")
+async def invite_to_family(family_id: str, request: Request, data: dict):
+    """Invite someone to join a family"""
+    current_user = await get_current_user(request)
+    
+    # Check if user has permission to invite
+    membership = await db.family_memberships.find_one({
+        "family_id": family_id,
+        "user_id": current_user['user_id'],
+        "role": {"$in": ["admin", "parent"]}
+    })
+    
+    if not membership and current_user['user_id'] != family_id:
+        raise HTTPException(status_code=403, detail="Not authorized to invite members")
+    
+    invite_email = data.get('email')
+    invite_role = data.get('role', 'member')
+    
+    invite_doc = {
+        "invite_id": f"inv_{uuid.uuid4().hex[:12]}",
+        "family_id": family_id,
+        "email": invite_email,
+        "role": invite_role,
+        "invited_by": current_user['user_id'],
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.family_invites.insert_one(invite_doc)
+    
+    return {"invite_id": invite_doc['invite_id'], "status": "pending"}
+
+@api_router.post("/families/switch/{family_id}")
+async def switch_family(family_id: str, request: Request):
+    """Switch to a different family"""
+    current_user = await get_current_user(request)
+    
+    # Verify membership
+    membership = await db.family_memberships.find_one({
+        "family_id": family_id,
+        "user_id": current_user['user_id']
+    })
+    
+    is_parent = current_user['user_id'] == family_id
+    
+    if not membership and not is_parent:
+        raise HTTPException(status_code=403, detail="Not a member of this family")
+    
+    # Update current family
+    await db.users.update_one(
+        {"user_id": current_user['user_id']},
+        {"$set": {"current_family_id": family_id}}
+    )
+    
+    return {"success": True, "current_family_id": family_id}
+
+# ==================== WELCOME TUTORIAL ====================
+
+@api_router.get("/tutorial/content")
+async def get_tutorial_content(request: Request):
+    """Get welcome tutorial content"""
+    current_user = await get_current_user(request)
+    role = current_user.get('role', 'member')
+    
+    # Check if user has seen the tutorial
+    if current_user.get('settings', {}).get('tutorial_completed'):
+        return {"completed": True, "slides": []}
+    
+    parent_slides = [
+        {
+            "id": 1,
+            "title": "Welcome to FamFocus Hub!",
+            "description": "Your family's command center for chores, events, and rewards. Let's take a quick tour!",
+            "image": "welcome",
+            "icon": "home"
+        },
+        {
+            "id": 2,
+            "title": "Home Hub Dashboard",
+            "description": "See everything at a glance - weather, calendar, chores, and shopping list all in one place.",
+            "image": "dashboard",
+            "icon": "layout-dashboard"
+        },
+        {
+            "id": 3,
+            "title": "Smart Chore Management",
+            "description": "Create chores, set points, and let AI help schedule them fairly. Kids earn points for completing tasks!",
+            "image": "chores",
+            "icon": "check-circle"
+        },
+        {
+            "id": 4,
+            "title": "Family Calendar",
+            "description": "Track events, work schedules, and appointments. Everyone stays in sync!",
+            "image": "calendar",
+            "icon": "calendar"
+        },
+        {
+            "id": 5,
+            "title": "Rewards & Motivation",
+            "description": "Create rewards for kids to redeem with their earned points. Customize point values for each reward.",
+            "image": "rewards",
+            "icon": "gift"
+        },
+        {
+            "id": 6,
+            "title": "Location Safety",
+            "description": "Set up safe zones and get notified when kids arrive or leave important locations.",
+            "image": "location",
+            "icon": "map-pin"
+        },
+        {
+            "id": 7,
+            "title": "You're All Set!",
+            "description": "Start by adding your family members and creating some chores. Have fun organizing your family!",
+            "image": "complete",
+            "icon": "party-popper"
+        }
+    ]
+    
+    child_slides = [
+        {
+            "id": 1,
+            "title": "Welcome to FamFocus Hub!",
+            "description": "Your own space to track missions, earn points, and claim awesome rewards!",
+            "image": "welcome",
+            "icon": "rocket"
+        },
+        {
+            "id": 2,
+            "title": "Your Daily Missions",
+            "description": "Check your missions (chores) and mark them complete to earn points!",
+            "image": "missions",
+            "icon": "target"
+        },
+        {
+            "id": 3,
+            "title": "Earn Points & Climb Up!",
+            "description": "Complete missions to earn points. See how you rank on the family leaderboard!",
+            "image": "points",
+            "icon": "trophy"
+        },
+        {
+            "id": 4,
+            "title": "Rewards Shop",
+            "description": "Spend your hard-earned points on cool rewards your parents have set up!",
+            "image": "rewards",
+            "icon": "gift"
+        },
+        {
+            "id": 5,
+            "title": "Stay Connected",
+            "description": "Chat with your family, share updates, and have fun together!",
+            "image": "chat",
+            "icon": "message-circle"
+        },
+        {
+            "id": 6,
+            "title": "Ready to Go!",
+            "description": "Start completing missions and earning points. Good luck, superstar!",
+            "image": "complete",
+            "icon": "star"
+        }
+    ]
+    
+    return {
+        "completed": False,
+        "slides": parent_slides if role == 'parent' else child_slides,
+        "total_slides": len(parent_slides if role == 'parent' else child_slides)
+    }
+
+@api_router.post("/tutorial/complete")
+async def complete_tutorial(request: Request):
+    """Mark tutorial as completed"""
+    current_user = await get_current_user(request)
+    
+    await db.users.update_one(
+        {"user_id": current_user['user_id']},
+        {"$set": {"settings.tutorial_completed": True}}
+    )
+    
+    return {"success": True}
+
+@api_router.post("/tutorial/reset")
+async def reset_tutorial(request: Request):
+    """Reset tutorial for testing"""
+    current_user = await get_current_user(request)
+    
+    await db.users.update_one(
+        {"user_id": current_user['user_id']},
+        {"$set": {"settings.tutorial_completed": False}}
+    )
+    
+    return {"success": True}
+
 app.include_router(api_router)
 
 app.add_middleware(
