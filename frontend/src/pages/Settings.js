@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Palette, Bell, Moon, Sun, ChevronDown, Check, Sparkles } from 'lucide-react';
+import { Palette, Bell, Moon, Sun, ChevronDown, Check, Sparkles, BellRing, BellOff } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
+import { isPushSupported, getPermissionStatus, subscribeToPush, unsubscribeFromPush, isSubscribed } from '@/utils/pushNotifications';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
