@@ -74,6 +74,19 @@
           "icon": "./assets/notification-icon.png",
           "color": "#6366f1"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "FamFocus needs access to your photos to share with family.",
+          "cameraPermission": "FamFocus needs camera access to take photos for your profile and family wall."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "FamFocus needs microphone access for voice messages in family chat."
+        }
       ]
     ],
     "extra": {
