@@ -189,7 +189,7 @@ export default function FamilyManagement({ user }) {
       <div className="fixed inset-0 bg-gradient-to-br from-indigo-900/20 via-purple-900/15 to-slate-950 pointer-events-none" />
       <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
 
-      <main className={`flex-1 overflow-hidden transition-all duration-300 relative z-10 ${sidebarCollapsed ? 'lg:ml-0' : 'lg:ml-64'}`}>
+      <main className={`flex-1 overflow-hidden transition-all duration-300 relative z-10 ${sidebarCollapsed ? 'lg:ml-0' : 'md:ml-64'}`}>
         <div className="h-full overflow-y-auto p-4 lg:p-6 pb-24 md:pb-6 pt-16 md:pt-6">
           <div className="max-w-3xl mx-auto space-y-6">
             

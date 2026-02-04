@@ -311,7 +311,7 @@ export default function HomeHub({ user }) {
       
       <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
-      <main className={`flex-1 overflow-hidden transition-all duration-300 relative z-10 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
+      <main className={`flex-1 overflow-hidden transition-all duration-300 relative z-10 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
         <div className="h-full p-3 flex flex-col" data-testid="home-hub">
           {/* Top Bar: Weather + Family Online Status */}
           <div className="flex items-center justify-between gap-3 mb-3">

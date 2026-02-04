@@ -80,7 +80,7 @@ export default function Analytics({ user }) {
       <div className="flex h-screen relative">
         <div className="fixed inset-0 bg-gradient-to-br from-teal-900/30 via-cyan-900/20 to-slate-950 pointer-events-none" />
         <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
-        <main className={`flex-1 flex items-center justify-center transition-all duration-300 relative z-10 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
+        <main className={`flex-1 flex items-center justify-center transition-all duration-300 relative z-10 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </main>
       </div>
@@ -110,7 +110,7 @@ export default function Analytics({ user }) {
       
       <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
-      <main className={`flex-1 overflow-y-auto transition-all duration-300 relative z-10 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
+      <main className={`flex-1 overflow-y-auto transition-all duration-300 relative z-10 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
         <div className="p-4 lg:p-6 pb-24 md:pb-6 space-y-4 pb-24 lg:pb-8" data-testid="analytics-dashboard">
           {/* Header */}
           <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">

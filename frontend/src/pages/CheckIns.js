@@ -221,7 +221,7 @@ export default function CheckIns({ user }) {
     <div className="flex h-screen bg-slate-950">
       <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
-      <main className={`flex-1 overflow-y-auto transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
+      <main className={`flex-1 overflow-y-auto transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
         <div className="p-4 lg:p-6 pb-24 md:pb-6 space-y-4" data-testid="checkins-page">
           <header className="flex items-center justify-between">
             <div>
