@@ -355,6 +355,19 @@ class ApiService {
     return this.post('/location/geofence-alert', data);
   }
 
+  // Battery Monitoring
+  async updateBattery(level, state) {
+    return this.post('/battery/update', { level, state });
+  }
+
+  async getBatteryStatus(userId) {
+    return this.get(`/battery/status/${userId}`);
+  }
+
+  async getFamilyBatteryStatus() {
+    return this.get('/battery/family-status', 'family_battery');
+  }
+
   // Check pending sync actions
   async getPendingSyncCount() {
     const pending = await offlineService.getPendingActions();
