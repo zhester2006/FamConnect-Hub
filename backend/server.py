@@ -1328,10 +1328,31 @@ async def get_tasks(request: Request):
     current_user = await get_current_user(request)
     parent_id = current_user.get('parent_id', current_user['user_id'])
     
+    # Get all family members for assignee lookup
+    family_members = await db.users.find(
+        {"$or": [{"user_id": parent_id}, {"parent_id": parent_id}]},
+        {"_id": 0, "user_id": 1, "name": 1, "nickname": 1, "picture": 1, "role": 1}
+    ).to_list(100)
+    member_map = {m['user_id']: m for m in family_members}
+    
     tasks = await db.tasks.find(
         {"family_id": parent_id, "status": {"$ne": "completed"}},
         {"_id": 0}
     ).sort("created_at", -1).to_list(50)
+    
+    # Enrich tasks with assignee details
+    for task in tasks:
+        assignee_id = task.get('assigned_to')
+        if assignee_id and assignee_id in member_map:
+            assignee = member_map[assignee_id]
+            task['assignee_name'] = assignee.get('nickname') or assignee.get('name')
+            task['assignee_picture'] = assignee.get('picture')
+        
+        completed_by_id = task.get('completed_by')
+        if completed_by_id and completed_by_id in member_map:
+            completer = member_map[completed_by_id]
+            task['completed_by_name'] = completer.get('nickname') or completer.get('name')
+            task['completed_by_picture'] = completer.get('picture')
     
     return {"tasks": tasks}
 
@@ -1348,6 +1369,7 @@ async def create_task(request: Request):
         "family_id": current_user['user_id'],
         "title": data['title'],
         "points": data.get('points', 10),
+        "assigned_to": data.get('assigned_to'),  # Optional assignee
         "deadline": data.get('deadline'),
         "status": "pending",
         "created_by": current_user['user_id'],
