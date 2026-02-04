@@ -654,4 +654,16 @@ const styles = StyleSheet.create({
   input: { backgroundColor: 'rgba(15, 13, 26, 0.5)', borderRadius: 12, padding: 16, color: '#fff', fontSize: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.3)' },
   submitButton: { backgroundColor: '#6366f1', borderRadius: 12, padding: 16, alignItems: 'center' },
   submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  // Day Events Popup styles
+  emptyDayEvents: { alignItems: 'center', paddingVertical: 30 },
+  emptyDayText: { color: '#6b7280', fontSize: 14, marginTop: 12, marginBottom: 16 },
+  addEventBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#6366f1', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
+  addEventBtnText: { color: '#fff', fontWeight: '600' },
+  dayEventsList: { maxHeight: 300 },
+  dayEventItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(99, 102, 241, 0.1)', borderRadius: 12, padding: 14, marginBottom: 10 },
+  dayEventDot: { width: 10, height: 10, borderRadius: 5, marginRight: 12 },
+  dayEventInfo: { flex: 1 },
+  dayEventTitle: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  dayEventTime: { color: '#a5b4fc', fontSize: 12, marginTop: 2 },
+  dayEventType: { color: '#6b7280', fontSize: 11, marginTop: 2, textTransform: 'capitalize' },
 });
