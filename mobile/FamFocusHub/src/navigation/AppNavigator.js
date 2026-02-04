@@ -19,6 +19,9 @@ import RewardsScreen from '../screens/RewardsScreen';
 import LeaderboardScreen from '../screens/LeaderboardScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import FamilyScreen from '../screens/FamilyScreen';
+import FamilyWallScreen from '../screens/FamilyWallScreen';
+import ShoppingListScreen from '../screens/ShoppingListScreen';
+import DinnerPlannerScreen from '../screens/DinnerPlannerScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
