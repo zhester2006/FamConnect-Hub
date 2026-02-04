@@ -2,14 +2,15 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   View, Text, StyleSheet, ScrollView, TouchableOpacity, 
   RefreshControl, ActivityIndicator, Modal, TextInput, Alert,
-  Linking, Platform, Dimensions, Switch
+  Linking, Platform, Dimensions, Switch, AppState
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
+import locationService from '../services/location.service';
+import batteryService from '../services/battery.service';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -31,66 +32,110 @@ export default function LocationScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
-  const [locationPermission, setLocationPermission] = useState(false);
-  const [tracking, setTracking] = useState(false);
+  const [permissions, setPermissions] = useState({ foreground: false, background: false });
+  const [foregroundTracking, setForegroundTracking] = useState(false);
+  const [backgroundTracking, setBackgroundTracking] = useState(false);
+  const [batterySharing, setBatterySharing] = useState(false);
+  const [batteryInfo, setBatteryInfo] = useState(null);
   const [geofences, setGeofences] = useState([]);
   const [children, setChildren] = useState([]);
-  const [checkins, setCheckins] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [showAddGeofence, setShowAddGeofence] = useState(false);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [newGeofence, setNewGeofence] = useState({ name: '', radius: 300 });
   const [saving, setSaving] = useState(false);
-  const [selectedChild, setSelectedChild] = useState(null);
-  const locationSubscription = useRef(null);
+  const appState = useRef(AppState.currentState);
 
   useEffect(() => {
-    initLocation();
+    initServices();
     fetchData();
     
-    return () => {
-      if (locationSubscription.current) {
-        locationSubscription.current.remove();
+    // Listen for app state changes
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    
+    // Listen for location service updates
+    const locationListener = locationService.addListener((type, data) => {
+      if (type === 'geofence') {
+        fetchData(); // Refresh alerts when geofence triggered
       }
+    });
+    
+    return () => {
+      subscription.remove();
+      locationListener();
     };
   }, []);
 
-  const initLocation = async () => {
+  const handleAppStateChange = async (nextAppState) => {
+    if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+      // App came to foreground - refresh data
+      await fetchData();
+      await updateBatteryInfo();
+    }
+    appState.current = nextAppState;
+  };
+
+  const initServices = async () => {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      setLocationPermission(status === 'granted');
+      // Initialize services
+      await locationService.init();
+      await batteryService.init();
       
-      if (status === 'granted') {
-        const location = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-        });
-        
-        setCurrentLocation({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
-        
-        // Send initial location update
-        await sendLocationUpdate(location.coords.latitude, location.coords.longitude);
+      // Check permissions
+      const perms = await locationService.checkPermissions();
+      setPermissions(perms);
+      
+      // Check if background tracking is active
+      const bgEnabled = await locationService.isBackgroundTrackingEnabled();
+      setBackgroundTracking(bgEnabled);
+      
+      // Check battery sharing status
+      const batteryEnabled = batteryService.isSharingEnabled();
+      setBatterySharing(batteryEnabled);
+      
+      // Get current location
+      const location = await locationService.getCurrentLocation();
+      if (location) {
+        setCurrentLocation(location);
       }
+      
+      // Get battery info
+      await updateBatteryInfo();
     } catch (error) {
-      console.error('Location init error:', error);
+      console.error('Service init error:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  const updateBatteryInfo = async () => {
+    const info = await batteryService.getBatteryInfo();
+    setBatteryInfo(info);
+  };
+
   const fetchData = async () => {
     try {
-      const [geofencesRes, membersRes, checkinsRes, alertsRes] = await Promise.all([
+      const [geofencesRes, membersRes, alertsRes, batteryRes] = await Promise.all([
         apiService.getGeofences(),
         apiService.getFamilyMembers(),
-        apiService.getCheckins().catch(() => ({ checkins: [] })),
         apiService.getLocationAlerts().catch(() => ({ alerts: [] })),
+        user?.role === 'parent' ? apiService.getFamilyBatteryStatus().catch(() => ({ members: [] })) : null,
       ]);
       
       setGeofences(geofencesRes.geofences || []);
-      setChildren((membersRes.members || []).filter(m => m.role === 'child'));
-      setCheckins(checkinsRes.checkins || []);
+      const childMembers = (membersRes.members || []).filter(m => m.role === 'child');
+      
+      // Merge battery info for children
+      if (batteryRes?.members) {
+        childMembers.forEach(child => {
+          const batteryInfo = batteryRes.members.find(m => m.user_id === child.user_id);
+          if (batteryInfo) {
+            child.battery = batteryInfo.battery;
+          }
+        });
+      }
+      
+      setChildren(childMembers);
       setAlerts(alertsRes.alerts || []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
@@ -100,83 +145,96 @@ export default function LocationScreen({ navigation }) {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchData();
+    await updateBatteryInfo();
+    const location = await locationService.getCurrentLocation();
+    if (location) setCurrentLocation(location);
     setRefreshing(false);
   }, []);
 
-  const sendLocationUpdate = async (latitude, longitude) => {
-    try {
-      await apiService.updateLocation(latitude, longitude);
-      checkGeofences(latitude, longitude);
-    } catch (error) {
-      console.error('Failed to send location:', error);
+  const handleRequestBackgroundPermission = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    const granted = await locationService.requestBackgroundPermission();
+    setPermissions(await locationService.checkPermissions());
+    
+    if (granted) {
+      Alert.alert('Success', 'Background location permission granted!');
+      setShowPermissionModal(false);
+    } else {
+      Alert.alert(
+        'Permission Needed',
+        'Background location is required for continuous tracking. Please enable it in Settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() }
+        ]
+      );
     }
   };
 
-  const checkGeofences = (lat, lng) => {
-    geofences.forEach(fence => {
-      const distance = calculateDistance(lat, lng, fence.latitude, fence.longitude);
-      const wasInside = fence.isInside;
-      const isInside = distance <= fence.radius_feet;
+  const handleToggleForegroundTracking = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    if (foregroundTracking) {
+      await locationService.stopForegroundTracking();
+      setForegroundTracking(false);
+    } else {
+      const success = await locationService.startForegroundTracking((location) => {
+        setCurrentLocation(location);
+      });
       
-      if (isInside !== wasInside) {
-        // Trigger haptic feedback on geofence enter/exit
-        Haptics.notificationAsync(
-          isInside ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning
-        );
-        
-        // Send alert
-        apiService.sendGeofenceAlert({
-          geofence_id: fence.geofence_id,
-          entered: isInside,
-          latitude: lat,
-          longitude: lng,
-        });
+      if (success) {
+        setForegroundTracking(true);
+      } else {
+        Alert.alert('Error', 'Failed to start location tracking');
       }
-    });
+    }
   };
 
-  const startTracking = async () => {
-    if (!locationPermission) {
-      Alert.alert(
-        'Permission Required',
-        'Location permission is needed for tracking.',
-        [{ text: 'OK', onPress: () => Linking.openSettings() }]
-      );
+  const handleToggleBackgroundTracking = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    if (!permissions.background) {
+      setShowPermissionModal(true);
       return;
     }
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setTracking(true);
     
-    locationSubscription.current = await Location.watchPositionAsync(
-      {
-        accuracy: Location.Accuracy.High,
-        distanceInterval: 10, // Update every 10 meters
-        timeInterval: 30000, // Or every 30 seconds
-      },
-      (location) => {
-        setCurrentLocation({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
-        sendLocationUpdate(location.coords.latitude, location.coords.longitude);
+    if (backgroundTracking) {
+      await locationService.stopBackgroundTracking();
+      setBackgroundTracking(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    } else {
+      const success = await locationService.startBackgroundTracking();
+      if (success) {
+        setBackgroundTracking(true);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Background Tracking', 'Your location will be tracked even when the app is closed.');
+      } else {
+        Alert.alert('Error', 'Failed to enable background tracking');
       }
-    );
+    }
   };
 
-  const stopTracking = () => {
+  const handleToggleBatterySharing = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setTracking(false);
-    if (locationSubscription.current) {
-      locationSubscription.current.remove();
-      locationSubscription.current = null;
+    
+    const newValue = !batterySharing;
+    await batteryService.setSharingEnabled(newValue);
+    setBatterySharing(newValue);
+    
+    if (newValue) {
+      Alert.alert('Battery Sharing', 'Your battery level will be shared with family members.');
     }
   };
 
   const handleCheckIn = async () => {
     if (!currentLocation) {
-      Alert.alert('Error', 'Unable to get current location');
-      return;
+      const location = await locationService.getCurrentLocation();
+      if (!location) {
+        Alert.alert('Error', 'Unable to get current location');
+        return;
+      }
+      setCurrentLocation(location);
     }
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -194,14 +252,28 @@ export default function LocationScreen({ navigation }) {
   };
 
   const handleAddGeofence = async () => {
-    if (!newGeofence.name.trim() || !currentLocation) {
-      Alert.alert('Error', 'Please enter a name and ensure location is available');
+    if (!newGeofence.name.trim()) {
+      Alert.alert('Error', 'Please enter a zone name');
+      return;
+    }
+    
+    if (!currentLocation) {
+      Alert.alert('Error', 'Unable to get current location');
       return;
     }
 
     setSaving(true);
     try {
-      await apiService.createGeofence({
+      const result = await apiService.createGeofence({
+        name: newGeofence.name,
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+        radius_feet: newGeofence.radius,
+      });
+      
+      // Add to local service
+      await locationService.addGeofence({
+        geofence_id: result.geofence_id,
         name: newGeofence.name,
         latitude: currentLocation.latitude,
         longitude: currentLocation.longitude,
@@ -212,7 +284,7 @@ export default function LocationScreen({ navigation }) {
       setShowAddGeofence(false);
       setNewGeofence({ name: '', radius: 300 });
       fetchData();
-      Alert.alert('Success', 'Safe zone created!');
+      Alert.alert('Success', 'Safe zone created! You\'ll be notified when entering or leaving.');
     } catch (error) {
       Alert.alert('Error', 'Failed to create safe zone');
     } finally {
@@ -232,6 +304,7 @@ export default function LocationScreen({ navigation }) {
           onPress: async () => {
             try {
               await apiService.deleteGeofence(geofenceId);
+              await locationService.removeGeofence(geofenceId);
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               fetchData();
             } catch (error) {
@@ -246,8 +319,19 @@ export default function LocationScreen({ navigation }) {
   const openMaps = (lat, lng, label) => {
     const scheme = Platform.OS === 'ios' ? 'maps:' : 'geo:';
     const url = Platform.OS === 'ios'
-      ? `${scheme}?q=${label}&ll=${lat},${lng}`
-      : `${scheme}${lat},${lng}?q=${label}`;
+      ? `${scheme}?q=${encodeURIComponent(label)}&ll=${lat},${lng}`
+      : `${scheme}${lat},${lng}?q=${encodeURIComponent(label)}`;
+    Linking.openURL(url);
+  };
+
+  const openNavigationToChild = (child) => {
+    if (!child.last_location) return;
+    
+    const { lat, lng } = child.last_location;
+    const scheme = Platform.OS === 'ios' ? 'maps:' : 'google.navigation:';
+    const url = Platform.OS === 'ios'
+      ? `${scheme}?daddr=${lat},${lng}&dirflg=d`
+      : `${scheme}q=${lat},${lng}`;
     Linking.openURL(url);
   };
 
@@ -286,20 +370,14 @@ export default function LocationScreen({ navigation }) {
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Location</Text>
-          <Text style={styles.subtitle}>GPS Check-in & Safe Zones</Text>
+          <Text style={styles.subtitle}>GPS Tracking & Safe Zones</Text>
         </View>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity 
-            style={[styles.trackingButton, tracking && styles.trackingButtonActive]}
-            onPress={tracking ? stopTracking : startTracking}
-          >
-            <Ionicons 
-              name={tracking ? 'location' : 'location-outline'} 
-              size={20} 
-              color={tracking ? '#10b981' : '#fff'} 
-            />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity 
+          style={styles.refreshButton}
+          onPress={onRefresh}
+        >
+          <Ionicons name="refresh" size={20} color="#fff" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -308,43 +386,84 @@ export default function LocationScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#818cf8" />
         }
       >
-        {/* GPS Status Card */}
-        <View style={[styles.card, styles.statusCard]}>
-          <View style={styles.statusHeader}>
-            <View style={styles.statusIcon}>
-              <Ionicons 
-                name={locationPermission ? 'location' : 'location-outline'} 
-                size={24} 
-                color={locationPermission ? '#10b981' : '#ef4444'} 
-              />
-            </View>
-            <View style={styles.statusInfo}>
-              <Text style={styles.statusTitle}>
-                {locationPermission ? 'Location Active' : 'Location Disabled'}
-              </Text>
-              <Text style={styles.statusSubtitle}>
-                {tracking ? 'Real-time tracking enabled' : 'Tap to enable tracking'}
-              </Text>
+        {/* Tracking Controls Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Tracking Settings</Text>
+          
+          {/* Foreground Tracking */}
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <View style={[styles.settingIcon, foregroundTracking && styles.settingIconActive]}>
+                <Ionicons name="location" size={20} color={foregroundTracking ? '#10b981' : '#6b7280'} />
+              </View>
+              <View>
+                <Text style={styles.settingLabel}>Live Tracking</Text>
+                <Text style={styles.settingDescription}>Track while app is open</Text>
+              </View>
             </View>
             <Switch
-              value={tracking}
-              onValueChange={tracking ? stopTracking : startTracking}
+              value={foregroundTracking}
+              onValueChange={handleToggleForegroundTracking}
               trackColor={{ false: '#374151', true: '#10b981' }}
-              thumbColor={tracking ? '#fff' : '#9ca3af'}
+              thumbColor="#fff"
             />
           </View>
-          
+
+          {/* Background Tracking */}
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <View style={[styles.settingIcon, backgroundTracking && styles.settingIconActive]}>
+                <Ionicons name="navigate" size={20} color={backgroundTracking ? '#818cf8' : '#6b7280'} />
+              </View>
+              <View>
+                <Text style={styles.settingLabel}>Background Tracking</Text>
+                <Text style={styles.settingDescription}>
+                  {permissions.background ? 'Track continuously' : 'Permission required'}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={backgroundTracking}
+              onValueChange={handleToggleBackgroundTracking}
+              trackColor={{ false: '#374151', true: '#818cf8' }}
+              thumbColor="#fff"
+            />
+          </View>
+
+          {/* Battery Sharing */}
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <View style={[styles.settingIcon, batterySharing && styles.settingIconBattery]}>
+                <Ionicons 
+                  name={batteryInfo?.isCharging ? 'battery-charging' : 'battery-half'} 
+                  size={20} 
+                  color={batterySharing ? '#fbbf24' : '#6b7280'} 
+                />
+              </View>
+              <View>
+                <Text style={styles.settingLabel}>Share Battery Level</Text>
+                <Text style={styles.settingDescription}>
+                  {batteryInfo ? `${batteryInfo.level}% ${batteryInfo.isCharging ? '(Charging)' : ''}` : 'Unknown'}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={batterySharing}
+              onValueChange={handleToggleBatterySharing}
+              trackColor={{ false: '#374151', true: '#fbbf24' }}
+              thumbColor="#fff"
+            />
+          </View>
+
+          {/* Current Location */}
           {currentLocation && (
-            <View style={styles.coordinatesRow}>
-              <Text style={styles.coordinatesText}>
-                {currentLocation.latitude.toFixed(6)}, {currentLocation.longitude.toFixed(6)}
+            <View style={styles.locationRow}>
+              <Ionicons name="location" size={16} color="#818cf8" />
+              <Text style={styles.locationText}>
+                {currentLocation.latitude.toFixed(5)}, {currentLocation.longitude.toFixed(5)}
               </Text>
-              <TouchableOpacity 
-                style={styles.mapButton}
-                onPress={() => openMaps(currentLocation.latitude, currentLocation.longitude, 'My Location')}
-              >
-                <Ionicons name="navigate" size={16} color="#818cf8" />
-                <Text style={styles.mapButtonText}>Open Map</Text>
+              <TouchableOpacity onPress={() => openMaps(currentLocation.latitude, currentLocation.longitude, 'My Location')}>
+                <Text style={styles.mapLink}>Open Map</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -353,72 +472,92 @@ export default function LocationScreen({ navigation }) {
           <TouchableOpacity 
             style={styles.checkinButton}
             onPress={handleCheckIn}
-            disabled={!currentLocation}
           >
             <Ionicons name="checkmark-circle" size={20} color="#fff" />
             <Text style={styles.checkinButtonText}>Check In Now</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Children's Locations (Parent View) */}
+        {/* Children's Status (Parent View) */}
         {user?.role === 'parent' && children.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Family Members</Text>
             {children.map((child) => {
               const lastLocation = child.last_location;
+              const battery = child.battery;
               const isOnline = child.online_status;
               const gpsEnabled = child.permissions?.share_location;
+              const batteryEnabled = child.permissions?.share_battery;
               
               return (
-                <TouchableOpacity 
-                  key={child.user_id} 
-                  style={styles.childCard}
-                  onPress={() => {
-                    if (lastLocation) {
-                      openMaps(lastLocation.lat, lastLocation.lng, child.name);
-                    }
-                  }}
-                  disabled={!lastLocation}
-                >
-                  <View style={styles.childAvatar}>
-                    <Text style={styles.childAvatarText}>{child.name?.charAt(0)}</Text>
-                    <View style={[styles.onlineIndicator, isOnline && styles.onlineIndicatorActive]} />
-                  </View>
-                  <View style={styles.childInfo}>
-                    <Text style={styles.childName}>{child.nickname || child.name}</Text>
-                    <View style={styles.childMeta}>
-                      {gpsEnabled ? (
-                        lastLocation ? (
+                <View key={child.user_id} style={styles.childCard}>
+                  <View style={styles.childHeader}>
+                    <View style={styles.childAvatar}>
+                      <Text style={styles.childAvatarText}>{child.name?.charAt(0)}</Text>
+                      <View style={[styles.onlineIndicator, isOnline && styles.onlineIndicatorActive]} />
+                    </View>
+                    <View style={styles.childInfo}>
+                      <Text style={styles.childName}>{child.nickname || child.name}</Text>
+                      <View style={styles.childMeta}>
+                        {gpsEnabled && lastLocation ? (
                           <>
                             <Ionicons name="location" size={12} color="#10b981" />
-                            <Text style={styles.childLocationText}>
-                              Last seen {formatDate(lastLocation.timestamp)} at {formatTime(lastLocation.timestamp)}
+                            <Text style={styles.childMetaText}>
+                              {formatDate(lastLocation.timestamp)} {formatTime(lastLocation.timestamp)}
                             </Text>
                           </>
                         ) : (
                           <>
-                            <Ionicons name="help-circle" size={12} color="#fbbf24" />
-                            <Text style={styles.childLocationText}>Location not available</Text>
+                            <Ionicons name="location-outline" size={12} color="#6b7280" />
+                            <Text style={styles.childMetaText}>Location off</Text>
                           </>
-                        )
-                      ) : (
-                        <>
-                          <Ionicons name="eye-off" size={12} color="#6b7280" />
-                          <Text style={styles.childLocationText}>Location sharing disabled</Text>
-                        </>
-                      )}
+                        )}
+                      </View>
                     </View>
+                    
+                    {/* Battery Status */}
+                    {batteryEnabled && battery && (
+                      <View style={[styles.batteryBadge, battery.level <= 20 && styles.batteryBadgeLow]}>
+                        <Ionicons 
+                          name={battery.state === 'charging' ? 'battery-charging' : 
+                            battery.level >= 50 ? 'battery-full' : 
+                            battery.level >= 20 ? 'battery-half' : 'battery-dead'} 
+                          size={14} 
+                          color={battery.level <= 20 ? '#ef4444' : battery.level <= 50 ? '#fbbf24' : '#10b981'} 
+                        />
+                        <Text style={[styles.batteryText, battery.level <= 20 && styles.batteryTextLow]}>
+                          {battery.level}%
+                        </Text>
+                      </View>
+                    )}
                   </View>
+                  
+                  {/* Action Buttons */}
                   {lastLocation && (
-                    <Ionicons name="navigate-outline" size={20} color="#818cf8" />
+                    <View style={styles.childActions}>
+                      <TouchableOpacity 
+                        style={styles.actionButton}
+                        onPress={() => openMaps(lastLocation.lat, lastLocation.lng, child.name)}
+                      >
+                        <Ionicons name="map-outline" size={16} color="#818cf8" />
+                        <Text style={styles.actionButtonText}>View on Map</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={[styles.actionButton, styles.actionButtonPrimary]}
+                        onPress={() => openNavigationToChild(child)}
+                      >
+                        <Ionicons name="navigate" size={16} color="#fff" />
+                        <Text style={[styles.actionButtonText, styles.actionButtonTextPrimary]}>Navigate</Text>
+                      </TouchableOpacity>
+                    </View>
                   )}
-                </TouchableOpacity>
+                </View>
               );
             })}
           </View>
         )}
 
-        {/* Safe Zones (Geofences) */}
+        {/* Safe Zones */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Safe Zones</Text>
@@ -437,7 +576,7 @@ export default function LocationScreen({ navigation }) {
               <Ionicons name="shield-outline" size={40} color="#6b7280" />
               <Text style={styles.emptyText}>No safe zones set up</Text>
               <Text style={styles.emptySubtext}>
-                {user?.role === 'parent' ? 'Add a safe zone to get alerts' : 'Ask a parent to set up safe zones'}
+                Get notified when entering or leaving zones
               </Text>
             </View>
           ) : (
@@ -448,8 +587,8 @@ export default function LocationScreen({ navigation }) {
               const isInside = distance !== null && distance <= fence.radius_feet;
               
               return (
-                <View key={fence.geofence_id} style={styles.geofenceCard}>
-                  <View style={[styles.geofenceIcon, isInside && styles.geofenceIconActive]}>
+                <View key={fence.geofence_id} style={[styles.geofenceCard, isInside && styles.geofenceCardInside]}>
+                  <View style={[styles.geofenceIcon, isInside && styles.geofenceIconInside]}>
                     <Ionicons 
                       name={isInside ? 'shield-checkmark' : 'shield-outline'} 
                       size={24} 
@@ -470,16 +609,11 @@ export default function LocationScreen({ navigation }) {
                     )}
                   </View>
                   <View style={styles.geofenceActions}>
-                    <TouchableOpacity 
-                      onPress={() => openMaps(fence.latitude, fence.longitude, fence.name)}
-                    >
+                    <TouchableOpacity onPress={() => openMaps(fence.latitude, fence.longitude, fence.name)}>
                       <Ionicons name="map-outline" size={20} color="#6b7280" />
                     </TouchableOpacity>
                     {user?.role === 'parent' && (
-                      <TouchableOpacity 
-                        onPress={() => handleDeleteGeofence(fence.geofence_id)}
-                        style={styles.deleteButton}
-                      >
+                      <TouchableOpacity onPress={() => handleDeleteGeofence(fence.geofence_id)}>
                         <Ionicons name="trash-outline" size={20} color="#ef4444" />
                       </TouchableOpacity>
                     )}
@@ -508,7 +642,7 @@ export default function LocationScreen({ navigation }) {
                 </View>
                 <View style={styles.alertInfo}>
                   <Text style={styles.alertText}>
-                    {alert.child_name} {alert.type === 'enter' ? 'entered' : 'left'} {alert.zone_name}
+                    {alert.child_name || 'You'} {alert.type === 'enter' ? 'entered' : 'left'} {alert.zone_name}
                   </Text>
                   <Text style={styles.alertTime}>
                     {formatDate(alert.timestamp)} at {formatTime(alert.timestamp)}
@@ -523,11 +657,7 @@ export default function LocationScreen({ navigation }) {
       </ScrollView>
 
       {/* Add Geofence Modal */}
-      <Modal
-        visible={showAddGeofence}
-        animationType="slide"
-        transparent={true}
-      >
+      <Modal visible={showAddGeofence} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -538,7 +668,7 @@ export default function LocationScreen({ navigation }) {
             </View>
 
             <Text style={styles.modalSubtext}>
-              This will create a safe zone at your current location
+              Creates a safe zone at your current location. You'll get notifications when entering or leaving.
             </Text>
 
             <TextInput
@@ -594,422 +724,125 @@ export default function LocationScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* Background Permission Modal */}
+      <Modal visible={showPermissionModal} animationType="fade" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.permissionIcon}>
+              <Ionicons name="navigate" size={40} color="#818cf8" />
+            </View>
+            <Text style={styles.modalTitle}>Background Location</Text>
+            <Text style={styles.permissionText}>
+              To track your location when the app is closed, FamFocus needs background location permission.
+              {'\n\n'}
+              This helps keep your family informed of your whereabouts even when you're not using the app.
+            </Text>
+            <TouchableOpacity 
+              style={styles.saveButton}
+              onPress={handleRequestBackgroundPermission}
+            >
+              <Text style={styles.saveButtonText}>Enable Background Location</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={() => setShowPermissionModal(false)}
+            >
+              <Text style={styles.cancelButtonText}>Maybe Later</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f0d1a',
-  },
-  gradient: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#0f0d1a',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#9ca3af',
-    marginTop: 2,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  trackingButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  trackingButtonActive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-    borderWidth: 1,
-    borderColor: '#10b981',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  card: {
-    backgroundColor: 'rgba(30, 27, 75, 0.6)',
-    borderRadius: 16,
-    marginHorizontal: 20,
-    marginBottom: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  statusCard: {
-    gap: 12,
-  },
-  statusHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  statusIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statusInfo: {
-    flex: 1,
-  },
-  statusTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  statusSubtitle: {
-    color: '#9ca3af',
-    fontSize: 13,
-    marginTop: 2,
-  },
-  coordinatesRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  coordinatesText: {
-    color: '#6b7280',
-    fontSize: 12,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-  mapButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  mapButtonText: {
-    color: '#818cf8',
-    fontSize: 13,
-  },
-  checkinButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#818cf8',
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  checkinButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  section: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 12,
-  },
-  addButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#818cf8',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  childCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(30, 27, 75, 0.6)',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  childAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#818cf8',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  childAvatarText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  onlineIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#6b7280',
-    borderWidth: 2,
-    borderColor: '#1e1b4b',
-  },
-  onlineIndicatorActive: {
-    backgroundColor: '#10b981',
-  },
-  childInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  childName: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  childMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-  },
-  childLocationText: {
-    color: '#9ca3af',
-    fontSize: 12,
-  },
-  geofenceCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(30, 27, 75, 0.6)',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  geofenceIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(129, 140, 248, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  geofenceIconActive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-  },
-  geofenceInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  geofenceName: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  geofenceDetails: {
-    color: '#9ca3af',
-    fontSize: 13,
-    marginTop: 2,
-  },
-  insideBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-  },
-  insideBadgeText: {
-    color: '#10b981',
-    fontSize: 12,
-  },
-  geofenceActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  deleteButton: {
-    padding: 4,
-  },
-  emptyCard: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(30, 27, 75, 0.4)',
-    borderRadius: 12,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  emptyText: {
-    color: '#9ca3af',
-    fontSize: 16,
-    marginTop: 12,
-  },
-  emptySubtext: {
-    color: '#6b7280',
-    fontSize: 13,
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  alertCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(30, 27, 75, 0.4)',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-  },
-  alertIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  alertIconEnter: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-  },
-  alertIconExit: {
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-  },
-  alertInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  alertText: {
-    color: '#fff',
-    fontSize: 14,
-  },
-  alertTime: {
-    color: '#6b7280',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  bottomSpacer: {
-    height: 100,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#1e1b4b',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  modalSubtext: {
-    color: '#9ca3af',
-    fontSize: 14,
-    marginBottom: 20,
-  },
-  input: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
-    padding: 16,
-    color: '#fff',
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  label: {
-    color: '#9ca3af',
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  radiusOptions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
-  },
-  radiusOption: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    alignItems: 'center',
-  },
-  radiusOptionActive: {
-    backgroundColor: 'rgba(129, 140, 248, 0.2)',
-    borderWidth: 1,
-    borderColor: '#818cf8',
-  },
-  radiusOptionText: {
-    color: '#9ca3af',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  radiusOptionTextActive: {
-    color: '#818cf8',
-  },
-  locationPreview: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(129, 140, 248, 0.1)',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  locationPreviewText: {
-    color: '#a5b4fc',
-    fontSize: 13,
-  },
-  saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#818cf8',
-    borderRadius: 12,
-    paddingVertical: 16,
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  container: { flex: 1, backgroundColor: '#0f0d1a' },
+  gradient: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f0d1a' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16 },
+  title: { fontSize: 28, fontWeight: 'bold', color: '#fff' },
+  subtitle: { fontSize: 14, color: '#9ca3af', marginTop: 2 },
+  refreshButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
+  scrollView: { flex: 1 },
+  card: { backgroundColor: 'rgba(30,27,75,0.6)', borderRadius: 16, marginHorizontal: 20, marginBottom: 16, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  cardTitle: { fontSize: 16, fontWeight: '600', color: '#fff', marginBottom: 16 },
+  settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
+  settingInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  settingIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)', justifyContent: 'center', alignItems: 'center' },
+  settingIconActive: { backgroundColor: 'rgba(16,185,129,0.1)' },
+  settingIconBattery: { backgroundColor: 'rgba(251,191,36,0.1)' },
+  settingLabel: { color: '#fff', fontSize: 15, fontWeight: '500' },
+  settingDescription: { color: '#6b7280', fontSize: 12, marginTop: 2 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 12, marginTop: 4 },
+  locationText: { color: '#6b7280', fontSize: 12, flex: 1, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  mapLink: { color: '#818cf8', fontSize: 13 },
+  checkinButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#818cf8', paddingVertical: 14, borderRadius: 12, marginTop: 16 },
+  checkinButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  section: { marginHorizontal: 20, marginBottom: 20 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: '#fff', marginBottom: 12 },
+  addButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#818cf8', justifyContent: 'center', alignItems: 'center' },
+  childCard: { backgroundColor: 'rgba(30,27,75,0.6)', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  childHeader: { flexDirection: 'row', alignItems: 'center' },
+  childAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#818cf8', justifyContent: 'center', alignItems: 'center', position: 'relative' },
+  childAvatarText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  onlineIndicator: { position: 'absolute', bottom: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: '#6b7280', borderWidth: 2, borderColor: '#1e1b4b' },
+  onlineIndicatorActive: { backgroundColor: '#10b981' },
+  childInfo: { flex: 1, marginLeft: 12 },
+  childName: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  childMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  childMetaText: { color: '#9ca3af', fontSize: 12 },
+  batteryBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(16,185,129,0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  batteryBadgeLow: { backgroundColor: 'rgba(239,68,68,0.1)' },
+  batteryText: { color: '#10b981', fontSize: 12, fontWeight: '600' },
+  batteryTextLow: { color: '#ef4444' },
+  childActions: { flexDirection: 'row', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
+  actionButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)' },
+  actionButtonPrimary: { backgroundColor: '#818cf8' },
+  actionButtonText: { color: '#818cf8', fontSize: 13, fontWeight: '500' },
+  actionButtonTextPrimary: { color: '#fff' },
+  geofenceCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(30,27,75,0.6)', borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  geofenceCardInside: { borderColor: 'rgba(16,185,129,0.3)', backgroundColor: 'rgba(16,185,129,0.05)' },
+  geofenceIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(129,140,248,0.1)', justifyContent: 'center', alignItems: 'center' },
+  geofenceIconInside: { backgroundColor: 'rgba(16,185,129,0.1)' },
+  geofenceInfo: { flex: 1, marginLeft: 12 },
+  geofenceName: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  geofenceDetails: { color: '#9ca3af', fontSize: 13, marginTop: 2 },
+  insideBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  insideBadgeText: { color: '#10b981', fontSize: 12 },
+  geofenceActions: { flexDirection: 'row', gap: 12 },
+  emptyCard: { alignItems: 'center', backgroundColor: 'rgba(30,27,75,0.4)', borderRadius: 12, padding: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  emptyText: { color: '#9ca3af', fontSize: 16, marginTop: 12 },
+  emptySubtext: { color: '#6b7280', fontSize: 13, marginTop: 4, textAlign: 'center' },
+  alertCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(30,27,75,0.4)', borderRadius: 12, padding: 12, marginBottom: 8 },
+  alertIcon: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  alertIconEnter: { backgroundColor: 'rgba(16,185,129,0.1)' },
+  alertIconExit: { backgroundColor: 'rgba(245,158,11,0.1)' },
+  alertInfo: { flex: 1, marginLeft: 12 },
+  alertText: { color: '#fff', fontSize: 14 },
+  alertTime: { color: '#6b7280', fontSize: 12, marginTop: 2 },
+  bottomSpacer: { height: 100 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#1e1b4b', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+  modalSubtext: { color: '#9ca3af', fontSize: 14, marginBottom: 20, lineHeight: 20 },
+  permissionIcon: { alignSelf: 'center', marginBottom: 16 },
+  permissionText: { color: '#9ca3af', fontSize: 14, textAlign: 'center', marginBottom: 20, lineHeight: 22 },
+  input: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 16, color: '#fff', fontSize: 16, marginBottom: 16 },
+  label: { color: '#9ca3af', fontSize: 14, marginBottom: 8 },
+  radiusOptions: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  radiusOption: { flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center' },
+  radiusOptionActive: { backgroundColor: 'rgba(129,140,248,0.2)', borderWidth: 1, borderColor: '#818cf8' },
+  radiusOptionText: { color: '#9ca3af', fontSize: 14, fontWeight: '600' },
+  radiusOptionTextActive: { color: '#818cf8' },
+  locationPreview: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(129,140,248,0.1)', padding: 12, borderRadius: 8, marginBottom: 16 },
+  locationPreviewText: { color: '#a5b4fc', fontSize: 13 },
+  saveButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#818cf8', borderRadius: 12, paddingVertical: 16 },
+  saveButtonDisabled: { opacity: 0.6 },
+  saveButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  cancelButton: { alignItems: 'center', paddingVertical: 16, marginTop: 8 },
+  cancelButtonText: { color: '#6b7280', fontSize: 14 },
 });
