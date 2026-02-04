@@ -1477,10 +1477,8 @@ RULES:
 Format the schedule clearly by day, showing which child does which chore."""
     
     logger.info(f"AI Schedule prompt has {len(children_info)} children, {len(chores_info)} chores")
-    print(f"DEBUG: AI Schedule prompt has {len(children_info)} children, {len(chores_info)} chores", flush=True)
     
     response = await chat.send_message(UserMessage(text=prompt))
-    print(f"DEBUG: Got AI response: {response[:100] if response else 'EMPTY'}...", flush=True)
     logger.info(f"AI Schedule: Got response of type {type(response)}, length {len(str(response)) if response else 0}")
     
     # Ensure response is a string
