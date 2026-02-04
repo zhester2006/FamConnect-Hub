@@ -409,17 +409,17 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
                   className="w-10 h-10 rounded-lg object-contain mx-auto"
                 />
               )}
-              <div className="hidden lg:flex items-center space-x-1">
-                {/* Float Toggle */}
+              <div className="flex items-center space-x-1">
+                {/* Float Toggle - visible on lg+ screens */}
                 <button
                   onClick={toggleFloating}
-                  className={`p-1.5 rounded-lg transition-all ${isFloating ? 'bg-primary/20 text-primary' : 'hover:bg-slate-800 text-slate-400'}`}
+                  className={`hidden lg:block p-1.5 rounded-lg transition-all ${isFloating ? 'bg-primary/20 text-primary' : 'hover:bg-slate-800 text-slate-400'}`}
                   title={isFloating ? 'Dock sidebar' : 'Float sidebar'}
                   data-testid="float-toggle"
                 >
                   <Move className="w-4 h-4" />
                 </button>
-                {/* Collapse Toggle */}
+                {/* Collapse Toggle - now visible on all screen sizes */}
                 <button
                   onClick={handleCollapse}
                   className="p-1.5 hover:bg-slate-800 rounded-lg transition-all"
