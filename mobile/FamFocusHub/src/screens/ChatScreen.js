@@ -139,17 +139,22 @@ export default function ChatScreen({ navigation }) {
     setNewMessage('');
     setSending(true);
 
-    if (connected && webSocketService.sendMessage(content)) {
-      setSending(false);
-      return;
+    // Try WebSocket first if connected
+    if (connected && webSocketService.ws?.readyState === WebSocket.OPEN) {
+      if (webSocketService.sendMessage(content)) {
+        setSending(false);
+        return;
+      }
     }
 
+    // Fallback to REST API
     try {
       await apiService.sendMessage(content);
       await fetchMessages();
     } catch (error) {
       console.error('Failed to send message:', error);
       setNewMessage(content);
+      Alert.alert('Error', 'Failed to send message. Please try again.');
     } finally {
       setSending(false);
     }
