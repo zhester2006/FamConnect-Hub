@@ -43,7 +43,7 @@ function DraggableChore({ chore, isOverlay = false }) {
 }
 
 // Droppable Day Column Component
-function DroppableDay({ date, dayName, chores, children: kidsList, onRemoveChore }) {
+function DroppableDay({ date, dayName, chores, onRemoveChore }) {
   const { setNodeRef, isOver } = useSortable({
     id: `day-${date}`,
     data: { type: 'day', date }
