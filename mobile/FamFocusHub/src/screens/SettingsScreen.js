@@ -127,6 +127,15 @@ export default function SettingsScreen({ navigation }) {
       ]
     },
     {
+      title: 'Features',
+      items: [
+        { icon: 'chatbubbles-outline', label: 'Family Wall', onPress: () => navigation.navigate('FamilyWall') },
+        { icon: 'cart-outline', label: 'Shopping List', onPress: () => navigation.navigate('Shopping') },
+        { icon: 'restaurant-outline', label: 'Dinner Planner', onPress: () => navigation.navigate('DinnerPlanner') },
+        { icon: 'trophy-outline', label: 'Leaderboard', onPress: () => navigation.navigate('Leaderboard') },
+      ]
+    },
+    {
       title: 'Security',
       items: [
         ...(biometricSupported ? [{
