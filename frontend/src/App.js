@@ -19,6 +19,7 @@ import Leaderboard from '@/pages/Leaderboard';
 import ReadingLogs from '@/pages/ReadingLogs';
 import CheckIns from '@/pages/CheckIns';
 import Analytics from '@/pages/Analytics';
+import ChoreScheduler from '@/pages/ChoreScheduler';
 import PixieOnboarding from '@/components/PixieOnboarding';
 import WelcomeTutorial from '@/components/WelcomeTutorial';
 
