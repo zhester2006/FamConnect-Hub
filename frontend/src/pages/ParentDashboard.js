@@ -224,7 +224,7 @@ export default function ParentDashboard({ user }) {
       <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
       <main className={`flex-1 overflow-y-auto transition-all duration-300 relative z-10 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
-        <div className="p-4 lg:p-6 space-y-4">
+        <div className="p-4 lg:p-6 pb-24 md:pb-6 space-y-4">
           <header>
             <h1 className="text-2xl lg:text-3xl font-black text-white">Hello, {user?.name?.split(' ')[0]}!</h1>
             <p className="text-sm text-slate-400">Here's what's happening with your family today</p>
