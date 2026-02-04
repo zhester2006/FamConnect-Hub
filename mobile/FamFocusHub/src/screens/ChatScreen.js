@@ -148,7 +148,16 @@ export default function ChatScreen({ navigation }) {
         apiService.getMessages(),
         apiService.getLeaderboard().catch(() => ({ leaderboard: [] })),
       ]);
-      setMessages(messagesData.messages || []);
+      
+      // Decrypt messages if they have encrypted content
+      const decryptedMessages = (messagesData.messages || []).map(msg => {
+        if (msg.encrypted_content) {
+          return { ...msg, content: encryptionService.decrypt(msg.encrypted_content) };
+        }
+        return msg;
+      });
+      
+      setMessages(decryptedMessages);
       setLeaderboard(leaderboardData.leaderboard || []);
     } catch (error) {
       console.error('Failed to fetch messages:', error);
