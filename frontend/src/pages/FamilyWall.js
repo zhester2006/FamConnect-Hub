@@ -329,15 +329,38 @@ export default function FamilyWall({ user }) {
             </header>
 
             {/* Daily Quote */}
-            {quote && (
+            {(quote || quoteLoading) && (
               <div className="glass-card rounded-2xl p-5 relative overflow-hidden" data-testid="daily-quote">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-accent/20 rounded-full blur-3xl" />
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary/20 rounded-full blur-2xl" />
                 <div className="relative z-10">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <TrendingUp className="w-5 h-5 text-accent" />
-                    <span className="text-sm font-bold text-accent">Daily Inspiration</span>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center">
+                        <Sparkles className="w-4 h-4 text-white" />
+                      </div>
+                      <div>
+                        <span className="text-sm font-bold text-accent">Daily Inspiration</span>
+                        <p className="text-[10px] text-slate-500">AI-generated just for your family</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => fetchDailyQuote(true)}
+                      disabled={quoteLoading}
+                      className="p-2 rounded-full hover:bg-slate-800 transition-all disabled:opacity-50"
+                      title="Get new quote"
+                      data-testid="refresh-quote-btn"
+                    >
+                      <RefreshCw className={`w-4 h-4 text-slate-400 ${quoteLoading ? 'animate-spin' : ''}`} />
+                    </button>
                   </div>
-                  <p className="text-base text-white font-medium italic">"{quote}"</p>
+                  {quoteLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="w-6 h-6 text-accent animate-spin" />
+                    </div>
+                  ) : (
+                    <p className="text-base text-white font-medium italic leading-relaxed">&ldquo;{quote}&rdquo;</p>
+                  )}
                 </div>
               </div>
             )}
