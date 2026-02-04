@@ -185,6 +185,7 @@ export default function AppNavigator() {
                 <Stack.Screen name="Profile" component={ProfileScreen} />
                 <Stack.Screen name="HomeHub" component={HomeHubScreen} />
                 <Stack.Screen name="ChildSpace" component={ChildSpace} />
+                <Stack.Screen name="Rewards" component={RewardsScreen} />
               </>
             ) : (
               <>
