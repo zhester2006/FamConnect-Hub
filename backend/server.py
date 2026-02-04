@@ -1499,7 +1499,7 @@ Format the schedule clearly by day, showing which child does which chore."""
     }
     await db.chore_schedules.insert_one(schedule_doc)
     
-    return {"schedule_id": schedule_id, "schedule": response}
+    return {"schedule_id": schedule_id, "schedule": schedule_text}
 
 # Get chore schedules
 @api_router.get("/chores/schedules")
