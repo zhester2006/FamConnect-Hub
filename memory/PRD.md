@@ -328,6 +328,29 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - [x] Updated SettingsScreen.js with navigation to all new features
 - [x] Mobile screens include: ParentDashboard, ChildSpace, ChatScreen, ChoresScreen, CalendarScreen, RewardsScreen, LeaderboardScreen, FamilyScreen, FamilyWallScreen, ShoppingListScreen, DinnerPlannerScreen, SettingsScreen, LoginScreen, OnboardingScreen
 
+### Session 17 - Haptic Feedback & GPS Check-in System (Feb 2026) ✅
+**Web App:**
+- [x] Added haptic feedback utility using Web Vibration API
+- [x] Implemented haptic feedback on tab switches (light vibration)
+- [x] Added haptic feedback on swipe gestures (medium vibration)
+- [x] Haptic types: light (10ms), medium (20ms), heavy (30-10-30ms), success (10-50-20ms)
+
+**React Native Mobile App:**
+- [x] Created LocationScreen.js with full GPS check-in system
+- [x] Real-time location tracking with expo-location
+- [x] Geofencing with entry/exit detection
+- [x] Safe zone management (create, delete, view on map)
+- [x] Children's location monitoring for parents
+- [x] Haptic feedback using expo-haptics on:
+  - Geofence enter/exit (success/warning notification)
+  - Tracking toggle (impact feedback)
+  - Safe zone creation (success notification)
+  - Button interactions (light impact)
+- [x] Distance calculation using Haversine formula
+- [x] Recent alerts display with enter/exit icons
+- [x] Open in Maps functionality (iOS Maps / Google Maps)
+- [x] Added expo-haptics and expo-location to dependencies
+
 ## API Endpoints
 
 ### Chat & Real-time (NEW - Session 4)
