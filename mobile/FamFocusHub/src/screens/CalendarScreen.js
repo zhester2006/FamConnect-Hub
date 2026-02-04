@@ -378,7 +378,21 @@ export default function CalendarScreen({ navigation }) {
                     <View style={[styles.dayEventDot, { backgroundColor: getEventTypeColor(event.event_type) }]} />
                     <View style={styles.dayEventInfo}>
                       <Text style={styles.dayEventTitle}>{event.title}</Text>
-                      <Text style={styles.dayEventTime}>{event.time || 'All Day'}</Text>
+                      <View style={styles.dayEventMeta}>
+                        <Text style={styles.dayEventTime}>{event.time || 'All Day'}</Text>
+                        {event.created_by_name && (
+                          <View style={styles.dayEventCreator}>
+                            {event.created_by_picture ? (
+                              <Image source={{ uri: event.created_by_picture }} style={styles.dayEventCreatorAvatar} />
+                            ) : (
+                              <View style={styles.dayEventCreatorAvatarPlaceholder}>
+                                <Text style={styles.dayEventCreatorAvatarText}>{event.created_by_name?.charAt(0)}</Text>
+                              </View>
+                            )}
+                            <Text style={styles.dayEventCreatorName}>{event.created_by_name}</Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
                     <View style={styles.dayEventActions}>
                       <TouchableOpacity 
