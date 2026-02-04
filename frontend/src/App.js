@@ -125,7 +125,6 @@ function ProtectedRoute({ children }) {
   return isAuthenticated ? (
     <>
       <WelcomeTutorial user={user} />
-      <PixieOnboarding user={user} />
       {React.cloneElement(children, { user })}
     </>
   ) : null;
