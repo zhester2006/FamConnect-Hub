@@ -32,10 +32,43 @@ export default function Leaderboard({ user }) {
   };
 
   return (
-    <div className="flex h-screen bg-slate-950">
+    <div className="flex h-screen relative">
+      {/* Golden gradient background */}
+      <div className="fixed inset-0 bg-gradient-to-br from-amber-900/25 via-orange-900/15 to-slate-950 pointer-events-none" />
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        {[...Array(10)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full bg-amber-500/10 animate-float-slow"
+            style={{
+              width: Math.random() * 100 + 50,
+              height: Math.random() * 100 + 50,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 5}s`,
+              animationDuration: `${Math.random() * 15 + 12}s`
+            }}
+          />
+        ))}
+        {/* Trophy sparkles */}
+        {[...Array(5)].map((_, i) => (
+          <div
+            key={`trophy-${i}`}
+            className="absolute text-xl animate-pulse opacity-50"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 2}s`
+            }}
+          >
+            🏆
+          </div>
+        ))}
+      </div>
+      
       <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
-      <main className={`flex-1 overflow-y-auto transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
+      <main className={`flex-1 overflow-y-auto transition-all duration-300 relative z-10 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
         <div className="p-6 lg:p-8 space-y-6 pb-24 lg:pb-8">
           <header className="glass-card rounded-3xl p-6 lg:p-8 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-accent/20 rounded-full blur-3xl"></div>
