@@ -335,6 +335,11 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     marginTop: 48,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   greeting: {
     fontSize: 14,
     color: '#6ee7b7',
