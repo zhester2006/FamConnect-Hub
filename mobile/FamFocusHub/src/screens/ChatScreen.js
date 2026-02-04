@@ -9,6 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
 import webSocketService from '../services/websocket.service';
+import encryptionService from '../services/encryption.service';
 import AnimatedBackground from '../components/AnimatedBackground';
 import MedalEmblem from '../components/MedalEmblem';
 import { formatTime } from '../utils/dateUtils';
