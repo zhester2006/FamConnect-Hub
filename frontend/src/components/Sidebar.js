@@ -427,17 +427,6 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
           </div>
         </div>
       </>
-          <DropdownMenuContent 
-            user={user}
-            menuItems={menuItems}
-            currentPath={location.pathname}
-            onNavigate={handleNavigate}
-            onCollapse={handleCollapse}
-            onLogout={handleLogout}
-            menuRef={menuRef}
-          />
-        </DropdownPortal>
-      </>
     );
   }
 
