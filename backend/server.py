@@ -1162,7 +1162,14 @@ async def get_weather(lat: float = 40.7128, lon: float = -74.0060):
             }
     except httpx.HTTPStatusError as e:
         logger.error(f"Weather API error: {e}")
-        raise HTTPException(status_code=502, detail=f"Weather API error: {str(e)}")
+        # Fallback to simulated on API errors (401, 403, etc.)
+        import random
+        return {
+            "temp": random.choice([65, 68, 72, 75, 78]),
+            "condition": random.choice(['sunny', 'cloudy']),
+            "description": "Weather API key may need activation (can take up to 2 hours)",
+            "is_mocked": True
+        }
     except Exception as e:
         logger.error(f"Weather fetch error: {e}")
         # Fallback to simulated on error
