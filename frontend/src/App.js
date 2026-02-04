@@ -143,6 +143,8 @@ function AppRouter() {
       <Route path="/reading" element={<ProtectedRoute><ReadingLogs /></ProtectedRoute>} />
       <Route path="/checkins" element={<ProtectedRoute><CheckIns /></ProtectedRoute>} />
       <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+      <Route path="/chore-scheduler" element={<ProtectedRoute><ChoreScheduler /></ProtectedRoute>} />
+      <Route path="/parent" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }
