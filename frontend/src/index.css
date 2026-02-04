@@ -302,6 +302,15 @@ code {
         scrollbar-width: none;
     }
     
+    /* Safe area for mobile bottom nav */
+    .safe-area-bottom {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    
+    .pb-safe {
+        padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+    }
+    
     /* Mobile Touch Optimizations */
     @media (hover: none) {
         button, a, [role="button"] {
@@ -310,10 +319,11 @@ code {
         }
     }
     
-    /* Ensure minimum touch target sizes */
-    button, a, input[type="button"], input[type="submit"] {
-        min-height: 44px;
-        min-width: 44px;
+    /* Ensure minimum touch target sizes on mobile only */
+    @media (max-width: 768px) {
+        button, a, input[type="button"], input[type="submit"] {
+            min-height: 44px;
+        }
     }
     
     /* Mobile text selection */
@@ -329,4 +339,45 @@ code {
             user-select: text;
         }
     }
+}
+
+/* Animation utilities */
+@keyframes scale-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.animate-scale-in {
+    animation: scale-in 0.2s ease-out;
+}
+
+/* Fade and slide animations for dropdowns */
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slide-in-from-top-2 {
+    from { transform: translateY(-8px); }
+    to { transform: translateY(0); }
+}
+
+.animate-in {
+    animation-duration: 0.2s;
+    animation-timing-function: ease-out;
+    animation-fill-mode: both;
+}
+
+.fade-in {
+    animation-name: fade-in;
+}
+
+.slide-in-from-top-2 {
+    animation-name: slide-in-from-top-2;
 }
