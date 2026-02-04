@@ -246,23 +246,7 @@ function DropdownMenuContent({
   );
 }
 
-// Dropdown Portal Component
-function DropdownPortal({ children, isOpen, position }) {
-  if (!isOpen) return null;
-  
-  return createPortal(
-    <div 
-      className="fixed z-[9999]"
-      style={{ 
-        left: position.x, 
-        top: position.y + 60,
-      }}
-    >
-      {children}
-    </div>,
-    document.body
-  );
-}
+ 
 
 export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollapsed }) {
   const navigate = useNavigate();
