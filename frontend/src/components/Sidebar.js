@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, Calendar, MessageCircle, Users, ShoppingCart, Award, 
@@ -15,24 +15,55 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [isFloating, setIsFloating] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const dragRef = useRef(null);
   const startPos = useRef({ x: 0, y: 0 });
+  const dragStartTime = useRef(0);
 
+  // Load saved position and floating state
   useEffect(() => {
     const saved = localStorage.getItem('sidebar-position');
     const savedFloating = localStorage.getItem('sidebar-floating');
     if (saved) {
-      setPosition(JSON.parse(saved));
+      try {
+        const pos = JSON.parse(saved);
+        // Validate position is within viewport
+        const maxX = window.innerWidth - 64;
+        const maxY = window.innerHeight - 64;
+        setPosition({
+          x: Math.min(Math.max(0, pos.x), maxX),
+          y: Math.min(Math.max(0, pos.y), maxY)
+        });
+      } catch (e) {
+        setPosition({ x: 0, y: 0 });
+      }
     }
     if (savedFloating === 'true') {
       setIsFloating(true);
     }
   }, []);
 
+  // Auto-float when collapsed
+  useEffect(() => {
+    if (isCollapsed && !isFloating) {
+      // When collapsed, automatically enable floating for better UX
+      setIsFloating(true);
+      localStorage.setItem('sidebar-floating', 'true');
+    }
+  }, [isCollapsed]);
+
   const handleCollapse = () => {
     const newState = !isCollapsed;
     setIsCollapsed(newState);
     if (setCollapsed) setCollapsed(newState);
+    
+    // When expanding, dock the sidebar
+    if (!newState) {
+      setIsFloating(false);
+      setPosition({ x: 0, y: 0 });
+      localStorage.setItem('sidebar-floating', 'false');
+      localStorage.removeItem('sidebar-position');
+    }
   };
 
   const toggleFloating = () => {
@@ -45,47 +76,96 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     }
   };
 
-  const handleMouseDown = (e) => {
+  // Calculate constrained position
+  const constrainPosition = useCallback((x, y) => {
+    const sidebarWidth = isCollapsed ? 64 : 256;
+    const sidebarHeight = isCollapsed ? (showMenu ? 400 : 64) : window.innerHeight * 0.9;
+    const maxX = window.innerWidth - sidebarWidth;
+    const maxY = window.innerHeight - sidebarHeight;
+    
+    return {
+      x: Math.max(0, Math.min(x, maxX)),
+      y: Math.max(0, Math.min(y, maxY))
+    };
+  }, [isCollapsed, showMenu]);
+
+  // Mouse/Touch event handlers
+  const handleDragStart = (e) => {
     if (!isFloating) return;
+    
+    e.preventDefault();
     setIsDragging(true);
+    dragStartTime.current = Date.now();
+    
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
     startPos.current = {
-      x: e.clientX - position.x,
-      y: e.clientY - position.y
+      x: clientX - position.x,
+      y: clientY - position.y
     };
   };
 
-  const handleMouseMove = (e) => {
+  const handleDragMove = useCallback((e) => {
     if (!isDragging || !isFloating) return;
-    const newX = e.clientX - startPos.current.x;
-    const newY = e.clientY - startPos.current.y;
     
-    // Constrain to viewport
-    const maxX = window.innerWidth - (isCollapsed ? 64 : 256);
-    const maxY = window.innerHeight - 100;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     
-    setPosition({
-      x: Math.max(0, Math.min(newX, maxX)),
-      y: Math.max(0, Math.min(newY, maxY))
-    });
-  };
+    const newX = clientX - startPos.current.x;
+    const newY = clientY - startPos.current.y;
+    
+    const constrained = constrainPosition(newX, newY);
+    setPosition(constrained);
+  }, [isDragging, isFloating, constrainPosition]);
 
-  const handleMouseUp = () => {
+  const handleDragEnd = useCallback(() => {
     if (isDragging && isFloating) {
       localStorage.setItem('sidebar-position', JSON.stringify(position));
+      
+      // If it was a quick tap (not drag), toggle menu on collapsed sidebar
+      const dragDuration = Date.now() - dragStartTime.current;
+      if (dragDuration < 200 && isCollapsed) {
+        setShowMenu(prev => !prev);
+      }
     }
     setIsDragging(false);
-  };
+  }, [isDragging, isFloating, position, isCollapsed]);
 
+  // Add/remove event listeners
   useEffect(() => {
     if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      const handleMove = (e) => handleDragMove(e);
+      const handleEnd = () => handleDragEnd();
+      
+      // Mouse events
+      document.addEventListener('mousemove', handleMove);
+      document.addEventListener('mouseup', handleEnd);
+      
+      // Touch events
+      document.addEventListener('touchmove', handleMove, { passive: false });
+      document.addEventListener('touchend', handleEnd);
+      
       return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('mousemove', handleMove);
+        document.removeEventListener('mouseup', handleEnd);
+        document.removeEventListener('touchmove', handleMove);
+        document.removeEventListener('touchend', handleEnd);
       };
     }
-  }, [isDragging, position]);
+  }, [isDragging, handleDragMove, handleDragEnd]);
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (isFloating) {
+        setPosition(prev => constrainPosition(prev.x, prev.y));
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isFloating, constrainPosition]);
 
   const handleLogout = async () => {
     try {
@@ -132,6 +212,129 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
 
   const menuItems = user?.role === 'parent' ? parentMenuItems : childMenuItems;
 
+  // Floating collapsed menu (draggable pill)
+  if (isCollapsed && isFloating) {
+    return (
+      <>
+        {/* Mobile Menu Toggle - Hidden when floating collapsed */}
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="fixed top-4 left-4 z-50 lg:hidden bg-slate-900/90 backdrop-blur-md border border-slate-700 text-white p-3 rounded-full shadow-lg hover:bg-slate-800 transition-all"
+          data-testid="mobile-menu-toggle"
+        >
+          {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+
+        {/* Floating Collapsed Pill */}
+        <div
+          ref={dragRef}
+          style={{
+            position: 'fixed',
+            left: position.x,
+            top: position.y,
+            zIndex: 60,
+            touchAction: 'none',
+          }}
+          className={`select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+          data-testid="floating-sidebar"
+        >
+          {/* Main Pill Button */}
+          <div
+            onMouseDown={handleDragStart}
+            onTouchStart={handleDragStart}
+            onClick={() => !isDragging && setShowMenu(prev => !prev)}
+            className={`w-14 h-14 rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-slate-700 shadow-2xl flex items-center justify-center transition-all hover:scale-105 hover:border-primary/50 ${
+              showMenu ? 'ring-2 ring-primary' : ''
+            }`}
+          >
+            <img 
+              src="https://customer-assets.emergentagent.com/job_homebridge-5/artifacts/2ku9mapg_app_logo.png.png"
+              alt="FamFocus"
+              className="w-8 h-8 rounded-lg object-contain pointer-events-none"
+              draggable={false}
+            />
+          </div>
+
+          {/* Expanded Menu */}
+          {showMenu && (
+            <div 
+              className="absolute left-0 top-16 w-56 bg-slate-900/98 backdrop-blur-xl border border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-scale-in"
+              style={{ maxHeight: 'calc(100vh - 100px)' }}
+            >
+              {/* User Info */}
+              <div className="p-3 border-b border-slate-800">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center text-xs font-black text-white">
+                    {user?.name?.charAt(0) || 'U'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-white text-sm truncate">{user?.name || 'User'}</p>
+                    <p className="text-xs text-slate-400 capitalize">{user?.role || 'Member'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Menu Items */}
+              <nav className="p-2 max-h-[50vh] overflow-y-auto scrollbar-hide">
+                {menuItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <button
+                      key={item.path}
+                      onClick={() => {
+                        navigate(item.path);
+                        setShowMenu(false);
+                        setIsOpen(false);
+                      }}
+                      className={`w-full flex items-center space-x-2 px-3 py-2 rounded-xl transition-all ${
+                        isActive
+                          ? 'bg-primary/20 border border-primary/50 text-primary'
+                          : 'text-slate-300 hover:bg-slate-800/50 hover:text-white border border-transparent'
+                      }`}
+                      data-testid={`floating-menu-${item.label.toLowerCase().replace(/ /g, '-')}`}
+                    >
+                      <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-primary' : item.color}`} />
+                      <span className="font-medium text-sm">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+
+              {/* Footer Actions */}
+              <div className="p-2 border-t border-slate-800 flex gap-1">
+                <button
+                  onClick={handleCollapse}
+                  className="flex-1 flex items-center justify-center space-x-1 px-2 py-2 rounded-lg text-slate-400 hover:bg-slate-800 transition-all"
+                  title="Expand sidebar"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                  <span className="text-xs">Expand</span>
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="flex-1 flex items-center justify-center space-x-1 px-2 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-all"
+                  data-testid="floating-logout"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="text-xs">Logout</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Drag Indicator */}
+          <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 flex gap-0.5">
+            <div className="w-1 h-1 rounded-full bg-slate-600"></div>
+            <div className="w-1 h-1 rounded-full bg-slate-600"></div>
+            <div className="w-1 h-1 rounded-full bg-slate-600"></div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Regular Sidebar (expanded or docked)
   const sidebarStyle = isFloating ? {
     position: 'fixed',
     left: position.x,
@@ -176,10 +379,14 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
             {/* Drag Handle - Only visible when floating */}
             {isFloating && (
               <div 
-                onMouseDown={handleMouseDown}
-                className="flex items-center justify-center mb-2 cursor-move py-1 hover:bg-slate-800 rounded-lg transition-all"
+                onMouseDown={handleDragStart}
+                onTouchStart={handleDragStart}
+                className={`flex items-center justify-center mb-2 py-1 rounded-lg transition-all ${
+                  isDragging ? 'bg-primary/20 cursor-grabbing' : 'hover:bg-slate-800 cursor-grab'
+                }`}
               >
                 <GripVertical className="w-4 h-4 text-slate-500" />
+                <span className="text-xs text-slate-500 ml-1">Drag to move</span>
               </div>
             )}
             <div className="flex items-center justify-between">
