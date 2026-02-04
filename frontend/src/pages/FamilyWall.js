@@ -172,6 +172,7 @@ const GifPicker = ({ onSelect, onClose }) => {
 export default function FamilyWall({ user }) {
   const [posts, setPosts] = useState([]);
   const [quote, setQuote] = useState('');
+  const [quoteLoading, setQuoteLoading] = useState(false);
   const [newPost, setNewPost] = useState('');
   const [selectedGif, setSelectedGif] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -199,13 +200,25 @@ export default function FamilyWall({ user }) {
     }
   };
 
-  const fetchDailyQuote = async () => {
+  const fetchDailyQuote = async (forceRefresh = false) => {
+    setQuoteLoading(true);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/family-wall/daily-quote`, { credentials: 'include' });
+      const url = forceRefresh 
+        ? `${BACKEND_URL}/api/family-wall/daily-quote?refresh=true`
+        : `${BACKEND_URL}/api/family-wall/daily-quote`;
+      const res = await fetch(url, { credentials: 'include' });
       const data = await res.json();
       setQuote(data.quote || '');
+      if (forceRefresh) {
+        toast.success('New inspiration generated!');
+      }
     } catch (error) {
       console.error('Failed to fetch quote:', error);
+      if (forceRefresh) {
+        toast.error('Failed to generate new quote');
+      }
+    } finally {
+      setQuoteLoading(false);
     }
   };
 
