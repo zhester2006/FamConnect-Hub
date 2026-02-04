@@ -3329,6 +3329,117 @@ async def get_permissions(request: Request):
         })
     }
 
+# Sample data endpoint
+@api_router.post("/dev/populate-sample-data")
+async def populate_sample_data(request: Request):
+    """Populate database with sample data for testing"""
+    current_user = await get_current_user(request)
+    parent_id = current_user['user_id'] if current_user['role'] == 'parent' else current_user.get('parent_id')
+    
+    # Sample rewards
+    sample_rewards = [
+        {"name": "30 min Screen Time", "description": "Extra gaming or TV time", "points_required": 50},
+        {"name": "Ice Cream Trip", "description": "Trip to get ice cream", "points_required": 100},
+        {"name": "Stay Up 30 min", "description": "Stay up past bedtime", "points_required": 75},
+        {"name": "Movie Night Pick", "description": "Choose the family movie", "points_required": 80},
+        {"name": "Toy Store Trip", "description": "$10 to spend at toy store", "points_required": 200},
+    ]
+    
+    for r in sample_rewards:
+        existing = await db.rewards.find_one({"family_id": parent_id, "name": r["name"]})
+        if not existing:
+            await db.rewards.insert_one({
+                "reward_id": f"reward_{uuid.uuid4().hex[:12]}",
+                "family_id": parent_id,
+                **r,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+    
+    # Sample tasks
+    sample_tasks = [
+        {"title": "Read for 20 minutes", "points": 15},
+        {"title": "Help with dinner", "points": 20},
+        {"title": "Practice instrument", "points": 25},
+        {"title": "Help sibling with homework", "points": 30},
+    ]
+    
+    for t in sample_tasks:
+        existing = await db.tasks.find_one({"family_id": parent_id, "title": t["title"]})
+        if not existing:
+            await db.tasks.insert_one({
+                "task_id": f"task_{uuid.uuid4().hex[:12]}",
+                "family_id": parent_id,
+                **t,
+                "status": "pending",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+    
+    # Sample chores
+    children = await db.users.find({"parent_id": parent_id, "role": "child"}, {"_id": 0}).to_list(10)
+    sample_chores = ["Wash dishes", "Take out trash", "Clean room", "Feed pet", "Vacuum living room"]
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    for i, chore_name in enumerate(sample_chores):
+        if children:
+            child = children[i % len(children)]
+            existing = await db.chores.find_one({"family_id": parent_id, "title": chore_name, "scheduled_date": today})
+            if not existing:
+                await db.chores.insert_one({
+                    "chore_id": f"chore_{uuid.uuid4().hex[:12]}",
+                    "family_id": parent_id,
+                    "title": chore_name,
+                    "assigned_to": child['user_id'],
+                    "assigned_to_name": child.get('nickname') or child['name'],
+                    "scheduled_date": today,
+                    "points": (i + 1) * 5,
+                    "status": "pending",
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                })
+    
+    # Sample calendar events
+    sample_events = [
+        {"title": "Soccer Practice", "type": "event", "time": "16:00"},
+        {"title": "Team Meeting", "type": "work", "time": "10:00"},
+        {"title": "Doctor Appointment", "type": "appointment", "time": "14:30"},
+        {"title": "Submit Project", "type": "task", "time": "17:00"},
+    ]
+    
+    for event in sample_events:
+        existing = await db.calendar_events.find_one({"family_id": parent_id, "title": event["title"], "date": today})
+        if not existing:
+            await db.calendar_events.insert_one({
+                "event_id": f"event_{uuid.uuid4().hex[:12]}",
+                "family_id": parent_id,
+                "title": event["title"],
+                "type": event["type"],
+                "date": today,
+                "time": event["time"],
+                "created_by": current_user['user_id'],
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+    
+    # Sample shopping items
+    sample_items = [
+        {"name": "Milk", "status": "approved"},
+        {"name": "Bread", "status": "approved"},
+        {"name": "Apples", "status": "pending"},
+        {"name": "Cereal", "status": "approved"},
+    ]
+    
+    for item in sample_items:
+        existing = await db.shopping_items.find_one({"family_id": parent_id, "name": item["name"]})
+        if not existing:
+            await db.shopping_items.insert_one({
+                "item_id": f"item_{uuid.uuid4().hex[:12]}",
+                "family_id": parent_id,
+                "name": item["name"],
+                "status": item["status"],
+                "added_by": current_user['user_id'],
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+    
+    return {"success": True, "message": "Sample data populated successfully"}
+
 app.include_router(api_router)
 
 app.add_middleware(
