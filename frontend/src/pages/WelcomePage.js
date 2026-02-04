@@ -125,6 +125,24 @@ export default function WelcomePage() {
               </span>
             </button>
 
+            {/* Dev Login Buttons */}
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => handleDevLogin('parent')}
+                className="flex-1 bg-slate-800 text-white font-medium py-2 px-4 rounded-lg hover:bg-slate-700 transition-all text-sm border border-slate-600"
+                data-testid="dev-login-parent"
+              >
+                Dev: Parent Login
+              </button>
+              <button
+                onClick={() => handleDevLogin('child')}
+                className="flex-1 bg-slate-800 text-white font-medium py-2 px-4 rounded-lg hover:bg-slate-700 transition-all text-sm border border-slate-600"
+                data-testid="dev-login-child"
+              >
+                Dev: Child Login
+              </button>
+            </div>
+
             <p className="text-xs text-slate-500">
               Secure authentication powered by Google
             </p>
