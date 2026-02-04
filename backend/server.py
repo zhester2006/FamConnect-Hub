@@ -467,10 +467,34 @@ async def update_user(user_id: str, request: Request, data: dict):
 @api_router.get("/chores")
 async def get_chores(request: Request, date: Optional[str] = None):
     current_user = await get_current_user(request)
-    query = {"$or": [{"assigned_to": current_user['user_id']}, {"created_by": current_user['user_id']}]}
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    # Get all family members for assignee lookup
+    family_members = await db.users.find(
+        {"$or": [{"user_id": family_id}, {"parent_id": family_id}]},
+        {"_id": 0, "user_id": 1, "name": 1, "nickname": 1, "picture": 1, "role": 1}
+    ).to_list(100)
+    member_map = {m['user_id']: m for m in family_members}
+    
+    query = {"$or": [{"family_id": family_id}, {"created_by": current_user['user_id']}, {"assigned_to": current_user['user_id']}]}
     if date:
         query["scheduled_date"] = date
     chores = await db.chores.find(query, {"_id": 0}).to_list(1000)
+    
+    # Enrich chores with assignee details
+    for chore in chores:
+        assignee_id = chore.get('assigned_to')
+        if assignee_id and assignee_id in member_map:
+            assignee = member_map[assignee_id]
+            chore['assignee_name'] = assignee.get('nickname') or assignee.get('name')
+            chore['assignee_picture'] = assignee.get('picture')
+        
+        completed_by_id = chore.get('completed_by')
+        if completed_by_id and completed_by_id in member_map:
+            completer = member_map[completed_by_id]
+            chore['completed_by_name'] = completer.get('nickname') or completer.get('name')
+            chore['completed_by_picture'] = completer.get('picture')
+    
     return {"chores": chores}
 
 @api_router.post("/chores")
