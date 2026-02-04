@@ -374,3 +374,4 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - `/app/test_reports/iteration_6.json` - v6 features (100% pass)
 - Session 7 - Visual polish (page backgrounds) - No API changes, frontend only
 - `/app/test_reports/iteration_7.json` - Battery feature (100% pass - 19/19 tests)
+- `/app/test_reports/iteration_8.json` - Drag-and-Drop Chore Scheduler (100% pass - 11/11 tests)
