@@ -179,12 +179,10 @@ function DropdownMenuContent({
   currentPath, 
   onNavigate, 
   onCollapse, 
-  onLogout,
-  menuRef 
+  onLogout
 }) {
   return (
     <div 
-      ref={menuRef}
       className="w-60 backdrop-blur-2xl bg-slate-900/95 border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
       style={{ maxHeight: 'calc(100vh - 120px)' }}
       onClick={(e) => e.stopPropagation()}
