@@ -111,7 +111,7 @@ export default function Analytics({ user }) {
       <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
       <main className={`flex-1 overflow-y-auto transition-all duration-300 relative z-10 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
-        <div className="p-4 lg:p-6 space-y-4 pb-24 lg:pb-8" data-testid="analytics-dashboard">
+        <div className="p-4 lg:p-6 pb-24 md:pb-6 space-y-4 pb-24 lg:pb-8" data-testid="analytics-dashboard">
           {/* Header */}
           <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>

@@ -313,7 +313,7 @@ export default function FamilyWall({ user }) {
       <main className={`flex-1 flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto pb-32" data-testid="family-wall">
-          <div className="p-4 lg:p-6 space-y-4">
+          <div className="p-4 lg:p-6 pb-24 md:pb-6 space-y-4">
             <header className="flex items-center justify-between">
               <h1 className="text-2xl font-black text-white">Family Wall</h1>
               {user?.role === 'parent' && (
