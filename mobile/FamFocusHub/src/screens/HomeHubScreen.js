@@ -14,20 +14,23 @@ const { width, height } = Dimensions.get('window');
 const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// Nature and Historical Places for Screensaver
+// Nature and Historical Places for Screensaver (NO PEOPLE)
 const SCREENSAVER_IMAGES = [
-  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800',   // Mountains
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800',   // Forest
-  'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800',   // Nature
-  'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800',   // Mountain peak
-  'https://images.unsplash.com/photo-1548013146-72479768bada?w=800',     // Taj Mahal
+  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800',   // Swiss Alps Mountains
+  'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800',   // Foggy Mountains
+  'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800',   // Mountain Peak
+  'https://images.unsplash.com/photo-1548013146-72479768bada?w=800',     // Taj Mahal (monument only)
   'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800',     // Rome Colosseum
-  'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800',  // Paris
   'https://images.unsplash.com/photo-1526711657229-e7e080ed7aa1?w=800',  // Grand Canyon
   'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800',  // Japan Temple
   'https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=800',  // Northern Lights
-  'https://images.unsplash.com/photo-1518098268026-4e89f1a2cd8e?w=800',  // Great Wall
+  'https://images.unsplash.com/photo-1518098268026-4e89f1a2cd8e?w=800',  // Great Wall China
   'https://images.unsplash.com/photo-1492136344046-866c85e0bf04?w=800',  // Waterfall
+  'https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800',  // Lake reflection
+  'https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=800',  // Forest waterfall
+  'https://images.unsplash.com/photo-1505765050516-f72dcac9c60e?w=800',  // Autumn forest
+  'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800',  // Mountain sunrise
+  'https://images.unsplash.com/photo-1418065460487-3e41a6c84dc5?w=800',  // Forest path
 ];
 
 // Weather Icon Component
