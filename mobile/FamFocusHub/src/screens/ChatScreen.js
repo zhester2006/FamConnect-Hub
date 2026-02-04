@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
 import webSocketService from '../services/websocket.service';
 import AnimatedBackground from '../components/AnimatedBackground';
+import MedalEmblem from '../components/MedalEmblem';
 import { formatTime } from '../utils/dateUtils';
 
 const EMOJI_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🎉'];
@@ -23,6 +24,7 @@ export default function ChatScreen({ navigation }) {
   const [connected, setConnected] = useState(false);
   const [typingUsers, setTypingUsers] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const [leaderboard, setLeaderboard] = useState([]);
   const flatListRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const connectionDot = useRef(new Animated.Value(0)).current;
