@@ -88,7 +88,7 @@ function DropdownMenuContent({ user, menuItems, currentPath, onNavigate, onColla
       </div>
 
       {/* Menu Items - Scrollable */}
-      <nav className="p-2 max-h-[50vh] overflow-y-auto">
+      <nav className="p-2 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentPath === item.path;
