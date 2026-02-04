@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
+import MedalEmblem from '../components/MedalEmblem';
 
 export default function ChildSpace({ navigation, route }) {
   const { user } = useAuth();
@@ -20,15 +21,17 @@ export default function ChildSpace({ navigation, route }) {
   const [rewards, setRewards] = useState([]);
   const [readingLogs, setReadingLogs] = useState([]);
   const [quote, setQuote] = useState('');
+  const [childRank, setChildRank] = useState(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const [choresData, tasksData, rewardsData, quoteData, logsData] = await Promise.all([
+      const [choresData, tasksData, rewardsData, quoteData, logsData, leaderboardData] = await Promise.all([
         apiService.getChores(),
         apiService.getTasks(),
         apiService.getRewards(),
         apiService.getDailyQuote().catch(() => ({ quote: 'Have an awesome day!' })),
         apiService.getReadingLogs(targetChild?.user_id).catch(() => ({ logs: [] })),
+        apiService.getLeaderboard().catch(() => ({ leaderboard: [] })),
       ]);
 
       // Filter chores assigned to this child
@@ -37,6 +40,11 @@ export default function ChildSpace({ navigation, route }) {
       setRewards(rewardsData.rewards || []);
       setQuote(quoteData.quote || '');
       setReadingLogs((logsData.logs || []).slice(0, 3));
+      
+      // Find child's rank
+      const leaderboard = leaderboardData.leaderboard || [];
+      const rankIndex = leaderboard.findIndex(child => child.user_id === targetChild?.user_id);
+      setChildRank(rankIndex >= 0 ? rankIndex + 1 : null);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
