@@ -105,7 +105,12 @@ function ProtectedRoute({ children }) {
     );
   }
 
-  return isAuthenticated ? React.cloneElement(children, { user }) : null;
+  return isAuthenticated ? (
+    <>
+      <PixieOnboarding user={user} />
+      {React.cloneElement(children, { user })}
+    </>
+  ) : null;
 }
 
 function AppRouter() {
