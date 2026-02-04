@@ -667,4 +667,45 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - [ ] Verify all navigation links work
 - [ ] Test photo/GIF uploads end-to-end
 
+### Session 24 - Safe Zone Map Picker & App-wide Medals (Dec 2025) ✅
+**Google Maps Safe Zone Selection:**
+- [x] Added react-native-maps dependency to package.json
+- [x] Configured Google Maps API key in app.json for both iOS and Android
+- [x] Updated LocationScreen.js with full Google Maps picker modal
+- [x] Map shows current location and allows tap-to-select any location
+- [x] Displays existing safe zones on the map with markers and radius circles
+- [x] New safe zone preview shows radius circle before creation
+- [x] "Use Current Location" and "Choose on Map" buttons in Add Safe Zone modal
+- [x] Visual map interface with zoom, pan, and location selection
+
+**App-wide Leaderboard Medals:**
+- [x] MedalEmblem component now used consistently across all screens
+- [x] ParentDashboard.js - Shows medals next to children in family overview
+- [x] ChoresScreen.js - Shows medals in "Assign To" selector and member checkboxes
+- [x] RewardsScreen.js - Shows medals for children (used in award points modal)
+- [x] LocationScreen.js - Shows medals next to children's location status
+- [x] ChildSpace.js - Shows medal next to child's name in header
+- [x] ChatScreen.js & FamilyWallScreen.js - Already had medals from previous session
+
+**Key Files Modified:**
+- `/app/mobile/FamFocusHub/package.json` - Added react-native-maps@1.27.1
+- `/app/mobile/FamFocusHub/app.json` - Added Google Maps API configuration
+- `/app/mobile/FamFocusHub/src/screens/LocationScreen.js` - Complete map picker implementation
+- `/app/mobile/FamFocusHub/src/screens/ParentDashboard.js` - Added medal imports and display
+- `/app/mobile/FamFocusHub/src/screens/ChoresScreen.js` - Added medals to member selectors
+- `/app/mobile/FamFocusHub/src/screens/RewardsScreen.js` - Added medals to family members
+- `/app/mobile/FamFocusHub/src/screens/ChildSpace.js` - Added medal to header
+
+**Technical Details:**
+- MapView uses PROVIDER_GOOGLE for consistent experience
+- Geofence radius converted from feet to meters for Circle component (feet * 0.3048)
+- Leaderboard data fetched in parallel with other screen data
+- Rankings mapped to children using user_id lookup
+- Medal emblem sizes: tiny (14px), small (18px), medium (24px), large (32px)
+
+**Verification Status:**
+- Web app running ✅
+- Backend API working ✅
+- Mobile build needed (changes require EAS build)
+
 
