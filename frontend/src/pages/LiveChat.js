@@ -523,6 +523,69 @@ export default function LiveChat({ user }) {
     }
   };
 
+  // Handle adding/removing emoji reaction
+  const handleReaction = async (messageId, reactionType) => {
+    try {
+      await fetch(`${BACKEND_URL}/api/messages/${messageId}/react`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ reaction: reactionType })
+      });
+      // Update local state optimistically
+      setMessages(prev => prev.map(msg => {
+        if (msg.message_id === messageId) {
+          const reactions = { ...msg.reactions } || {};
+          const userIds = reactions[reactionType] || [];
+          const hasReacted = userIds.includes(user?.user_id);
+          
+          if (hasReacted) {
+            reactions[reactionType] = userIds.filter(id => id !== user?.user_id);
+            if (reactions[reactionType].length === 0) delete reactions[reactionType];
+          } else {
+            reactions[reactionType] = [...userIds, user?.user_id];
+          }
+          return { ...msg, reactions };
+        }
+        return msg;
+      }));
+      setSelectedMessageForReaction(null);
+    } catch (error) {
+      console.error('Failed to react to message:', error);
+      toast.error('Failed to add reaction');
+    }
+  };
+
+  // Handle voice message send
+  const handleVoiceSend = async (audioBlob, duration) => {
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'voice_message.webm');
+      formData.append('duration', duration.toString());
+      
+      const response = await fetch(`${BACKEND_URL}/api/messages/voice`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+      
+      if (!response.ok) throw new Error('Failed to send voice message');
+      
+      setShowVoiceRecorder(false);
+      fetchMessages();
+      toast.success('Voice message sent');
+    } catch (error) {
+      console.error('Failed to send voice message:', error);
+      toast.error('Failed to send voice message');
+    }
+  };
+
+  // Insert emoji into message
+  const insertEmoji = (emoji) => {
+    setNewMessage(prev => prev + emoji);
+    setShowEmojiPicker(false);
+  };
+
   // Mark messages as read when viewing
   useEffect(() => {
     if (messages.length > 0) {
