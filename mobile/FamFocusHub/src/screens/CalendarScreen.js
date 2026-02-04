@@ -323,7 +323,21 @@ export default function CalendarScreen({ navigation }) {
                 </View>
                 <View style={styles.eventInfo}>
                   <Text style={styles.eventTitle}>{event.title}</Text>
-                  <Text style={styles.eventTime}>{event.time || 'All Day'}</Text>
+                  <View style={styles.eventMeta}>
+                    <Text style={styles.eventTime}>{event.time || 'All Day'}</Text>
+                    {event.created_by_name && (
+                      <View style={styles.creatorBadge}>
+                        {event.created_by_picture ? (
+                          <Image source={{ uri: event.created_by_picture }} style={styles.creatorAvatar} />
+                        ) : (
+                          <View style={styles.creatorAvatarPlaceholder}>
+                            <Text style={styles.creatorAvatarText}>{event.created_by_name?.charAt(0)}</Text>
+                          </View>
+                        )}
+                        <Text style={styles.creatorName}>{event.created_by_name}</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
                 <TouchableOpacity 
                   style={styles.deleteBtn}
