@@ -1491,7 +1491,7 @@ Format the schedule clearly by day, showing which child does which chore."""
     schedule_doc = {
         "schedule_id": schedule_id,
         "family_id": family_id,
-        "schedule": response,
+        "schedule": schedule_text,
         "days": schedule_days,
         "preferences": preferences,
         "created_by": current_user['user_id'],
