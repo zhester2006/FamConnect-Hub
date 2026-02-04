@@ -177,9 +177,21 @@ export default function ChatScreen({ navigation }) {
     setNewMessage('');
     setSending(true);
 
+    // Encrypt the message if encryption is enabled
+    let messagePayload = { content };
+    if (encryptionEnabled) {
+      const encryptedData = encryptionService.encrypt(content);
+      if (encryptedData.encrypted) {
+        messagePayload = {
+          content: '[Encrypted Message]', // Placeholder for non-encrypted clients
+          encrypted_content: encryptedData
+        };
+      }
+    }
+
     // Try WebSocket first if connected
     if (connected && webSocketService.ws?.readyState === WebSocket.OPEN) {
-      if (webSocketService.sendMessage(content)) {
+      if (webSocketService.sendMessage(messagePayload.encrypted_content || content)) {
         setSending(false);
         return;
       }
@@ -187,7 +199,7 @@ export default function ChatScreen({ navigation }) {
 
     // Fallback to REST API
     try {
-      await apiService.sendMessage(content);
+      await apiService.sendMessage(content, messagePayload.encrypted_content);
       await fetchMessages();
     } catch (error) {
       console.error('Failed to send message:', error);
