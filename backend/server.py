@@ -299,6 +299,52 @@ async def mobile_auth_callback(request: Request, response: Response, data: dict)
     # Return token directly for mobile (no cookie needed)
     return {"session_token": session_token, "user": user}
 
+# Development-only mock login for testing
+@api_router.post("/auth/dev-login")
+async def dev_login(response: Response, data: dict = None):
+    """Mock login for development/testing purposes"""
+    role = data.get('role', 'parent') if data else 'parent'
+    
+    # Find or create a test user
+    user = await db.users.find_one({"role": role}, {"_id": 0})
+    if not user:
+        user_id = f"user_test_{uuid.uuid4().hex[:8]}"
+        user = {
+            "user_id": user_id,
+            "email": f"test_{role}@famfocus.demo",
+            "name": f"Test {role.capitalize()}",
+            "role": role,
+            "points": 100,
+            "badges": [],
+            "settings": {"theme": "cosmic_explorer", "notifications_enabled": True},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "online_status": True,
+            "last_seen": datetime.now(timezone.utc).isoformat()
+        }
+        await db.users.insert_one(user)
+        user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    
+    # Create session token
+    session_token = str(uuid.uuid4())
+    await db.user_sessions.insert_one({
+        "user_id": user['user_id'],
+        "session_token": session_token,
+        "expires_at": datetime.now(timezone.utc) + timedelta(days=7),
+        "created_at": datetime.now(timezone.utc)
+    })
+    
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+        max_age=7*24*60*60
+    )
+    
+    return {"user": user, "session_token": session_token}
+
 # Push notification device registration
 @api_router.post("/notifications/register-device")
 async def register_device_for_push(request: Request, data: dict):
