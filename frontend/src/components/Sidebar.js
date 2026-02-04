@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { 
   Home, Calendar, MessageCircle, Users, ShoppingCart, Award, 
   Settings, LogOut, Utensils, Trophy, Book, MapPin, Menu, X,
@@ -8,17 +9,99 @@ import {
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Mobile Bottom Navigation Component
+function MobileBottomNav({ user, currentPath }) {
+  const navigate = useNavigate();
+  
+  const navItems = user?.role === 'parent' ? [
+    { icon: Home, label: 'Home', path: '/dashboard' },
+    { icon: Calendar, label: 'Calendar', path: '/calendar' },
+    { icon: MessageCircle, label: 'Chat', path: '/chat' },
+    { icon: LayoutDashboard, label: 'Wall', path: '/family-wall' },
+    { icon: Settings, label: 'More', path: '/settings' },
+  ] : [
+    { icon: Home, label: 'Space', path: '/space' },
+    { icon: Calendar, label: 'Calendar', path: '/calendar' },
+    { icon: MessageCircle, label: 'Chat', path: '/chat' },
+    { icon: Trophy, label: 'Rewards', path: '/rewards' },
+    { icon: Settings, label: 'More', path: '/settings' },
+  ];
+
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
+      <div className="backdrop-blur-2xl bg-slate-950/90 border-t border-white/10 px-2 py-2 safe-area-bottom">
+        <div className="flex items-center justify-around max-w-lg mx-auto">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = currentPath === item.path;
+            return (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all ${
+                  isActive 
+                    ? 'text-primary bg-primary/10' 
+                    : 'text-slate-400 hover:text-white active:scale-95'
+                }`}
+                data-testid={`mobile-nav-${item.label.toLowerCase()}`}
+              >
+                <Icon className={`w-5 h-5 ${isActive ? 'text-primary' : ''}`} />
+                <span className="text-[10px] mt-0.5 font-medium">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+// Dropdown Menu Portal Component
+function DropdownPortal({ children, isOpen, position }) {
+  if (!isOpen) return null;
+  
+  return createPortal(
+    <div 
+      className="fixed z-[9999]"
+      style={{ 
+        left: position.x, 
+        top: position.y + 60,
+      }}
+    >
+      {children}
+    </div>,
+    document.body
+  );
+}
+
 export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollapsed }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(collapsed || false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState({ x: 16, y: 16 });
   const [isDragging, setIsDragging] = useState(false);
   const [isFloating, setIsFloating] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const dragRef = useRef(null);
+  const menuRef = useRef(null);
   const startPos = useRef({ x: 0, y: 0 });
   const dragStartTime = useRef(0);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (showMenu && menuRef.current && !menuRef.current.contains(e.target) && 
+          dragRef.current && !dragRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showMenu]);
 
   // Load saved position and floating state
   useEffect(() => {
@@ -27,15 +110,14 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     if (saved) {
       try {
         const pos = JSON.parse(saved);
-        // Validate position is within viewport
         const maxX = window.innerWidth - 64;
         const maxY = window.innerHeight - 64;
         setPosition({
-          x: Math.min(Math.max(0, pos.x), maxX),
-          y: Math.min(Math.max(0, pos.y), maxY)
+          x: Math.min(Math.max(16, pos.x), maxX),
+          y: Math.min(Math.max(16, pos.y), maxY)
         });
       } catch (e) {
-        setPosition({ x: 0, y: 0 });
+        setPosition({ x: 16, y: 16 });
       }
     }
     if (savedFloating === 'true') {
@@ -43,24 +125,23 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     }
   }, []);
 
-  // Auto-float when collapsed
+  // Auto-float when collapsed on desktop
   useEffect(() => {
-    if (isCollapsed && !isFloating) {
-      // When collapsed, automatically enable floating for better UX
+    if (isCollapsed && !isFloating && window.innerWidth >= 1024) {
       setIsFloating(true);
       localStorage.setItem('sidebar-floating', 'true');
     }
-  }, [isCollapsed]);
+  }, [isCollapsed, isFloating]);
 
   const handleCollapse = () => {
     const newState = !isCollapsed;
     setIsCollapsed(newState);
     if (setCollapsed) setCollapsed(newState);
+    setShowMenu(false);
     
-    // When expanding, dock the sidebar
     if (!newState) {
       setIsFloating(false);
-      setPosition({ x: 0, y: 0 });
+      setPosition({ x: 16, y: 16 });
       localStorage.setItem('sidebar-floating', 'false');
       localStorage.removeItem('sidebar-position');
     }
@@ -71,29 +152,24 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     setIsFloating(newFloating);
     localStorage.setItem('sidebar-floating', newFloating.toString());
     if (!newFloating) {
-      setPosition({ x: 0, y: 0 });
+      setPosition({ x: 16, y: 16 });
       localStorage.removeItem('sidebar-position');
     }
   };
 
-  // Calculate constrained position
   const constrainPosition = useCallback((x, y) => {
-    const sidebarWidth = isCollapsed ? 64 : 256;
-    const sidebarHeight = isCollapsed ? (showMenu ? 400 : 64) : window.innerHeight * 0.9;
-    const maxX = window.innerWidth - sidebarWidth;
-    const maxY = window.innerHeight - sidebarHeight;
-    
+    const maxX = window.innerWidth - 70;
+    const maxY = window.innerHeight - 70;
     return {
-      x: Math.max(0, Math.min(x, maxX)),
-      y: Math.max(0, Math.min(y, maxY))
+      x: Math.max(8, Math.min(x, maxX)),
+      y: Math.max(8, Math.min(y, maxY))
     };
-  }, [isCollapsed, showMenu]);
+  }, []);
 
-  // Mouse/Touch event handlers
   const handleDragStart = (e) => {
     if (!isFloating) return;
-    
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(true);
     dragStartTime.current = Date.now();
     
@@ -122,8 +198,6 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
   const handleDragEnd = useCallback(() => {
     if (isDragging && isFloating) {
       localStorage.setItem('sidebar-position', JSON.stringify(position));
-      
-      // If it was a quick tap (not drag), toggle menu on collapsed sidebar
       const dragDuration = Date.now() - dragStartTime.current;
       if (dragDuration < 200 && isCollapsed) {
         setShowMenu(prev => !prev);
@@ -132,17 +206,13 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     setIsDragging(false);
   }, [isDragging, isFloating, position, isCollapsed]);
 
-  // Add/remove event listeners
   useEffect(() => {
     if (isDragging) {
       const handleMove = (e) => handleDragMove(e);
       const handleEnd = () => handleDragEnd();
       
-      // Mouse events
       document.addEventListener('mousemove', handleMove);
       document.addEventListener('mouseup', handleEnd);
-      
-      // Touch events
       document.addEventListener('touchmove', handleMove, { passive: false });
       document.addEventListener('touchend', handleEnd);
       
@@ -155,20 +225,20 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     }
   }, [isDragging, handleDragMove, handleDragEnd]);
 
-  // Handle window resize
   useEffect(() => {
     const handleResize = () => {
       if (isFloating) {
         setPosition(prev => constrainPosition(prev.x, prev.y));
       }
     };
-    
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [isFloating, constrainPosition]);
 
   const handleLogout = async () => {
     try {
+      localStorage.removeItem('dev_session_token');
+      localStorage.removeItem('dev_user');
       await fetch(`${BACKEND_URL}/api/auth/logout`, {
         method: 'POST',
         credentials: 'include'
@@ -176,75 +246,149 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
       navigate('/login');
     } catch (error) {
       console.error('Logout failed:', error);
+      navigate('/login');
     }
   };
 
   const parentMenuItems = [
-    { icon: Home, label: 'Dashboard', path: '/dashboard', color: 'text-primary' },
+    { icon: Home, label: 'Dashboard', path: '/dashboard', color: 'text-blue-400' },
     { icon: Sparkles, label: 'Home Hub', path: '/hub', color: 'text-indigo-400' },
-    { icon: Users, label: 'Family', path: '/family', color: 'text-secondary' },
-    { icon: Calendar, label: 'Calendar', path: '/calendar', color: 'text-accent' },
+    { icon: Users, label: 'Family', path: '/family', color: 'text-cyan-400' },
+    { icon: Calendar, label: 'Calendar', path: '/calendar', color: 'text-emerald-400' },
     { icon: GripVertical, label: 'Chore Scheduler', path: '/chore-scheduler', color: 'text-teal-400' },
-    { icon: MessageCircle, label: 'Chat', path: '/chat', color: 'text-green-400' },
-    { icon: LayoutDashboard, label: 'Wall', path: '/family-wall', color: 'text-pink-400' },
-    { icon: ShoppingCart, label: 'Shopping', path: '/shopping', color: 'text-blue-400' },
+    { icon: MessageCircle, label: 'Chat', path: '/chat', color: 'text-pink-400' },
+    { icon: LayoutDashboard, label: 'Wall', path: '/family-wall', color: 'text-rose-400' },
+    { icon: ShoppingCart, label: 'Shopping', path: '/shopping', color: 'text-orange-400' },
     { icon: Trophy, label: 'Leaderboard', path: '/leaderboard', color: 'text-yellow-400' },
-    { icon: Utensils, label: 'Dinner', path: '/dinner', color: 'text-orange-400' },
+    { icon: Utensils, label: 'Dinner', path: '/dinner', color: 'text-amber-400' },
     { icon: Award, label: 'Rewards', path: '/rewards', color: 'text-purple-400' },
-    { icon: Book, label: 'Reading', path: '/reading', color: 'text-cyan-400' },
+    { icon: Book, label: 'Reading', path: '/reading', color: 'text-sky-400' },
     { icon: MapPin, label: 'Location', path: '/checkins', color: 'text-red-400' },
-    { icon: BarChart3, label: 'Analytics', path: '/analytics', color: 'text-emerald-400' },
+    { icon: BarChart3, label: 'Analytics', path: '/analytics', color: 'text-lime-400' },
     { icon: Settings, label: 'Settings', path: '/settings', color: 'text-slate-400' },
   ];
 
   const childMenuItems = [
-    { icon: Home, label: 'My Space', path: '/space', color: 'text-primary' },
+    { icon: Home, label: 'My Space', path: '/space', color: 'text-blue-400' },
     { icon: Sparkles, label: 'Home Hub', path: '/hub', color: 'text-indigo-400' },
-    { icon: Calendar, label: 'Calendar', path: '/calendar', color: 'text-accent' },
-    { icon: MessageCircle, label: 'Chat', path: '/chat', color: 'text-green-400' },
-    { icon: LayoutDashboard, label: 'Wall', path: '/family-wall', color: 'text-pink-400' },
-    { icon: ShoppingCart, label: 'Shopping', path: '/shopping', color: 'text-blue-400' },
+    { icon: Calendar, label: 'Calendar', path: '/calendar', color: 'text-emerald-400' },
+    { icon: MessageCircle, label: 'Chat', path: '/chat', color: 'text-pink-400' },
+    { icon: LayoutDashboard, label: 'Wall', path: '/family-wall', color: 'text-rose-400' },
+    { icon: ShoppingCart, label: 'Shopping', path: '/shopping', color: 'text-orange-400' },
     { icon: Trophy, label: 'Leaderboard', path: '/leaderboard', color: 'text-yellow-400' },
     { icon: Award, label: 'Rewards', path: '/rewards', color: 'text-purple-400' },
-    { icon: Book, label: 'Reading', path: '/reading', color: 'text-cyan-400' },
+    { icon: Book, label: 'Reading', path: '/reading', color: 'text-sky-400' },
     { icon: Settings, label: 'Settings', path: '/settings', color: 'text-slate-400' },
   ];
 
   const menuItems = user?.role === 'parent' ? parentMenuItems : childMenuItems;
 
-  // Floating collapsed menu (draggable pill)
+  // Dropdown Menu Content
+  const DropdownMenuContent = () => (
+    <div 
+      ref={menuRef}
+      className="w-60 backdrop-blur-2xl bg-slate-900/95 border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+      style={{ maxHeight: 'calc(100vh - 120px)' }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* User Info */}
+      <div className="p-4 border-b border-white/10 bg-gradient-to-r from-primary/10 to-transparent">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-sm font-bold text-white shadow-lg">
+            {user?.name?.charAt(0) || 'U'}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-white text-sm truncate">{user?.name || 'User'}</p>
+            <p className="text-xs text-slate-400 capitalize">{user?.role || 'Member'}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Menu Items */}
+      <nav className="p-2 max-h-[45vh] overflow-y-auto scrollbar-hide">
+        {menuItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.path;
+          return (
+            <button
+              key={item.path}
+              onClick={() => {
+                navigate(item.path);
+                setShowMenu(false);
+                setIsOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
+                isActive
+                  ? 'bg-primary/20 text-primary'
+                  : 'text-slate-300 hover:bg-white/5 hover:text-white'
+              }`}
+              data-testid={`floating-menu-${item.label.toLowerCase().replace(/ /g, '-')}`}
+            >
+              <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-primary' : item.color}`} />
+              <span className="font-medium text-sm">{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Footer Actions */}
+      <div className="p-2 border-t border-white/10 flex gap-2">
+        <button
+          onClick={handleCollapse}
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-white/5 hover:text-white transition-all"
+          title="Expand sidebar"
+        >
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-xs font-medium">Expand</span>
+        </button>
+        <button
+          onClick={handleLogout}
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 transition-all"
+          data-testid="floating-logout"
+        >
+          <LogOut className="w-4 h-4" />
+          <span className="text-xs font-medium">Logout</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  // Mobile: Show bottom nav + optional floating pill
+  // Desktop: Show sidebar or floating pill
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+  // Floating collapsed pill (desktop only when collapsed, or when explicitly enabled)
   if (isCollapsed && isFloating) {
     return (
       <>
-        {/* Mobile Menu Toggle - Hidden when floating collapsed */}
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="fixed top-4 left-4 z-50 lg:hidden bg-slate-900/90 backdrop-blur-md border border-slate-700 text-white p-3 rounded-full shadow-lg hover:bg-slate-800 transition-all"
-          data-testid="mobile-menu-toggle"
-        >
-          {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        {/* Mobile Bottom Navigation */}
+        <MobileBottomNav user={user} currentPath={location.pathname} />
 
-        {/* Floating Collapsed Pill */}
+        {/* Floating Pill - Hidden on mobile, shown on desktop */}
         <div
           ref={dragRef}
           style={{
             position: 'fixed',
             left: position.x,
             top: position.y,
-            zIndex: 60,
+            zIndex: 100,
             touchAction: 'none',
           }}
-          className={`select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+          className={`hidden md:block select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
           data-testid="floating-sidebar"
         >
           {/* Main Pill Button */}
           <div
             onMouseDown={handleDragStart}
             onTouchStart={handleDragStart}
-            onClick={() => !isDragging && setShowMenu(prev => !prev)}
-            className={`w-14 h-14 rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-slate-700 shadow-2xl flex items-center justify-center transition-all hover:scale-105 hover:border-primary/50 ${
-              showMenu ? 'ring-2 ring-primary' : ''
+            onClick={(e) => {
+              if (!isDragging) {
+                e.stopPropagation();
+                setShowMenu(prev => !prev);
+              }
+            }}
+            className={`w-14 h-14 rounded-2xl backdrop-blur-xl bg-slate-900/90 border border-white/10 shadow-2xl flex items-center justify-center transition-all hover:scale-105 hover:border-primary/30 hover:shadow-primary/20 ${
+              showMenu ? 'ring-2 ring-primary/50 border-primary/30' : ''
             }`}
           >
             <img 
@@ -255,100 +399,40 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
             />
           </div>
 
-          {/* Expanded Menu */}
-          {showMenu && (
-            <div 
-              className="absolute left-0 top-16 w-56 bg-slate-900/98 backdrop-blur-xl border border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-scale-in"
-              style={{ maxHeight: 'calc(100vh - 100px)' }}
-            >
-              {/* User Info */}
-              <div className="p-3 border-b border-slate-800">
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center text-xs font-black text-white">
-                    {user?.name?.charAt(0) || 'U'}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-white text-sm truncate">{user?.name || 'User'}</p>
-                    <p className="text-xs text-slate-400 capitalize">{user?.role || 'Member'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Menu Items */}
-              <nav className="p-2 max-h-[50vh] overflow-y-auto scrollbar-hide">
-                {menuItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.path;
-                  return (
-                    <button
-                      key={item.path}
-                      onClick={() => {
-                        navigate(item.path);
-                        setShowMenu(false);
-                        setIsOpen(false);
-                      }}
-                      className={`w-full flex items-center space-x-2 px-3 py-2 rounded-xl transition-all ${
-                        isActive
-                          ? 'bg-primary/20 border border-primary/50 text-primary'
-                          : 'text-slate-300 hover:bg-slate-800/50 hover:text-white border border-transparent'
-                      }`}
-                      data-testid={`floating-menu-${item.label.toLowerCase().replace(/ /g, '-')}`}
-                    >
-                      <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-primary' : item.color}`} />
-                      <span className="font-medium text-sm">{item.label}</span>
-                    </button>
-                  );
-                })}
-              </nav>
-
-              {/* Footer Actions */}
-              <div className="p-2 border-t border-slate-800 flex gap-1">
-                <button
-                  onClick={handleCollapse}
-                  className="flex-1 flex items-center justify-center space-x-1 px-2 py-2 rounded-lg text-slate-400 hover:bg-slate-800 transition-all"
-                  title="Expand sidebar"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                  <span className="text-xs">Expand</span>
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="flex-1 flex items-center justify-center space-x-1 px-2 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-all"
-                  data-testid="floating-logout"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span className="text-xs">Logout</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Drag Indicator */}
-          <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 flex gap-0.5">
-            <div className="w-1 h-1 rounded-full bg-slate-600"></div>
-            <div className="w-1 h-1 rounded-full bg-slate-600"></div>
-            <div className="w-1 h-1 rounded-full bg-slate-600"></div>
+          {/* Drag Handle Indicator */}
+          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex gap-0.5 opacity-50">
+            <div className="w-1 h-1 rounded-full bg-slate-500" />
+            <div className="w-1 h-1 rounded-full bg-slate-500" />
+            <div className="w-1 h-1 rounded-full bg-slate-500" />
           </div>
         </div>
+
+        {/* Dropdown Menu using Portal */}
+        <DropdownPortal isOpen={showMenu} position={position}>
+          <DropdownMenuContent />
+        </DropdownPortal>
       </>
     );
   }
 
-  // Regular Sidebar (expanded or docked)
+  // Regular Sidebar (expanded)
   const sidebarStyle = isFloating ? {
     position: 'fixed',
     left: position.x,
     top: position.y,
-    zIndex: 60,
+    zIndex: 100,
     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
   } : {};
 
   return (
     <>
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav user={user} currentPath={location.pathname} />
+
       {/* Mobile Menu Toggle */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-4 left-4 z-50 lg:hidden bg-slate-900/90 backdrop-blur-md border border-slate-700 text-white p-3 rounded-full shadow-lg hover:bg-slate-800 transition-all"
+        className="fixed top-4 left-4 z-50 md:hidden backdrop-blur-xl bg-slate-900/90 border border-white/10 text-white p-3 rounded-2xl shadow-lg hover:bg-slate-800 transition-all active:scale-95"
         data-testid="mobile-menu-toggle"
       >
         {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -357,7 +441,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
       {/* Mobile Overlay */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}
@@ -366,39 +450,38 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
       <aside
         ref={dragRef}
         style={sidebarStyle}
-        className={`${isFloating ? '' : 'fixed top-0 left-0'} h-full z-50 glass-card border-r border-white/10 backdrop-blur-2xl bg-slate-950/95 transition-all duration-300 ${
-          isCollapsed ? 'w-16' : 'w-64'
-        } ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${
-          isFloating ? 'rounded-2xl max-h-[90vh] overflow-hidden' : ''
+        className={`${isFloating ? '' : 'fixed top-0 left-0'} h-full z-50 backdrop-blur-2xl bg-slate-950/95 border-r border-white/10 transition-all duration-300 ${
+          isCollapsed ? 'w-20' : 'w-64'
+        } ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${
+          isFloating ? 'rounded-2xl max-h-[90vh] overflow-hidden shadow-2xl' : ''
         }`}
         data-testid="sidebar"
       >
         <div className="flex flex-col h-full">
-          {/* Header with Drag Handle */}
-          <div className={`p-4 border-b border-slate-800 ${isCollapsed ? 'px-2' : ''}`}>
-            {/* Drag Handle - Only visible when floating */}
+          {/* Header */}
+          <div className={`p-4 border-b border-white/10 ${isCollapsed ? 'px-3' : ''}`}>
             {isFloating && (
               <div 
                 onMouseDown={handleDragStart}
                 onTouchStart={handleDragStart}
-                className={`flex items-center justify-center mb-2 py-1 rounded-lg transition-all ${
-                  isDragging ? 'bg-primary/20 cursor-grabbing' : 'hover:bg-slate-800 cursor-grab'
+                className={`flex items-center justify-center mb-3 py-1.5 rounded-lg transition-all ${
+                  isDragging ? 'bg-primary/20 cursor-grabbing' : 'hover:bg-white/5 cursor-grab'
                 }`}
               >
                 <GripVertical className="w-4 h-4 text-slate-500" />
-                <span className="text-xs text-slate-500 ml-1">Drag to move</span>
+                <span className="text-xs text-slate-500 ml-1">Drag</span>
               </div>
             )}
             <div className="flex items-center justify-between">
               {!isCollapsed && (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   <img 
                     src="https://customer-assets.emergentagent.com/job_homebridge-5/artifacts/2ku9mapg_app_logo.png.png"
                     alt="FamFocus Hub"
-                    className="w-10 h-10 rounded-lg object-contain"
+                    className="w-10 h-10 rounded-xl object-contain"
                   />
                   <div>
-                    <h1 className="text-lg font-black gradient-text">FamFocus</h1>
+                    <h1 className="text-lg font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">FamFocus</h1>
                   </div>
                 </div>
               )}
@@ -406,23 +489,21 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
                 <img 
                   src="https://customer-assets.emergentagent.com/job_homebridge-5/artifacts/2ku9mapg_app_logo.png.png"
                   alt="FamFocus Hub"
-                  className="w-10 h-10 rounded-lg object-contain mx-auto"
+                  className="w-10 h-10 rounded-xl object-contain mx-auto"
                 />
               )}
-              <div className="flex items-center space-x-1">
-                {/* Float Toggle - visible on lg+ screens */}
+              <div className="flex items-center gap-1">
                 <button
                   onClick={toggleFloating}
-                  className={`hidden lg:block p-1.5 rounded-lg transition-all ${isFloating ? 'bg-primary/20 text-primary' : 'hover:bg-slate-800 text-slate-400'}`}
+                  className={`hidden md:flex p-2 rounded-xl transition-all ${isFloating ? 'bg-primary/20 text-primary' : 'hover:bg-white/5 text-slate-400'}`}
                   title={isFloating ? 'Dock sidebar' : 'Float sidebar'}
                   data-testid="float-toggle"
                 >
                   <Move className="w-4 h-4" />
                 </button>
-                {/* Collapse Toggle - now visible on all screen sizes */}
                 <button
                   onClick={handleCollapse}
-                  className="p-1.5 hover:bg-slate-800 rounded-lg transition-all"
+                  className="p-2 hover:bg-white/5 rounded-xl transition-all"
                   data-testid="collapse-toggle"
                 >
                   {isCollapsed ? (
@@ -437,13 +518,13 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
 
           {/* User Info */}
           {!isCollapsed && (
-            <div className="p-3 border-b border-slate-800">
-              <div className="flex items-center space-x-2">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center text-sm font-black text-white">
+            <div className="p-4 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-sm font-bold text-white shadow-lg">
                   {user?.name?.charAt(0) || 'U'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-white text-sm truncate">{user?.name || 'User'}</p>
+                  <p className="font-semibold text-white text-sm truncate">{user?.name || 'User'}</p>
                   <p className="text-xs text-slate-400 capitalize">{user?.role || 'Member'}</p>
                 </div>
               </div>
@@ -451,7 +532,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
           )}
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto p-2 space-y-0.5 scrollbar-hide">
+          <nav className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-hide">
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
@@ -462,10 +543,10 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
                     navigate(item.path);
                     setIsOpen(false);
                   }}
-                  className={`w-full flex items-center ${isCollapsed ? 'justify-center' : ''} space-x-2 px-3 py-2.5 rounded-xl transition-all ${
+                  className={`w-full flex items-center ${isCollapsed ? 'justify-center' : ''} gap-3 px-3 py-2.5 rounded-xl transition-all ${
                     isActive
-                      ? 'bg-primary/20 border border-primary/50 text-primary'
-                      : 'text-slate-300 hover:bg-slate-800/50 hover:text-white border border-transparent'
+                      ? 'bg-primary/20 text-primary'
+                      : 'text-slate-300 hover:bg-white/5 hover:text-white'
                   }`}
                   title={isCollapsed ? item.label : ''}
                   data-testid={`sidebar-${item.label.toLowerCase().replace(/ /g, '-')}`}
@@ -478,10 +559,10 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
           </nav>
 
           {/* Logout */}
-          <div className="p-2 border-t border-slate-800">
+          <div className="p-2 border-t border-white/10">
             <button
               onClick={handleLogout}
-              className={`w-full flex items-center ${isCollapsed ? 'justify-center' : ''} space-x-2 px-3 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/30 transition-all`}
+              className={`w-full flex items-center ${isCollapsed ? 'justify-center' : ''} gap-3 px-3 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 transition-all`}
               title={isCollapsed ? 'Logout' : ''}
               data-testid="sidebar-logout"
             >
@@ -491,6 +572,11 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
           </div>
         </div>
       </aside>
+
+      {/* Spacer for content when sidebar is docked on desktop */}
+      {!isFloating && !isCollapsed && (
+        <div className="hidden md:block w-64 flex-shrink-0" />
+      )}
     </>
   );
 }
