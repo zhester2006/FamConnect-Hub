@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
 import AnimatedBackground from '../components/AnimatedBackground';
+import MedalEmblem from '../components/MedalEmblem';
 
 export default function ParentDashboard({ navigation }) {
   const { user } = useAuth();
