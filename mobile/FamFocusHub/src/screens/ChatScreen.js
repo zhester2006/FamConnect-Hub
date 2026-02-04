@@ -469,7 +469,7 @@ export default function ChatScreen({ navigation }) {
               <Text style={[styles.messageText, isOwn && styles.ownMessageText]}>
                 {item.content}
               </Text>
-            )}
+            ) : null}
             
             <View style={styles.messageFooter}>
               <Text style={[styles.timestamp, isOwn && styles.ownTimestamp]}>
