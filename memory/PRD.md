@@ -9,7 +9,7 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 
 ### 1. Home Hub (Central Dashboard) - OPTIMIZED FOR SINGLE SCREEN
 - **Top Bar Layout:**
-  - Weather & Time (top-left): Real-time clock with animated weather icons
+  - Weather & Time (top-left): Real-time clock with animated weather icons (NOW FROM API)
   - Family Online Status (top-right): Avatar row showing who's online
 - **Mini Calendar**: Compact calendar with event type color indicators
 - **Today's Events**: Quick list of scheduled events
@@ -64,8 +64,10 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - **CSS Variables**: Dynamic color application
 - **Persistence**: LocalStorage for theme settings
 - **Parent Notifications**: 7 toggle categories
+- **Browser Push Notifications**: Enable/disable with one click
 
 ### 8. GPS & Location (CheckIns)
+- **Google Maps Integration**: Uses API key from env variable
 - **Geofencing**: Set safe zones (Home, School, etc.)
 - **50ft Radius Alerts**: Notify all parents when child leaves
 - **GPS Status**: Active/Off indicator
@@ -83,12 +85,27 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - Parent approval workflow
 - History tracking per child
 
+### 11. Weather Integration (NEW - v3)
+- **OpenWeatherMap API**: Real-time weather data
+- **Location-based**: Uses browser geolocation
+- **Fallback**: Simulated weather if no API key
+- **Display**: Temperature, condition, city name
+
+### 12. Push Notifications (NEW - v3)
+- **Browser Web Push API**: Works even when app is closed
+- **Service Worker**: Background notification handling
+- **VAPID Authentication**: Secure push subscriptions
+- **Notification Types**: Chores, chat, location alerts, approvals
+
 ## Technical Stack
 - **Frontend**: React with TailwindCSS
 - **Backend**: FastAPI (Python)
 - **Database**: MongoDB
 - **AI Integration**: Emergent LLM Key (GPT-5.2)
 - **Authentication**: Emergent-managed Google OAuth
+- **Weather**: OpenWeatherMap API
+- **Maps**: Google Maps JavaScript API
+- **Notifications**: Web Push API with Service Worker
 
 ## What's Been Implemented
 
@@ -124,32 +141,50 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - [x] GPS disabled notifications
 - [x] Parent notification settings (7 categories)
 
+### Session 3 - Weather, Maps & Push (Dec 2025) ✅
+- [x] Weather API endpoint with OpenWeatherMap support
+- [x] Weather fallback to simulated data when no API key
+- [x] Google Maps API key from environment variable
+- [x] Push notification subscription endpoints
+- [x] VAPID key endpoint for secure push
+- [x] Service worker for background notifications
+- [x] Push notification utilities (subscribe/unsubscribe)
+- [x] Browser notifications UI in Settings page
+
 ## API Endpoints
 
-### Events (New/Updated)
+### Weather (NEW)
+- `GET /api/weather?lat=X&lon=Y` - Get current weather
+
+### Push Notifications (NEW)
+- `GET /api/push/vapid-key` - Get VAPID public key
+- `POST /api/push/subscribe` - Subscribe to push (auth required)
+- `DELETE /api/push/unsubscribe` - Unsubscribe (auth required)
+
+### Events (Updated)
 - `GET /api/events?event_type={type}` - Filter by type
 - `POST /api/events` - With event_time and event_type
 - `POST /api/events/work-schedule` - Add work hours
 
-### Geofencing (New)
+### Geofencing
 - `GET /api/geofences` - List safe zones
 - `POST /api/geofences` - Create with radius_feet
 - `DELETE /api/geofences/{id}` - Remove zone
 
-### Location (New)
+### Location
 - `POST /api/checkins` - Send location update
 - `GET /api/checkins/{user_id}` - Get history
 - `GET /api/checkins/{user_id}/last` - Last known
 - `POST /api/location/gps-disabled` - Report GPS off
 
-### Notifications (New)
+### Notifications
 - `GET /api/notifications` - List alerts
 
-### Rewards (Updated)
+### Rewards
 - `PUT /api/rewards/{id}` - Update points
 - `DELETE /api/rewards/{id}` - Remove
 
-### Chores (Updated)
+### Chores
 - `PUT /api/chores/{id}/approve` - With optional points override
 - `PUT /api/chores/{id}/points` - Modify points
 
@@ -158,14 +193,27 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - `bye_days`, `shopping_items`, `family_wall`
 - `daily_quotes`, `messages`, `events`
 - `reading_logs`, `rewards`, `checkins`
-- `geofences` (NEW), `notifications` (NEW)
+- `geofences`, `notifications`
+- `push_subscriptions` (NEW), `push_queue` (NEW)
+
+## Environment Variables
+
+### Backend (.env)
+- `MONGO_URL` - MongoDB connection
+- `DB_NAME` - Database name
+- `CORS_ORIGINS` - CORS configuration
+- `EMERGENT_LLM_KEY` - For AI features
+- `OPENWEATHER_API_KEY` - For real weather data (optional)
+
+### Frontend (.env)
+- `REACT_APP_BACKEND_URL` - Backend URL
+- `REACT_APP_GOOGLE_MAPS_API_KEY` - For Google Maps (optional)
 
 ## Backlog / Future Tasks
 
 ### P0 - High Priority
-- [ ] Real weather API integration
-- [ ] Push notifications (service worker)
 - [ ] Real-time chat (WebSocket)
+- [ ] AI Onboarding Guide with Pixie
 
 ### P1 - Medium Priority
 - [ ] Profile picture uploads
@@ -181,12 +229,15 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - [ ] Mobile app (React Native)
 
 ## Notes
-- **Weather**: MOCKED (simulated randomly)
+- **Weather**: Uses OpenWeatherMap API (fallback to simulated if no key)
 - **GPS**: Uses browser geolocation API
 - **OAuth**: Emergent-managed Google Auth
 - **AI**: Emergent LLM Key (GPT-5.2)
+- **Push**: Browser Web Push API with VAPID
+- **Maps**: Google Maps (needs API key for production)
 - **Sample Data**: `/app/scripts/populate_sample_data.py`
 
 ## Test Reports
 - `/app/test_reports/iteration_1.json` - Initial features (100% pass)
 - `/app/test_reports/iteration_2.json` - v2 features (100% pass)
+- `/app/test_reports/iteration_3.json` - v3 features (100% pass)
