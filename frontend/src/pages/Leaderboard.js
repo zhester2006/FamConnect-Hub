@@ -92,7 +92,10 @@ export default function Leaderboard({ user }) {
                       
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-2 mb-1">
-                          <h3 className="font-black text-white text-xl">{child.name}</h3>
+                          <h3 className="font-black text-white text-xl">{child.nickname || child.name}</h3>
+                          {child.nickname && (
+                            <span className="text-xs text-slate-500">({child.name})</span>
+                          )}
                           {isCurrentUser && (
                             <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full font-bold">You</span>
                           )}
