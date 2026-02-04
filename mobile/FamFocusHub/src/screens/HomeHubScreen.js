@@ -267,6 +267,14 @@ export default function HomeHubScreen({ navigation }) {
   const todayEvents = events.filter(e => e.event_date === new Date().toISOString().split('T')[0]);
   const onlineMembers = familyMembers.filter(m => m.online_status);
 
+  const handleDayPress = (day) => {
+    const dateStr = `${calendarDate.getFullYear()}-${String(calendarDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const eventsForDay = events.filter(e => e.event_date === dateStr || e.date === dateStr);
+    setSelectedDay({ day, dateStr });
+    setDayEvents(eventsForDay);
+    setShowDayModal(true);
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
