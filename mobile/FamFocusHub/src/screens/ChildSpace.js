@@ -196,11 +196,36 @@ export default function ChildSpace({ navigation }) {
             <Text style={styles.quickActionText}>Leaderboard</Text>
           </TouchableOpacity>
           <TouchableOpacity 
+            style={[styles.quickAction, { backgroundColor: 'rgba(59, 130, 246, 0.2)' }]}
+            onPress={() => navigation.navigate('ReadingLogs')}
+          >
+            <Ionicons name="book" size={28} color="#3b82f6" />
+            <Text style={styles.quickActionText}>Reading</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* More Quick Actions */}
+        <View style={styles.quickActions}>
+          <TouchableOpacity 
             style={[styles.quickAction, { backgroundColor: 'rgba(251, 191, 36, 0.2)' }]}
             onPress={() => navigation.navigate('Calendar')}
           >
             <Ionicons name="calendar" size={28} color="#fbbf24" />
             <Text style={styles.quickActionText}>Calendar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.quickAction, { backgroundColor: 'rgba(236, 72, 153, 0.2)' }]}
+            onPress={() => navigation.navigate('FamilyWall')}
+          >
+            <Ionicons name="people" size={28} color="#ec4899" />
+            <Text style={styles.quickActionText}>Family Wall</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.quickAction, { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}
+            onPress={() => navigation.navigate('Shopping')}
+          >
+            <Ionicons name="cart" size={28} color="#10b981" />
+            <Text style={styles.quickActionText}>Shopping</Text>
           </TouchableOpacity>
         </View>
 
