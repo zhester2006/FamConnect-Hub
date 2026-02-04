@@ -237,6 +237,21 @@ export default function CalendarScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
+        {/* Event Type Legend */}
+        <View style={styles.legendContainer}>
+          {[
+            { type: 'event', label: 'Event', color: '#06b6d4' },
+            { type: 'work', label: 'Work', color: '#3b82f6' },
+            { type: 'appointment', label: 'Appt', color: '#f59e0b' },
+            { type: 'task', label: 'Task', color: '#10b981' },
+          ].map((item) => (
+            <View key={item.type} style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+              <Text style={styles.legendText}>{item.label}</Text>
+            </View>
+          ))}
+        </View>
+
         {/* Calendar Card */}
         <View style={styles.calendarCard}>
           {/* Weekday Headers */}
