@@ -383,6 +383,22 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - [x] Fixed useEffect navItems warning with useMemo
 - [x] Fixed conditional hook call in Sidebar component
 
+### Session 21 - Family Management & UI Polish (Feb 2026) ✅
+**Family Management Features:**
+- [x] Edit family name (PUT /api/families/{id})
+- [x] Delete family (DELETE /api/families/{id})
+- [x] View family members (GET /api/families/{id}/members)
+- [x] Change member role (PUT /api/families/{id}/members/{member_id}/role)
+- [x] Remove member from family (DELETE /api/families/{id}/members/{member_id})
+- [x] Invite with role selection: child, member, parent
+- [x] Collapsible member list within family card
+
+**Sidebar UI Improvements:**
+- [x] Small fixed menu button (40x40px) at top-left corner
+- [x] Removed draggable functionality for cleaner UX
+- [x] Compact dropdown menu with all navigation items
+- [x] Content width reduced for single-page fit without scrolling
+
 ### Session 18 - Background Tracking, Push Alerts & Battery Monitoring (Feb 2026) ✅
 **Background Location Tracking:**
 - [x] Created location.service.js with full background tracking support
