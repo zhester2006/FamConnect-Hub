@@ -1395,6 +1395,7 @@ async def ai_schedule_chores(request: Request, data: dict):
         raise HTTPException(status_code=403, detail="Only parents can schedule chores")
     
     family_id = current_user['user_id']
+    logger.info(f"AI Schedule: family_id={family_id}")
     
     # Get family members
     members = await db.users.find(
@@ -1402,7 +1403,10 @@ async def ai_schedule_chores(request: Request, data: dict):
         {"_id": 0, "user_id": 1, "name": 1, "role": 1}
     ).to_list(20)
     
+    logger.info(f"AI Schedule: found {len(members)} members")
+    
     children = [m for m in members if m.get('role') == 'child']
+    logger.info(f"AI Schedule: found {len(children)} children: {[c['name'] for c in children]}")
     
     # Get available chores
     chores = await db.chore_types.find(
