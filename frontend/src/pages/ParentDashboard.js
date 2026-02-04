@@ -291,7 +291,9 @@ export default function ParentDashboard({ user }) {
                 <span>Children</span>
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {children.map((child) => (
+                {children.map((child) => {
+                  const childBattery = batteryStatus.find(b => b.user_id === child.user_id);
+                  return (
                   <div key={child.user_id} className="glass-card rounded-xl p-4" data-testid="child-card">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center space-x-3">
@@ -304,10 +306,31 @@ export default function ParentDashboard({ user }) {
                           )}
                         </div>
                         <div>
-                          <h3 className="font-bold text-white">{child.name}</h3>
+                          <h3 className="font-bold text-white">{child.nickname || child.name}</h3>
                           <p className="text-accent font-bold text-sm">{child.points || 0} pts</p>
                         </div>
                       </div>
+                      
+                      {/* Battery Status */}
+                      {childBattery && childBattery.level !== null && (
+                        <div className="flex items-center space-x-1" data-testid="battery-indicator">
+                          {childBattery.is_charging ? (
+                            <BatteryCharging className="w-5 h-5 text-green-400" />
+                          ) : childBattery.level <= 15 ? (
+                            <BatteryLow className="w-5 h-5 text-red-400 animate-pulse" />
+                          ) : childBattery.level <= 30 ? (
+                            <BatteryWarning className="w-5 h-5 text-yellow-400" />
+                          ) : (
+                            <Battery className="w-5 h-5 text-green-400" />
+                          )}
+                          <span className={`text-xs font-bold ${
+                            childBattery.level <= 15 ? 'text-red-400' : 
+                            childBattery.level <= 30 ? 'text-yellow-400' : 'text-green-400'
+                          }`}>
+                            {childBattery.level}%
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div className="flex space-x-2">
                       <button
