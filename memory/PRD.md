@@ -18,12 +18,15 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - **Daily Inspiration**: AI-generated quotes (Emergent LLM Key)
 - **Quick Add**: Modals for events and shopping items
 
-### 2. Collapsible Sidebar
+### 2. Collapsible & Draggable Sidebar
 - Toggle button to collapse/expand
-- Collapses to icons-only mode (w-16)
+- Collapses to floating draggable pill
 - Expands to full navigation (w-64)
-- Shows on all screens
-- Responsive mobile menu
+- Drag anywhere on screen (mouse & touch)
+- Position persists across sessions
+- Click pill to open dropdown menu
+- Works on all screen sizes (desktop & mobile)
+- Responsive mobile menu (hamburger)
 
 ### 3. Calendar & Events
 - **Event Types**: Appointment, Event, Work Schedule, Task
