@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo, useContext } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, Calendar, MessageCircle, Users, ShoppingCart, Award, 
@@ -70,54 +70,12 @@ function MobileBottomNav({ user, currentPath, onNavigate }) {
   );
 }
 
-// Dropdown Menu Content (Fixed position, no overlap)
-function DropdownMenuContent({ user, menuItems, currentPath, onNavigate, onCollapse, onLogout }) {
+// Tooltip component for collapsed sidebar
+function NavTooltip({ label, visible }) {
+  if (!visible) return null;
   return (
-    <div className="w-56 backdrop-blur-2xl bg-slate-900/95 border border-white/10 rounded-xl shadow-2xl overflow-hidden">
-      {/* User Info */}
-      <div className="p-3 border-b border-white/10 bg-gradient-to-r from-primary/10 to-secondary/10">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xs font-bold text-white">
-            {user?.name?.charAt(0) || 'U'}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-white text-sm truncate">{user?.name || 'User'}</p>
-            <p className="text-xs text-slate-400 capitalize">{user?.role || 'Member'}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Menu Items - Scrollable */}
-      <nav className="p-2 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = currentPath === item.path;
-          return (
-            <button
-              key={item.path}
-              onClick={() => onNavigate(item.path)}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${
-                isActive ? 'bg-primary/20 text-primary' : 'text-slate-300 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-primary' : item.color}`} />
-              <span className="font-medium text-sm">{item.label}</span>
-            </button>
-          );
-        })}
-      </nav>
-
-      {/* Footer Actions */}
-      <div className="p-2 border-t border-white/10 flex gap-2">
-        <button onClick={onCollapse} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-slate-400 hover:bg-white/5 hover:text-white transition-all">
-          <ChevronRight className="w-4 h-4" />
-          <span className="text-xs font-medium">Expand</span>
-        </button>
-        <button onClick={onLogout} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-all">
-          <LogOut className="w-4 h-4" />
-          <span className="text-xs font-medium">Logout</span>
-        </button>
-      </div>
+    <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-xs rounded whitespace-nowrap z-50 pointer-events-none">
+      {label}
     </div>
   );
 }
@@ -126,41 +84,16 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(collapsed || false);
-  const [showMenu, setShowMenu] = useState(false);
-  const menuRef = useRef(null);
-  const buttonRef = useRef(null);
+  const [hoveredItem, setHoveredItem] = useState(null);
   
   const notificationContext = useContext(NotificationContext);
   const unreadCount = notificationContext?.unreadCount || 0;
   const setShowNotificationPanel = notificationContext?.setShowNotificationPanel;
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (showMenu && 
-          menuRef.current && !menuRef.current.contains(e.target) && 
-          buttonRef.current && !buttonRef.current.contains(e.target)) {
-        setShowMenu(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-    };
-  }, [showMenu]);
-
-  // Close menu on route change
-  useEffect(() => {
-    setShowMenu(false);
-  }, [location.pathname]);
-
   const handleCollapse = useCallback(() => {
     const newState = !isCollapsed;
     setIsCollapsed(newState);
     if (setCollapsed) setCollapsed(newState);
-    setShowMenu(false);
   }, [isCollapsed, setCollapsed]);
 
   const handleLogout = useCallback(async () => {
@@ -177,7 +110,6 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
 
   const handleNavigate = useCallback((path) => {
     navigate(path);
-    setShowMenu(false);
     setIsOpen(false);
   }, [navigate, setIsOpen]);
 
@@ -186,7 +118,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     { icon: Sparkles, label: 'Home Hub', path: '/hub', color: 'text-indigo-400' },
     { icon: Users, label: 'Family', path: '/family', color: 'text-cyan-400' },
     { icon: Calendar, label: 'Calendar', path: '/calendar', color: 'text-emerald-400' },
-    { icon: GripVertical, label: 'Chore Scheduler', path: '/chore-scheduler', color: 'text-teal-400' },
+    { icon: GripVertical, label: 'Chores', path: '/chore-scheduler', color: 'text-teal-400' },
     { icon: MessageCircle, label: 'Chat', path: '/chat', color: 'text-pink-400' },
     { icon: LayoutDashboard, label: 'Wall', path: '/family-wall', color: 'text-rose-400' },
     { icon: ShoppingCart, label: 'Shopping', path: '/shopping', color: 'text-orange-400' },
@@ -214,51 +146,9 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
 
   const menuItems = user?.role === 'parent' ? parentMenuItems : childMenuItems;
 
-  // Collapsed state - show fixed menu button at top-left
-  if (isCollapsed) {
-    return (
-      <>
-        {/* Mobile Bottom Navigation */}
-        <MobileBottomNav user={user} currentPath={location.pathname} onNavigate={handleNavigate} />
+  // Sidebar width for margin calculation: 64px collapsed, 256px expanded
+  const sidebarWidth = isCollapsed ? 'w-16' : 'w-64';
 
-        {/* Fixed Menu Button - Top Left, Never Moves */}
-        <div className="fixed left-4 top-4 z-[100] hidden md:block" data-testid="floating-sidebar">
-          {/* Menu Button */}
-          <button
-            ref={buttonRef}
-            type="button"
-            onClick={() => setShowMenu(prev => !prev)}
-            className={`w-11 h-11 rounded-xl backdrop-blur-xl bg-slate-900/95 border border-white/10 shadow-lg flex items-center justify-center transition-all hover:scale-105 hover:border-primary/30 ${
-              showMenu ? 'ring-2 ring-primary/50 border-primary/30' : ''
-            }`}
-            data-testid="floating-pill-btn"
-          >
-            {showMenu ? <X className="w-5 h-5 text-slate-300" /> : <Menu className="w-5 h-5 text-slate-300" />}
-          </button>
-
-          {/* Dropdown Menu - Positioned below button with gap */}
-          {showMenu && (
-            <div 
-              ref={menuRef}
-              className="absolute left-0 top-14"
-              data-testid="floating-dropdown-menu"
-            >
-              <DropdownMenuContent 
-                user={user}
-                menuItems={menuItems}
-                currentPath={location.pathname}
-                onNavigate={handleNavigate}
-                onCollapse={handleCollapse}
-                onLogout={handleLogout}
-              />
-            </div>
-          )}
-        </div>
-      </>
-    );
-  }
-
-  // Expanded Sidebar
   return (
     <>
       {/* Mobile Bottom Navigation */}
@@ -278,29 +168,29 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden" onClick={() => setIsOpen(false)} />
       )}
 
-      {/* Full Sidebar */}
+      {/* Sidebar - Always visible on desktop, slide on mobile */}
       <aside
-        className={`fixed top-0 left-0 h-full z-50 w-64 backdrop-blur-2xl bg-slate-950/95 border-r border-white/10 transition-transform duration-300 ${
+        className={`fixed top-0 left-0 h-full z-50 ${sidebarWidth} backdrop-blur-2xl bg-slate-950/95 border-r border-white/10 transition-all duration-300 ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
         data-testid="sidebar"
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="p-4 border-b border-white/10">
+          <div className={`p-3 border-b border-white/10 ${isCollapsed ? 'px-2' : ''}`}>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <img 
-                  src="https://customer-assets.emergentagent.com/job_homebridge-5/artifacts/2ku9mapg_app_logo.png.png"
-                  alt="FamFocus Hub"
-                  className="w-10 h-10 rounded-xl object-contain"
-                />
-                <div>
-                  <h1 className="text-lg font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">FamFocus</h1>
+              {!isCollapsed && (
+                <div className="flex items-center gap-2">
+                  <img 
+                    src="https://customer-assets.emergentagent.com/job_homebridge-5/artifacts/2ku9mapg_app_logo.png.png"
+                    alt="FamFocus Hub"
+                    className="w-9 h-9 rounded-lg object-contain"
+                  />
+                  <h1 className="text-base font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">FamFocus</h1>
                 </div>
-              </div>
-              <div className="flex items-center gap-1">
-                {setShowNotificationPanel && (
+              )}
+              <div className={`flex items-center gap-1 ${isCollapsed ? 'w-full justify-center' : ''}`}>
+                {!isCollapsed && setShowNotificationPanel && (
                   <button
                     onClick={() => setShowNotificationPanel(prev => !prev)}
                     className="relative p-2 hover:bg-white/5 rounded-xl transition-all"
@@ -315,55 +205,86 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
                     )}
                   </button>
                 )}
-                <button onClick={handleCollapse} className="p-2 hover:bg-white/5 rounded-xl transition-all" data-testid="collapse-toggle">
-                  <ChevronLeft className="w-4 h-4 text-slate-400" />
+                <button 
+                  onClick={handleCollapse} 
+                  className={`p-2 hover:bg-white/5 rounded-xl transition-all ${isCollapsed ? 'mx-auto' : ''}`} 
+                  data-testid="collapse-toggle"
+                  title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                >
+                  {isCollapsed ? <ChevronRight className="w-4 h-4 text-slate-400" /> : <ChevronLeft className="w-4 h-4 text-slate-400" />}
                 </button>
               </div>
             </div>
           </div>
 
-          {/* User Info */}
-          <div className="p-4 border-b border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-sm font-bold text-white shadow-lg">
-                {user?.name?.charAt(0) || 'U'}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-white text-sm truncate">{user?.name || 'User'}</p>
-                <p className="text-xs text-slate-400 capitalize">{user?.role || 'Member'}</p>
+          {/* User Info - Only show when expanded */}
+          {!isCollapsed && (
+            <div className="p-3 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-sm font-bold text-white shadow-lg">
+                  {user?.name?.charAt(0) || 'U'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-white text-sm truncate">{user?.name || 'User'}</p>
+                  <p className="text-xs text-slate-400 capitalize">{user?.role || 'Member'}</p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* User Avatar - Collapsed mode */}
+          {isCollapsed && (
+            <div className="p-2 border-b border-white/10 flex justify-center">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-sm font-bold text-white shadow-lg">
+                {user?.name?.charAt(0) || 'U'}
+              </div>
+            </div>
+          )}
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto p-2">
+          <nav className="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
+              const isHovered = hoveredItem === item.path;
+              
               return (
-                <button
-                  key={item.path}
-                  onClick={() => handleNavigate(item.path)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all mb-0.5 ${
-                    isActive ? 'bg-primary/20 text-primary' : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                  }`}
-                >
-                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-primary' : item.color}`} />
-                  <span className="font-medium text-sm">{item.label}</span>
-                </button>
+                <div key={item.path} className="relative">
+                  <button
+                    onClick={() => handleNavigate(item.path)}
+                    onMouseEnter={() => setHoveredItem(item.path)}
+                    onMouseLeave={() => setHoveredItem(null)}
+                    className={`w-full flex items-center gap-3 rounded-xl transition-all mb-0.5 ${
+                      isCollapsed ? 'px-0 py-2.5 justify-center' : 'px-3 py-2.5'
+                    } ${
+                      isActive ? 'bg-primary/20 text-primary' : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                    }`}
+                    title={isCollapsed ? item.label : undefined}
+                  >
+                    <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-primary' : item.color}`} />
+                    {!isCollapsed && <span className="font-medium text-sm">{item.label}</span>}
+                  </button>
+                  {/* Tooltip for collapsed state */}
+                  {isCollapsed && isHovered && (
+                    <NavTooltip label={item.label} visible={true} />
+                  )}
+                </div>
               );
             })}
           </nav>
 
           {/* Logout */}
-          <div className="p-3 border-t border-white/10">
+          <div className={`p-2 border-t border-white/10 ${isCollapsed ? 'flex justify-center' : ''}`}>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 transition-all"
+              className={`flex items-center gap-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-all ${
+                isCollapsed ? 'p-2.5 justify-center' : 'w-full px-3 py-2.5'
+              }`}
               data-testid="logout-btn"
+              title={isCollapsed ? 'Logout' : undefined}
             >
               <LogOut className="w-5 h-5" />
-              <span className="font-medium text-sm">Logout</span>
+              {!isCollapsed && <span className="font-medium text-sm">Logout</span>}
             </button>
           </div>
         </div>
