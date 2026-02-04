@@ -217,6 +217,21 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - [x] Browser Battery API integration for real-time updates
 - [x] Auto-update battery when permission enabled
 
+### Session 9 - Drag-and-Drop Chore Scheduler (Feb 2026) ✅
+- [x] New ChoreScheduler page at /chore-scheduler
+- [x] @dnd-kit/core library integration for drag-and-drop
+- [x] Calendar View - drag chores onto specific days (7-day week)
+- [x] Children View - drag chores onto specific children
+- [x] Child selector in Calendar View
+- [x] Draggable chore items with point display
+- [x] Droppable day columns with visual feedback
+- [x] Droppable child rows with visual feedback
+- [x] Save Schedule button creates chores via API
+- [x] Clear Schedule button removes assignments
+- [x] Manual Scheduler button on Parent Dashboard
+- [x] Chore Scheduler link in Sidebar for parents
+- [x] Help text explaining drag-and-drop functionality
+
 ## API Endpoints
 
 ### Chat & Real-time (NEW - Session 4)
