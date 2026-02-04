@@ -409,33 +409,6 @@ async def update_chore_points(chore_id: str, request: Request, data: dict):
     await db.chores.update_one({"chore_id": chore_id}, {"$set": {"points": new_points}})
     return await db.chores.find_one({"chore_id": chore_id}, {"_id": 0})
 
-# AI Schedule chores
-@api_router.post("/chores/ai-schedule")
-async def ai_schedule_chores(request: Request, data: dict):
-    current_user = await get_current_user(request)
-    if current_user['role'] != 'parent':
-        raise HTTPException(status_code=403, detail="Only parents can schedule chores")
-    
-    children = data.get('children', [])
-    chore_list = data.get('chores', [])
-    week_start = data.get('week_start')
-    
-    chat = LlmChat(
-        api_key=os.environ['EMERGENT_LLM_KEY'],
-        session_id=f"schedule_{uuid.uuid4().hex[:8]}",
-        system_message="You are a helpful assistant for scheduling family chores fairly."
-    ).with_model("openai", "gpt-5.2")
-    
-    prompt = f"""Schedule these chores fairly for Monday-Friday:
-Children: {', '.join([c['name'] for c in children])}
-Chores: {', '.join(chore_list)}
-Week starting: {week_start}
-
-Return a JSON array with format: {{"date": "YYYY-MM-DD", "child_id": "user_xxx", "chore": "chore name"}}"""
-    
-    response = await chat.send_message(UserMessage(text=prompt))
-    return {"schedule": response}
-
 # Get all available chore types
 @api_router.get("/chores/types")
 async def get_chore_types(request: Request):
