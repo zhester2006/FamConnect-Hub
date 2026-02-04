@@ -138,6 +138,9 @@ export default function HomeHubScreen({ navigation }) {
   const [quote, setQuote] = useState('');
   const [shoppingItems, setShoppingItems] = useState([]);
   const [todayChores, setTodayChores] = useState([]);
+  const [showDayModal, setShowDayModal] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [dayEvents, setDayEvents] = useState([]);
   const [weather, setWeather] = useState({ condition: 'sunny', temp: 72, location: '' });
   const [lastWeatherUpdate, setLastWeatherUpdate] = useState(null);
   
