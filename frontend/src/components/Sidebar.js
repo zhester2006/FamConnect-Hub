@@ -9,8 +9,12 @@ import {
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
-// Mobile Bottom Navigation Component - defined outside
+// Mobile Bottom Navigation Component with swipe gestures
 function MobileBottomNav({ user, currentPath, onNavigate }) {
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+  const swipeThreshold = 50;
+
   const navItems = user?.role === 'parent' ? [
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Calendar, label: 'Calendar', path: '/calendar' },
@@ -25,10 +29,93 @@ function MobileBottomNav({ user, currentPath, onNavigate }) {
     { icon: Settings, label: 'More', path: '/settings' },
   ];
 
+  const currentIndex = navItems.findIndex(item => item.path === currentPath);
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    const diff = touchStartX.current - touchEndX.current;
+    
+    if (Math.abs(diff) > swipeThreshold) {
+      if (diff > 0 && currentIndex < navItems.length - 1) {
+        // Swipe left - go to next tab
+        onNavigate(navItems[currentIndex + 1].path);
+      } else if (diff < 0 && currentIndex > 0) {
+        // Swipe right - go to previous tab
+        onNavigate(navItems[currentIndex - 1].path);
+      }
+    }
+  };
+
+  // Add global touch listeners for swipe detection
+  useEffect(() => {
+    const handleGlobalTouchStart = (e) => {
+      // Only track swipes that start in the bottom 150px of the screen
+      if (window.innerHeight - e.touches[0].clientY < 150) {
+        touchStartX.current = e.touches[0].clientX;
+      }
+    };
+    
+    const handleGlobalTouchMove = (e) => {
+      if (touchStartX.current) {
+        touchEndX.current = e.touches[0].clientX;
+      }
+    };
+    
+    const handleGlobalTouchEnd = () => {
+      if (touchStartX.current && touchEndX.current) {
+        const diff = touchStartX.current - touchEndX.current;
+        
+        if (Math.abs(diff) > swipeThreshold) {
+          if (diff > 0 && currentIndex < navItems.length - 1) {
+            onNavigate(navItems[currentIndex + 1].path);
+          } else if (diff < 0 && currentIndex > 0) {
+            onNavigate(navItems[currentIndex - 1].path);
+          }
+        }
+      }
+      touchStartX.current = 0;
+      touchEndX.current = 0;
+    };
+
+    document.addEventListener('touchstart', handleGlobalTouchStart, { passive: true });
+    document.addEventListener('touchmove', handleGlobalTouchMove, { passive: true });
+    document.addEventListener('touchend', handleGlobalTouchEnd);
+
+    return () => {
+      document.removeEventListener('touchstart', handleGlobalTouchStart);
+      document.removeEventListener('touchmove', handleGlobalTouchMove);
+      document.removeEventListener('touchend', handleGlobalTouchEnd);
+    };
+  }, [currentIndex, navItems, onNavigate]);
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
       <div className="backdrop-blur-2xl bg-slate-950/90 border-t border-white/10 px-2 py-2 safe-area-bottom">
-        <div className="flex items-center justify-around max-w-lg mx-auto">
+        {/* Swipe indicator dots */}
+        <div className="flex justify-center gap-1 mb-1">
+          {navItems.map((item, index) => (
+            <div
+              key={item.path}
+              className={`w-1.5 h-1.5 rounded-full transition-all ${
+                index === currentIndex ? 'bg-primary w-3' : 'bg-slate-600'
+              }`}
+            />
+          ))}
+        </div>
+        
+        <div 
+          className="flex items-center justify-around max-w-lg mx-auto"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentPath === item.path;
