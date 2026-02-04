@@ -229,7 +229,11 @@ export default function FamilyWallScreen({ navigation }) {
     return (
       <View style={styles.pollContainer}>
         {post.poll_options?.map((option, index) => {
-          const voteCount = post.poll_votes?.find(v => v.option_index === index)?.count || 0;
+          const optionData = typeof option === 'string' ? { text: option } : option;
+          const optionText = optionData.text || option;
+          const votes = optionData.votes || [];
+          const voterNames = optionData.voter_names || [];
+          const voteCount = votes.length;
           const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
           const isUserVote = post.user_voted_option === index;
 
@@ -244,17 +248,27 @@ export default function FamilyWallScreen({ navigation }) {
                 <View style={[styles.pollProgress, { width: `${percentage}%` }]} />
               )}
               <View style={styles.pollOptionContent}>
-                <Text style={[styles.pollOptionText, isUserVote && styles.pollOptionTextVoted]}>
-                  {option}
-                </Text>
+                <View style={styles.pollOptionLeft}>
+                  <Text style={[styles.pollOptionText, isUserVote && styles.pollOptionTextVoted]}>
+                    {optionText}
+                  </Text>
+                  {userVoted && voterNames.length > 0 && (
+                    <Text style={styles.pollVoterNames}>
+                      {voterNames.slice(0, 3).join(', ')}{voterNames.length > 3 ? ` +${voterNames.length - 3}` : ''}
+                    </Text>
+                  )}
+                </View>
                 {userVoted && (
-                  <Text style={styles.pollPercentage}>{percentage}%</Text>
+                  <View style={styles.pollOptionRight}>
+                    <Text style={styles.pollPercentage}>{percentage}%</Text>
+                    <Text style={styles.pollVoteCount}>{voteCount} vote{voteCount !== 1 ? 's' : ''}</Text>
+                  </View>
                 )}
               </View>
             </TouchableOpacity>
           );
         })}
-        <Text style={styles.totalVotes}>{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</Text>
+        <Text style={styles.totalVotes}>{totalVotes} total vote{totalVotes !== 1 ? 's' : ''}</Text>
       </View>
     );
   };
