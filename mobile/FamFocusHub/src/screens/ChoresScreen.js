@@ -719,6 +719,7 @@ const styles = StyleSheet.create({
   memberSelector: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
   memberOption: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 20, backgroundColor: 'rgba(30, 27, 75, 0.8)' },
   memberOptionActive: { backgroundColor: '#6366f1' },
+  memberOptionContent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   memberOptionText: { color: '#6b7280', fontSize: 13, fontWeight: '500' },
   memberOptionTextActive: { color: '#fff' },
   
