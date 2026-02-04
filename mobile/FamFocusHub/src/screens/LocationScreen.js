@@ -120,25 +120,33 @@ export default function LocationScreen({ navigation }) {
 
   const fetchData = async () => {
     try {
-      const [geofencesRes, membersRes, alertsRes, batteryRes] = await Promise.all([
+      const [geofencesRes, membersRes, alertsRes, batteryRes, leaderboardRes] = await Promise.all([
         apiService.getGeofences(),
         apiService.getFamilyMembers(),
         apiService.getLocationAlerts().catch(() => ({ alerts: [] })),
         user?.role === 'parent' ? apiService.getFamilyBatteryStatus().catch(() => ({ members: [] })) : null,
+        apiService.getLeaderboard().catch(() => ({ leaderboard: [] })),
       ]);
       
       setGeofences(geofencesRes.geofences || []);
-      const childMembers = (membersRes.members || []).filter(m => m.role === 'child');
+      const members = membersRes.members || [];
+      const leaderboard = leaderboardRes.leaderboard || [];
       
-      // Merge battery info for children
-      if (batteryRes?.members) {
-        childMembers.forEach(child => {
-          const batteryInfo = batteryRes.members.find(m => m.user_id === child.user_id);
-          if (batteryInfo) {
-            child.battery = batteryInfo.battery;
-          }
-        });
-      }
+      // Create a map of user_id to rank
+      const rankMap = {};
+      leaderboard.forEach((child, index) => {
+        rankMap[child.user_id] = index + 1;
+      });
+      
+      // Add rank and battery info to children
+      const childMembers = members.filter(m => m.role === 'child').map(child => {
+        const batteryInfo = batteryRes?.members?.find(m => m.user_id === child.user_id);
+        return {
+          ...child,
+          rank: rankMap[child.user_id] || null,
+          battery: batteryInfo?.battery
+        };
+      });
       
       setChildren(childMembers);
       setAlerts(alertsRes.alerts || []);
