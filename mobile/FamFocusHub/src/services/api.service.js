@@ -302,7 +302,8 @@ class ApiService {
   }
 
   async searchGifs(query) {
-    return this.get(`/gifs/search?q=${encodeURIComponent(query)}`);
+    const response = await this.get(`/gifs/search?q=${encodeURIComponent(query)}`);
+    return { results: response.gifs || [] };
   }
 
   // Shopping List Extended
