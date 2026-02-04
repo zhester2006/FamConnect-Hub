@@ -553,6 +553,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
+  avatarContainer: {
+    position: 'relative',
+  },
   avatar: {
     width: 44,
     height: 44,
@@ -576,6 +579,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#10b981',
     borderWidth: 2,
     borderColor: '#1e1b4b',
+  },
+  medalPosition: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
   },
   childInfo: {
     marginLeft: 12,
