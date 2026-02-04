@@ -1481,6 +1481,10 @@ RULES:
 Format the schedule clearly by day, showing which child does which chore."""
     
     response = await chat.send_message(UserMessage(text=prompt))
+    logger.info(f"AI Schedule: Got response of type {type(response)}, length {len(str(response)) if response else 0}")
+    
+    # Ensure response is a string
+    schedule_text = str(response) if response else "Unable to generate schedule"
     
     # Store the schedule
     schedule_id = f"schedule_{uuid.uuid4().hex[:12]}"
