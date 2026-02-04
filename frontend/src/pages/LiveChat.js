@@ -59,6 +59,237 @@ const ReadReceipt = ({ message, familyMembers, currentUserId }) => {
   );
 };
 
+// Emoji Reaction Picker Component
+const EmojiReactionPicker = ({ onReact, onClose, position }) => {
+  return (
+    <div 
+      className="absolute z-50 flex items-center gap-1 bg-slate-800 rounded-full px-2 py-1.5 border border-slate-700 shadow-xl"
+      style={{ 
+        bottom: position === 'top' ? '100%' : 'auto', 
+        top: position === 'bottom' ? '100%' : 'auto',
+        marginBottom: position === 'top' ? '8px' : 0,
+        marginTop: position === 'bottom' ? '8px' : 0
+      }}
+      data-testid="emoji-reaction-picker"
+    >
+      {EMOJI_REACTIONS.map(reaction => (
+        <button
+          key={reaction.name}
+          onClick={() => onReact(reaction.name)}
+          className="w-8 h-8 flex items-center justify-center hover:bg-slate-700 rounded-full transition-all hover:scale-125 text-lg"
+          title={reaction.name}
+        >
+          {reaction.emoji}
+        </button>
+      ))}
+      <button
+        onClick={onClose}
+        className="w-6 h-6 flex items-center justify-center hover:bg-slate-700 rounded-full transition-all ml-1"
+      >
+        <X className="w-3 h-3 text-slate-400" />
+      </button>
+    </div>
+  );
+};
+
+// Message Reactions Display Component
+const MessageReactions = ({ reactions, onReact, currentUserId }) => {
+  if (!reactions || Object.keys(reactions).length === 0) return null;
+  
+  return (
+    <div className="flex items-center gap-1 mt-1 flex-wrap">
+      {Object.entries(reactions).map(([reactionType, userIds]) => {
+        if (!userIds || userIds.length === 0) return null;
+        const hasReacted = userIds.includes(currentUserId);
+        const reactionConfig = EMOJI_REACTIONS.find(r => r.name === reactionType);
+        if (!reactionConfig) return null;
+        
+        return (
+          <button
+            key={reactionType}
+            onClick={() => onReact(reactionType)}
+            className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all ${
+              hasReacted 
+                ? 'bg-primary/20 border border-primary/30' 
+                : 'bg-slate-800/50 border border-slate-700 hover:bg-slate-700'
+            }`}
+            data-testid={`reaction-${reactionType}`}
+          >
+            <span>{reactionConfig.emoji}</span>
+            <span className={hasReacted ? 'text-primary' : 'text-slate-400'}>{userIds.length}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+// Voice Message Recorder Component
+const VoiceRecorder = ({ onRecordingComplete, onCancel }) => {
+  const [isRecording, setIsRecording] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
+  const timerRef = useRef(null);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      chunksRef.current = [];
+      
+      mediaRecorderRef.current.ondataavailable = (e) => {
+        chunksRef.current.push(e.data);
+      };
+      
+      mediaRecorderRef.current.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(blob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+      setDuration(0);
+      
+      timerRef.current = setInterval(() => {
+        setDuration(d => d + 1);
+      }, 1000);
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+      toast.error('Could not access microphone');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      clearInterval(timerRef.current);
+    }
+  };
+
+  const handleSend = () => {
+    if (audioBlob) {
+      onRecordingComplete(audioBlob, duration);
+    }
+  };
+
+  const handleCancel = () => {
+    stopRecording();
+    setAudioBlob(null);
+    setDuration(0);
+    onCancel();
+  };
+
+  const formatDuration = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-2xl border border-slate-700" data-testid="voice-recorder">
+      {isRecording ? (
+        <>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+            <span className="text-red-400 font-mono text-sm">{formatDuration(duration)}</span>
+          </div>
+          <div className="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden">
+            <div className="h-full bg-red-500 animate-pulse" style={{ width: `${Math.min(100, (duration / 60) * 100)}%` }} />
+          </div>
+          <button onClick={stopRecording} className="p-2 bg-red-500 rounded-full hover:bg-red-600 transition-all">
+            <MicOff className="w-4 h-4 text-white" />
+          </button>
+        </>
+      ) : audioBlob ? (
+        <>
+          <span className="text-slate-400 text-sm">{formatDuration(duration)}</span>
+          <VoicePlayer audioBlob={audioBlob} />
+          <button onClick={handleSend} className="p-2 bg-primary rounded-full hover:bg-primary/80 transition-all">
+            <Send className="w-4 h-4 text-white" />
+          </button>
+        </>
+      ) : (
+        <>
+          <span className="text-slate-400 text-sm">Tap to record</span>
+          <button onClick={startRecording} className="p-2 bg-primary rounded-full hover:bg-primary/80 transition-all">
+            <Mic className="w-4 h-4 text-white" />
+          </button>
+        </>
+      )}
+      <button onClick={handleCancel} className="p-2 hover:bg-slate-700 rounded-full transition-all">
+        <X className="w-4 h-4 text-slate-400" />
+      </button>
+    </div>
+  );
+};
+
+// Voice Player Component
+const VoicePlayer = ({ audioBlob, audioUrl }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const audioRef = useRef(null);
+  const url = audioUrl || (audioBlob ? URL.createObjectURL(audioBlob) : null);
+
+  useEffect(() => {
+    return () => {
+      if (audioBlob && url) {
+        URL.revokeObjectURL(url);
+      }
+    };
+  }, [audioBlob, url]);
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setProgress((audioRef.current.currentTime / audioRef.current.duration) * 100);
+    }
+  };
+
+  const handleEnded = () => {
+    setIsPlaying(false);
+    setProgress(0);
+  };
+
+  if (!url) return null;
+
+  return (
+    <div className="flex items-center gap-2 flex-1">
+      <audio 
+        ref={audioRef} 
+        src={url}
+        onTimeUpdate={handleTimeUpdate}
+        onEnded={handleEnded}
+      />
+      <button 
+        onClick={togglePlay}
+        className="p-1.5 bg-slate-700 rounded-full hover:bg-slate-600 transition-all"
+      >
+        {isPlaying ? <Pause className="w-4 h-4 text-white" /> : <Play className="w-4 h-4 text-white" />}
+      </button>
+      <div className="flex-1 h-1.5 bg-slate-600 rounded-full overflow-hidden">
+        <div 
+          className="h-full bg-primary transition-all" 
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    </div>
+  );
+};
+
 // Online Users Bar Component
 const OnlineUsersBar = ({ onlineUsers, familyMembers, currentUserId }) => {
   const onlineMembers = familyMembers.filter(m => onlineUsers.includes(m.user_id) && m.user_id !== currentUserId);
