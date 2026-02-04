@@ -362,11 +362,17 @@ export default function LiveChat({ user }) {
   const [typingUsers, setTypingUsers] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [familyMembers, setFamilyMembers] = useState([]);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+  const [selectedMessageForReaction, setSelectedMessageForReaction] = useState(null);
   const messagesEndRef = useRef(null);
   const wsRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const connectWebSocketRef = useRef(null);
+
+  // Common emoji set for quick picker
+  const quickEmojis = ['😀', '😂', '❤️', '👍', '🎉', '🔥', '😢', '😡', '🤔', '👏', '💯', '✨'];
 
   // Get session token from cookies
   const getSessionToken = () => {
