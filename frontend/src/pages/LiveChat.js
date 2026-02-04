@@ -199,6 +199,7 @@ export default function LiveChat({ user }) {
   useEffect(() => {
     fetchMessages();
     fetchOnlineUsers();
+    fetchFamilyMembers();
     connectWebSocket();
 
     return () => {
@@ -234,6 +235,16 @@ export default function LiveChat({ user }) {
     }
   };
 
+  const fetchFamilyMembers = async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/family/members`, { credentials: 'include' });
+      const data = await res.json();
+      setFamilyMembers(data.members || []);
+    } catch (error) {
+      console.error('Failed to fetch family members:', error);
+    }
+  };
+
   const fetchOnlineUsers = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/family/online`, { credentials: 'include' });
@@ -243,6 +254,27 @@ export default function LiveChat({ user }) {
       console.error('Failed to fetch online users:', error);
     }
   };
+
+  const markMessageAsRead = async (messageId) => {
+    try {
+      await fetch(`${BACKEND_URL}/api/messages/${messageId}/read`, {
+        method: 'PUT',
+        credentials: 'include'
+      });
+    } catch (error) {
+      console.error('Failed to mark message as read:', error);
+    }
+  };
+
+  // Mark messages as read when viewing
+  useEffect(() => {
+    if (messages.length > 0) {
+      const unreadMessages = messages.filter(
+        m => m.user_id !== user?.user_id && !m.read_by?.includes(user?.user_id)
+      );
+      unreadMessages.forEach(m => markMessageAsRead(m.message_id));
+    }
+  }, [messages, user?.user_id]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
