@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, CheckCircle, Clock, AlertCircle, TrendingUp, Calendar as CalendarIcon, MapPin, Eye, Book, Award, Settings, X, ChevronRight, ToggleLeft, ToggleRight, Sparkles, Loader2 } from 'lucide-react';
+import { Users, CheckCircle, Clock, AlertCircle, TrendingUp, Calendar as CalendarIcon, MapPin, Eye, Book, Award, Settings, X, ChevronRight, ToggleLeft, ToggleRight, Sparkles, Loader2, Battery, BatteryCharging, BatteryLow, BatteryWarning } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { toast } from 'sonner';
 
@@ -20,6 +20,7 @@ export default function ParentDashboard({ user }) {
   const [selectedChild, setSelectedChild] = useState(null);
   const [childDetails, setChildDetails] = useState(null);
   const [childChoreSettings, setChildChoreSettings] = useState(null);
+  const [batteryStatus, setBatteryStatus] = useState([]);
   
   // AI Scheduler state
   const [showAiScheduler, setShowAiScheduler] = useState(false);
