@@ -1,29 +1,79 @@
 {
   "expo": {
-    "name": "FamFocusHub",
-    "slug": "FamFocusHub",
+    "name": "FamFocus Hub",
+    "slug": "famfocus-hub",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1e1b4b"
+    },
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+      "color": "#6366f1",
+      "androidMode": "default"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.famfocus.hub",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "FamFocus needs your location to help keep your family informed of your whereabouts.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "FamFocus needs continuous location access to track your location even when the app is closed, helping keep your family safe.",
+        "NSLocationAlwaysUsageDescription": "FamFocus needs continuous location access to monitor safe zones and alert your family.",
+        "UIBackgroundModes": ["location", "remote-notification", "fetch"]
+      }
     },
     "android": {
+      "package": "com.famfocus.hub",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#1e1b4b"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION", 
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "WAKE_LOCK"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "FamFocus needs continuous location access to monitor safe zones and alert your family even when the app is closed.",
+          "locationAlwaysPermission": "FamFocus needs background location access for continuous family safety monitoring.",
+          "locationWhenInUsePermission": "FamFocus needs your location to show where you are to family members.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#6366f1",
+          "sounds": ["./assets/notification.wav"]
+        }
+      ],
+      "expo-task-manager",
+      "expo-battery"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "famfocus-hub"
+      }
     }
   }
 }
