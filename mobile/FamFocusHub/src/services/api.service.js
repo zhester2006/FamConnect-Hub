@@ -287,6 +287,45 @@ class ApiService {
     return this.post('/tutorial/reset', {});
   }
 
+  // Family Wall Extended
+  async getFamilyWallPosts() {
+    return this.get('/family-wall', 'family_wall_posts');
+  }
+
+  async createFamilyWallPost(data) {
+    return this.post('/family-wall', data);
+  }
+
+  async likePost(postId) {
+    return this.post(`/family-wall/${postId}/like`, {});
+  }
+
+  async searchGifs(query) {
+    return this.get(`/gifs/search?q=${encodeURIComponent(query)}`);
+  }
+
+  // Shopping List Extended
+  async updateShoppingItem(itemId, data) {
+    return this.put(`/shopping/${itemId}`, data);
+  }
+
+  async deleteShoppingItem(itemId) {
+    return this.delete(`/shopping/${itemId}`);
+  }
+
+  // Dinner Planner
+  async getDinnerPlan() {
+    return this.get('/dinner-plan', 'dinner_plan');
+  }
+
+  async updateDinnerPlan(day, mealType, meal) {
+    return this.post('/dinner-plan', { day, meal_type: mealType, meal });
+  }
+
+  async generateDinnerPlan() {
+    return this.post('/dinner-plan/generate', {});
+  }
+
   // Check pending sync actions
   async getPendingSyncCount() {
     const pending = await offlineService.getPendingActions();
