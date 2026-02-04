@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, Calendar, MessageCircle, Users, ShoppingCart, Award, 
   Settings, LogOut, Utensils, Trophy, Book, MapPin, Menu, X,
-  LayoutDashboard, Sparkles, ChevronLeft, ChevronRight, Move, GripVertical
+  LayoutDashboard, Sparkles, ChevronLeft, ChevronRight, Move, GripVertical, BarChart3
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
