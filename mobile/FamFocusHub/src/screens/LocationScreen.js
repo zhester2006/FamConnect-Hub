@@ -43,9 +43,12 @@ export default function LocationScreen({ navigation }) {
   const [alerts, setAlerts] = useState([]);
   const [showAddGeofence, setShowAddGeofence] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [newGeofence, setNewGeofence] = useState({ name: '', radius: 300 });
+  const [selectedLocation, setSelectedLocation] = useState(null);
   const [saving, setSaving] = useState(false);
   const appState = useRef(AppState.currentState);
+  const mapRef = useRef(null);
 
   useEffect(() => {
     initServices();
