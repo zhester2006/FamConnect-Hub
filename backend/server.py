@@ -909,6 +909,70 @@ async def mark_message_read(message_id: str, request: Request):
     )
     return {"success": True}
 
+@api_router.post("/messages/{message_id}/react")
+async def react_to_message(message_id: str, request: Request, data: dict):
+    """Add or remove a reaction from a message"""
+    current_user = await get_current_user(request)
+    user_id = current_user['user_id']
+    reaction_type = data.get('reaction')
+    
+    if not reaction_type:
+        raise HTTPException(status_code=400, detail="Reaction type required")
+    
+    # Check if user has already reacted with this reaction
+    message = await db.messages.find_one({"message_id": message_id})
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+    
+    reactions = message.get('reactions', {})
+    reaction_users = reactions.get(reaction_type, [])
+    
+    if user_id in reaction_users:
+        # Remove reaction
+        await db.messages.update_one(
+            {"message_id": message_id},
+            {"$pull": {f"reactions.{reaction_type}": user_id}}
+        )
+    else:
+        # Add reaction
+        await db.messages.update_one(
+            {"message_id": message_id},
+            {"$addToSet": {f"reactions.{reaction_type}": user_id}}
+        )
+    
+    return {"success": True}
+
+@api_router.post("/messages/voice")
+async def send_voice_message(request: Request, audio: UploadFile = File(...), duration: int = Form(0)):
+    """Send a voice message"""
+    current_user = await get_current_user(request)
+    message_id = f"msg_{uuid.uuid4().hex[:12]}"
+    
+    # Save audio file
+    import base64
+    audio_content = await audio.read()
+    audio_base64 = base64.b64encode(audio_content).decode('utf-8')
+    
+    # In production, upload to cloud storage
+    # For now, store as base64 data URL
+    audio_url = f"data:audio/webm;base64,{audio_base64}"
+    
+    message_doc = {
+        "message_id": message_id,
+        "user_id": current_user['user_id'],
+        "user_name": current_user.get('name', 'User'),
+        "type": "voice",
+        "content": "[Voice Message]",
+        "audio_url": audio_url,
+        "duration": duration,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "read_by": [current_user['user_id']],
+        "reactions": {}
+    }
+    
+    await db.messages.insert_one(message_doc)
+    return await db.messages.find_one({"message_id": message_id}, {"_id": 0})
+
 # Events/Calendar
 @api_router.get("/events")
 async def get_events(request: Request, start_date: Optional[str] = None, end_date: Optional[str] = None, event_type: Optional[str] = None):
