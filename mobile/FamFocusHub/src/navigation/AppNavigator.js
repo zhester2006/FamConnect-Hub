@@ -22,6 +22,7 @@ import FamilyScreen from '../screens/FamilyScreen';
 import FamilyWallScreen from '../screens/FamilyWallScreen';
 import ShoppingListScreen from '../screens/ShoppingListScreen';
 import DinnerPlannerScreen from '../screens/DinnerPlannerScreen';
+import LocationScreen from '../screens/LocationScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
