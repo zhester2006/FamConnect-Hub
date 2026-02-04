@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, 
-  RefreshControl, ActivityIndicator, Image, Modal, KeyboardAvoidingView, Platform 
+  RefreshControl, ActivityIndicator, Image, Modal, KeyboardAvoidingView, Platform, Alert 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
 
@@ -24,11 +25,13 @@ export default function FamilyWallScreen({ navigation }) {
   const [newPost, setNewPost] = useState('');
   const [postType, setPostType] = useState('message');
   const [showNewPostModal, setShowNewPostModal] = useState(false);
-  const [showGifSearch, setShowGifSearch] = useState(false);
   const [gifs, setGifs] = useState([]);
   const [gifSearch, setGifSearch] = useState('');
   const [selectedGif, setSelectedGif] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [pollOptions, setPollOptions] = useState(['', '']);
   const [posting, setPosting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const flatListRef = useRef(null);
 
   const fetchPosts = useCallback(async () => {
@@ -66,26 +69,99 @@ export default function FamilyWallScreen({ navigation }) {
     }
   };
 
+  const handlePickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Needed', 'Please allow access to your photos to upload images.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setSelectedImage(result.assets[0]);
+      }
+    } catch (error) {
+      console.error('Image picker error:', error);
+      Alert.alert('Error', 'Failed to select image');
+    }
+  };
+
+  const uploadImage = async (imageUri) => {
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: 'post_image.jpg',
+      });
+
+      const response = await fetch(`${apiService.baseUrl}/upload/image`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiService.sessionToken}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Upload failed');
+      const data = await response.json();
+      return data.url;
+    } catch (error) {
+      console.error('Upload error:', error);
+      // Return local URI as fallback (image will be stored locally)
+      return imageUri;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handlePost = async () => {
-    if (!newPost.trim() && !selectedGif) return;
+    if (!newPost.trim() && !selectedGif && !selectedImage && postType !== 'poll') return;
+    if (postType === 'poll' && pollOptions.filter(o => o.trim()).length < 2) {
+      Alert.alert('Error', 'Please add at least 2 poll options');
+      return;
+    }
     
     setPosting(true);
     try {
+      let imageUrl = null;
+      if (selectedImage) {
+        imageUrl = await uploadImage(selectedImage.uri);
+      }
+
       await apiService.createFamilyWallPost({
         type: postType,
         content: newPost,
         gif_url: selectedGif?.url,
+        image_url: imageUrl,
+        poll_options: postType === 'poll' ? pollOptions.filter(o => o.trim()) : undefined,
       });
       
-      setNewPost('');
-      setSelectedGif(null);
-      setShowNewPostModal(false);
+      resetPostForm();
       fetchPosts();
     } catch (error) {
       console.error('Failed to post:', error);
+      Alert.alert('Error', 'Failed to create post. Please try again.');
     } finally {
       setPosting(false);
     }
+  };
+
+  const resetPostForm = () => {
+    setNewPost('');
+    setSelectedGif(null);
+    setSelectedImage(null);
+    setPollOptions(['', '']);
+    setPostType('message');
+    setShowNewPostModal(false);
   };
 
   const handleLike = async (postId) => {
@@ -94,6 +170,33 @@ export default function FamilyWallScreen({ navigation }) {
       fetchPosts();
     } catch (error) {
       console.error('Failed to like:', error);
+    }
+  };
+
+  const handleVote = async (postId, optionIndex) => {
+    try {
+      await apiService.votePoll(postId, optionIndex);
+      fetchPosts();
+    } catch (error) {
+      console.error('Failed to vote:', error);
+    }
+  };
+
+  const addPollOption = () => {
+    if (pollOptions.length < 6) {
+      setPollOptions([...pollOptions, '']);
+    }
+  };
+
+  const updatePollOption = (index, value) => {
+    const newOptions = [...pollOptions];
+    newOptions[index] = value;
+    setPollOptions(newOptions);
+  };
+
+  const removePollOption = (index) => {
+    if (pollOptions.length > 2) {
+      setPollOptions(pollOptions.filter((_, i) => i !== index));
     }
   };
 
@@ -117,6 +220,43 @@ export default function FamilyWallScreen({ navigation }) {
     } catch (error) {
       return '';
     }
+  };
+
+  const renderPollOptions = (post) => {
+    const totalVotes = post.poll_votes?.reduce((sum, v) => sum + (v.count || 0), 0) || 0;
+    const userVoted = post.user_voted_option !== undefined && post.user_voted_option !== null;
+
+    return (
+      <View style={styles.pollContainer}>
+        {post.poll_options?.map((option, index) => {
+          const voteCount = post.poll_votes?.find(v => v.option_index === index)?.count || 0;
+          const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+          const isUserVote = post.user_voted_option === index;
+
+          return (
+            <TouchableOpacity
+              key={index}
+              style={[styles.pollOption, isUserVote && styles.pollOptionVoted]}
+              onPress={() => !userVoted && handleVote(post.post_id, index)}
+              disabled={userVoted}
+            >
+              {userVoted && (
+                <View style={[styles.pollProgress, { width: `${percentage}%` }]} />
+              )}
+              <View style={styles.pollOptionContent}>
+                <Text style={[styles.pollOptionText, isUserVote && styles.pollOptionTextVoted]}>
+                  {option}
+                </Text>
+                {userVoted && (
+                  <Text style={styles.pollPercentage}>{percentage}%</Text>
+                )}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+        <Text style={styles.totalVotes}>{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</Text>
+      </View>
+    );
   };
 
   const renderPost = ({ item }) => (
@@ -146,6 +286,8 @@ export default function FamilyWallScreen({ navigation }) {
       {item.image_url && (
         <Image source={{ uri: item.image_url }} style={styles.postImage} resizeMode="cover" />
       )}
+
+      {item.type === 'poll' && item.poll_options && renderPollOptions(item)}
 
       <View style={styles.postActions}>
         <TouchableOpacity 
@@ -185,6 +327,9 @@ export default function FamilyWallScreen({ navigation }) {
       
       {/* Header */}
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
         <Text style={styles.title}>Family Wall</Text>
         <TouchableOpacity 
           style={styles.newPostButton}
@@ -234,7 +379,7 @@ export default function FamilyWallScreen({ navigation }) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>New Post</Text>
-              <TouchableOpacity onPress={() => setShowNewPostModal(false)}>
+              <TouchableOpacity onPress={resetPostForm}>
                 <Ionicons name="close" size={24} color="#9ca3af" />
               </TouchableOpacity>
             </View>
@@ -261,13 +406,70 @@ export default function FamilyWallScreen({ navigation }) {
 
             <TextInput
               style={styles.postInput}
-              placeholder="What's on your mind?"
+              placeholder={postType === 'poll' ? "Ask a question..." : "What's on your mind?"}
               placeholderTextColor="#6b7280"
               multiline
               value={newPost}
               onChangeText={setNewPost}
             />
 
+            {/* Photo Upload Section */}
+            {postType === 'photo' && (
+              <View style={styles.photoSection}>
+                <TouchableOpacity style={styles.photoPickerBtn} onPress={handlePickImage}>
+                  <Ionicons name="image" size={24} color="#818cf8" />
+                  <Text style={styles.photoPickerText}>
+                    {selectedImage ? 'Change Photo' : 'Select Photo'}
+                  </Text>
+                </TouchableOpacity>
+                
+                {selectedImage && (
+                  <View style={styles.selectedImageContainer}>
+                    <Image source={{ uri: selectedImage.uri }} style={styles.selectedImage} />
+                    <TouchableOpacity 
+                      style={styles.removeImageBtn}
+                      onPress={() => setSelectedImage(null)}
+                    >
+                      <Ionicons name="close-circle" size={28} color="#ef4444" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Poll Options Section */}
+            {postType === 'poll' && (
+              <View style={styles.pollSection}>
+                <Text style={styles.pollSectionTitle}>Poll Options</Text>
+                {pollOptions.map((option, index) => (
+                  <View key={index} style={styles.pollInputRow}>
+                    <TextInput
+                      style={styles.pollInput}
+                      placeholder={`Option ${index + 1}`}
+                      placeholderTextColor="#6b7280"
+                      value={option}
+                      onChangeText={(text) => updatePollOption(index, text)}
+                    />
+                    {pollOptions.length > 2 && (
+                      <TouchableOpacity 
+                        style={styles.removePollOption}
+                        onPress={() => removePollOption(index)}
+                      >
+                        <Ionicons name="close-circle" size={24} color="#ef4444" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))}
+                {pollOptions.length < 6 && (
+                  <TouchableOpacity style={styles.addOptionBtn} onPress={addPollOption}>
+                    <Ionicons name="add-circle" size={20} color="#818cf8" />
+                    <Text style={styles.addOptionText}>Add Option</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {/* GIF Search Section */}
             {postType === 'gif' && (
               <View style={styles.gifSection}>
                 <View style={styles.gifSearchRow}>
@@ -309,17 +511,23 @@ export default function FamilyWallScreen({ navigation }) {
                     </TouchableOpacity>
                   )}
                   style={styles.gifList}
+                  showsHorizontalScrollIndicator={false}
                 />
               </View>
             )}
 
             <TouchableOpacity 
-              style={[styles.postButton, posting && styles.postButtonDisabled]}
+              style={[styles.postButton, (posting || uploadingImage) && styles.postButtonDisabled]}
               onPress={handlePost}
-              disabled={posting}
+              disabled={posting || uploadingImage}
             >
-              {posting ? (
-                <ActivityIndicator color="#fff" />
+              {posting || uploadingImage ? (
+                <View style={styles.postingIndicator}>
+                  <ActivityIndicator color="#fff" size="small" />
+                  <Text style={styles.postButtonText}>
+                    {uploadingImage ? 'Uploading...' : 'Posting...'}
+                  </Text>
+                </View>
               ) : (
                 <Text style={styles.postButtonText}>Post</Text>
               )}
@@ -332,284 +540,77 @@ export default function FamilyWallScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f0d1a',
-  },
-  gradient: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#0f0d1a',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  newPostButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#818cf8',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quoteCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(251, 191, 36, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(251, 191, 36, 0.3)',
-    marginHorizontal: 20,
-    marginBottom: 16,
-    padding: 12,
-    borderRadius: 12,
-    gap: 10,
-  },
-  quoteText: {
-    flex: 1,
-    color: '#fcd34d',
-    fontSize: 14,
-    fontStyle: 'italic',
-  },
-  listContent: {
-    padding: 20,
-    paddingTop: 0,
-    paddingBottom: 100,
-  },
-  postCard: {
-    backgroundColor: 'rgba(30, 27, 75, 0.6)',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  postHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#818cf8',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  postMeta: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  authorName: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  postTime: {
-    color: '#9ca3af',
-    fontSize: 12,
-  },
-  pollBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(129, 140, 248, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    gap: 4,
-  },
-  pollBadgeText: {
-    color: '#818cf8',
-    fontSize: 12,
-  },
-  postContent: {
-    color: '#e5e7eb',
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: 12,
-  },
-  gifImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  postImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  postActions: {
-    flexDirection: 'row',
-    gap: 20,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  actionText: {
-    color: '#9ca3af',
-    fontSize: 14,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingTop: 60,
-  },
-  emptyText: {
-    color: '#9ca3af',
-    fontSize: 18,
-    marginTop: 16,
-  },
-  emptySubtext: {
-    color: '#6b7280',
-    fontSize: 14,
-    marginTop: 4,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#1e1b4b',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  typeSelector: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  typeButton: {
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  typeButtonActive: {
-    backgroundColor: 'rgba(129, 140, 248, 0.2)',
-    borderWidth: 1,
-    borderColor: '#818cf8',
-  },
-  typeText: {
-    color: '#9ca3af',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  typeTextActive: {
-    color: '#818cf8',
-  },
-  postInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
-    padding: 16,
-    color: '#fff',
-    fontSize: 16,
-    minHeight: 100,
-    textAlignVertical: 'top',
-    marginBottom: 16,
-  },
-  gifSection: {
-    marginBottom: 16,
-  },
-  gifSearchRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
-  },
-  gifSearchInput: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: '#fff',
-  },
-  gifSearchButton: {
-    backgroundColor: '#818cf8',
-    width: 44,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectedGif: {
-    position: 'relative',
-    marginBottom: 12,
-  },
-  gifPreview: {
-    width: '100%',
-    height: 150,
-    borderRadius: 12,
-  },
-  removeGif: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-  },
-  gifList: {
-    maxHeight: 80,
-  },
-  gifOption: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    marginRight: 8,
-  },
-  postButton: {
-    backgroundColor: '#818cf8',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  postButtonDisabled: {
-    opacity: 0.6,
-  },
-  postButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  container: { flex: 1, backgroundColor: '#0f0d1a' },
+  gradient: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f0d1a' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 48, paddingBottom: 16 },
+  backButton: { padding: 8 },
+  title: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+  newPostButton: { backgroundColor: '#6366f1', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+  quoteCard: { marginHorizontal: 16, marginBottom: 16, backgroundColor: 'rgba(99, 102, 241, 0.1)', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  quoteText: { flex: 1, color: '#a5b4fc', fontSize: 13, fontStyle: 'italic' },
+  listContent: { padding: 16, paddingBottom: 100 },
+  postCard: { backgroundColor: 'rgba(30, 27, 75, 0.8)', borderRadius: 16, padding: 16, marginBottom: 12 },
+  postHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#6366f1', justifyContent: 'center', alignItems: 'center' },
+  avatarText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  postMeta: { flex: 1, marginLeft: 12 },
+  authorName: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  postTime: { color: '#6b7280', fontSize: 12 },
+  pollBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(129, 140, 248, 0.2)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  pollBadgeText: { color: '#818cf8', fontSize: 11, fontWeight: '500' },
+  postContent: { color: '#e5e7eb', fontSize: 15, lineHeight: 22, marginBottom: 12 },
+  gifImage: { width: '100%', height: 200, borderRadius: 12, marginBottom: 12 },
+  postImage: { width: '100%', height: 200, borderRadius: 12, marginBottom: 12 },
+  pollContainer: { marginTop: 8, marginBottom: 12 },
+  pollOption: { backgroundColor: 'rgba(99, 102, 241, 0.1)', borderRadius: 10, padding: 14, marginBottom: 8, overflow: 'hidden', position: 'relative' },
+  pollOptionVoted: { borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.3)' },
+  pollProgress: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: 'rgba(99, 102, 241, 0.2)', borderRadius: 10 },
+  pollOptionContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 1 },
+  pollOptionText: { color: '#e5e7eb', fontSize: 14 },
+  pollOptionTextVoted: { fontWeight: '600' },
+  pollPercentage: { color: '#818cf8', fontSize: 14, fontWeight: '600' },
+  totalVotes: { color: '#6b7280', fontSize: 12, textAlign: 'center', marginTop: 4 },
+  postActions: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)', paddingTop: 12, gap: 20 },
+  actionButton: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  actionText: { color: '#9ca3af', fontSize: 13 },
+  emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
+  emptyText: { color: '#9ca3af', fontSize: 18, marginTop: 16 },
+  emptySubtext: { color: '#6b7280', fontSize: 14, marginTop: 4 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#1e1b4b', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '90%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+  typeSelector: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 },
+  typeButton: { alignItems: 'center', padding: 12, borderRadius: 12, flex: 1, marginHorizontal: 4, backgroundColor: 'rgba(99, 102, 241, 0.1)' },
+  typeButtonActive: { backgroundColor: 'rgba(99, 102, 241, 0.3)', borderWidth: 1, borderColor: '#818cf8' },
+  typeText: { color: '#9ca3af', fontSize: 11, marginTop: 4, fontWeight: '500' },
+  typeTextActive: { color: '#818cf8' },
+  postInput: { backgroundColor: 'rgba(15, 13, 26, 0.5)', borderRadius: 12, padding: 16, color: '#fff', fontSize: 16, minHeight: 80, textAlignVertical: 'top', marginBottom: 16 },
+  photoSection: { marginBottom: 16 },
+  photoPickerBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: 'rgba(99, 102, 241, 0.2)', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.3)', borderStyle: 'dashed' },
+  photoPickerText: { color: '#818cf8', fontSize: 15, fontWeight: '500' },
+  selectedImageContainer: { marginTop: 12, position: 'relative' },
+  selectedImage: { width: '100%', height: 200, borderRadius: 12 },
+  removeImageBtn: { position: 'absolute', top: 8, right: 8 },
+  pollSection: { marginBottom: 16 },
+  pollSectionTitle: { color: '#a5b4fc', fontSize: 14, fontWeight: '600', marginBottom: 12 },
+  pollInputRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  pollInput: { flex: 1, backgroundColor: 'rgba(15, 13, 26, 0.5)', borderRadius: 10, padding: 12, color: '#fff', fontSize: 15 },
+  removePollOption: { marginLeft: 8 },
+  addOptionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 12, marginTop: 4 },
+  addOptionText: { color: '#818cf8', fontSize: 14, fontWeight: '500' },
+  gifSection: { marginBottom: 16 },
+  gifSearchRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  gifSearchInput: { flex: 1, backgroundColor: 'rgba(15, 13, 26, 0.5)', borderRadius: 12, padding: 12, color: '#fff', fontSize: 15 },
+  gifSearchButton: { backgroundColor: '#6366f1', width: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  selectedGif: { position: 'relative', marginBottom: 12 },
+  gifPreview: { width: '100%', height: 150, borderRadius: 12 },
+  removeGif: { position: 'absolute', top: 8, right: 8 },
+  gifList: { maxHeight: 80 },
+  gifOption: { width: 80, height: 80, borderRadius: 8, marginRight: 8 },
+  postButton: { backgroundColor: '#6366f1', borderRadius: 12, padding: 16, alignItems: 'center' },
+  postButtonDisabled: { opacity: 0.6 },
+  postingIndicator: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  postButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });
