@@ -687,26 +687,50 @@ async def vote_on_poll(post_id: str, request: Request, data: dict):
 
 # AI Daily Quote
 @api_router.get("/family-wall/daily-quote")
-async def get_daily_quote(request: Request):
+async def get_daily_quote(request: Request, refresh: bool = False):
     await get_current_user(request)
     
     today = datetime.now(timezone.utc).date().isoformat()
-    existing_quote = await db.daily_quotes.find_one({"date": today}, {"_id": 0})
-    if existing_quote:
-        return existing_quote
     
+    # Check for existing quote if not forcing refresh
+    if not refresh:
+        existing_quote = await db.daily_quotes.find_one({"date": today}, {"_id": 0})
+        if existing_quote:
+            return existing_quote
+    
+    # Generate new quote with AI
     chat = LlmChat(
         api_key=os.environ['EMERGENT_LLM_KEY'],
-        session_id=f"quote_{today}",
-        system_message="You are a motivational assistant for families."
+        session_id=f"quote_{today}_{uuid.uuid4().hex[:8]}",
+        system_message="You are a warm, encouraging motivational assistant for families. Create quotes that inspire togetherness, love, and positive action."
     ).with_model("openai", "gpt-5.2")
     
+    themes = [
+        "family bonding", "teamwork", "gratitude", "kindness", 
+        "perseverance", "love", "growth", "joy", "togetherness"
+    ]
+    import random
+    theme = random.choice(themes)
+    
     response = await chat.send_message(UserMessage(
-        text="Generate a short, inspirational quote for a family today. Return only the quote, no extra text."
+        text=f"Generate a short, heartfelt inspirational quote for a family about {theme}. Make it uplifting and actionable. Return only the quote text, no quotation marks or attribution."
     ))
     
-    quote_doc = {"date": today, "quote": response, "created_at": datetime.now(timezone.utc).isoformat()}
-    await db.daily_quotes.insert_one(quote_doc)
+    # Ensure response is a string and clean it
+    quote_text = str(response).strip().strip('"').strip("'")
+    
+    # If refreshing, update existing quote; otherwise insert new
+    quote_doc = {"date": today, "quote": quote_text, "theme": theme, "created_at": datetime.now(timezone.utc).isoformat()}
+    
+    if refresh:
+        await db.daily_quotes.update_one(
+            {"date": today},
+            {"$set": quote_doc},
+            upsert=True
+        )
+    else:
+        await db.daily_quotes.insert_one(quote_doc)
+    
     return quote_doc
 
 # Messages/Chat
