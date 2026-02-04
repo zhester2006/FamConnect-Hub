@@ -258,15 +258,95 @@ export default function Settings({ user }) {
             <p className="text-sm" style={{ color: 'var(--color-text)', opacity: 0.6 }}>Customize your FamFocus Hub experience</p>
           </header>
 
-          {/* Profile Card */}
+          {/* Profile Card with Picture Upload */}
           <div className="glass-card rounded-xl p-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-black text-white" style={{ background: `linear-gradient(135deg, var(--color-primary), var(--color-secondary))` }}>
-                {user?.name?.charAt(0)}
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold flex items-center space-x-2" style={{ color: 'var(--color-text)' }}>
+                <User className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
+                <span>Profile</span>
+              </h2>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              {/* Profile Picture */}
+              <div className="relative group">
+                <div 
+                  className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-black text-white overflow-hidden"
+                  style={{ background: profilePicture ? 'none' : `linear-gradient(135deg, var(--color-primary), var(--color-secondary))` }}
+                >
+                  {profilePicture ? (
+                    <img src={profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    user?.name?.charAt(0)
+                  )}
+                </div>
+                <button
+                  onClick={() => profileInputRef.current?.click()}
+                  disabled={uploadingProfile}
+                  className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                >
+                  {uploadingProfile ? (
+                    <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white" />
+                  ) : (
+                    <Camera className="w-6 h-6 text-white" />
+                  )}
+                </button>
+                <input
+                  ref={profileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleImageUpload(e.target.files?.[0], 'profile')}
+                />
               </div>
-              <div>
-                <h3 className="font-bold" style={{ color: 'var(--color-text)' }}>{user?.name}</h3>
+              
+              <div className="flex-1">
+                <h3 className="font-bold text-lg" style={{ color: 'var(--color-text)' }}>{user?.name}</h3>
                 <p className="text-sm capitalize" style={{ color: 'var(--color-text)', opacity: 0.6 }}>{user?.role}</p>
+                <p className="text-xs mt-1" style={{ color: 'var(--color-text)', opacity: 0.4 }}>{user?.email}</p>
+              </div>
+            </div>
+
+            {/* Background Picture Upload */}
+            <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--color-text)', opacity: 0.1 }}>
+              <label className="text-xs font-medium mb-2 block" style={{ color: 'var(--color-text)', opacity: 0.6 }}>
+                Profile Background
+              </label>
+              <div className="relative group">
+                <div 
+                  className="h-24 rounded-xl overflow-hidden flex items-center justify-center"
+                  style={{ backgroundColor: backgroundPicture ? 'transparent' : 'var(--color-card)' }}
+                >
+                  {backgroundPicture ? (
+                    <img src={backgroundPicture} alt="Background" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="flex items-center space-x-2" style={{ color: 'var(--color-text)', opacity: 0.3 }}>
+                      <Image className="w-5 h-5" />
+                      <span className="text-sm">No background set</span>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => backgroundInputRef.current?.click()}
+                  disabled={uploadingBackground}
+                  className="absolute inset-0 bg-black/50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                >
+                  {uploadingBackground ? (
+                    <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white" />
+                  ) : (
+                    <div className="flex items-center space-x-2 text-white">
+                      <Camera className="w-5 h-5" />
+                      <span className="text-sm font-medium">Change Background</span>
+                    </div>
+                  )}
+                </button>
+                <input
+                  ref={backgroundInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleImageUpload(e.target.files?.[0], 'background')}
+                />
               </div>
             </div>
           </div>
