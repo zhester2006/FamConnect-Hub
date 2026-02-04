@@ -1102,6 +1102,146 @@ async def get_notifications(request: Request):
     ).sort("created_at", -1).limit(50).to_list(50)
     return {"notifications": notifications}
 
+# Weather API endpoint
+@api_router.get("/weather")
+async def get_weather(lat: float = 40.7128, lon: float = -74.0060):
+    """Fetch current weather from OpenWeatherMap API"""
+    api_key = os.environ.get('OPENWEATHER_API_KEY')
+    
+    # Map OpenWeatherMap conditions to our simplified conditions
+    condition_map = {
+        'Clear': 'sunny',
+        'Clouds': 'cloudy',
+        'Rain': 'rainy',
+        'Drizzle': 'rainy',
+        'Thunderstorm': 'stormy',
+        'Snow': 'snowy',
+        'Mist': 'cloudy',
+        'Fog': 'cloudy',
+        'Wind': 'windy'
+    }
+    
+    if not api_key:
+        # Return simulated weather if no API key configured
+        import random
+        conditions = ['sunny', 'cloudy', 'rainy', 'windy']
+        temps = [65, 68, 72, 75, 78, 80, 82]
+        return {
+            "temp": random.choice(temps),
+            "condition": random.choice(conditions),
+            "description": "Simulated weather (no API key)",
+            "is_mocked": True
+        }
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.get(
+                "https://api.openweathermap.org/data/2.5/weather",
+                params={
+                    "lat": lat,
+                    "lon": lon,
+                    "appid": api_key,
+                    "units": "imperial"
+                },
+                timeout=10
+            )
+            res.raise_for_status()
+            data = res.json()
+            
+            weather_main = data.get("weather", [{}])[0].get("main", "Clear")
+            condition = condition_map.get(weather_main, 'cloudy')
+            
+            return {
+                "temp": round(data.get("main", {}).get("temp", 72)),
+                "condition": condition,
+                "description": data.get("weather", [{}])[0].get("description", ""),
+                "humidity": data.get("main", {}).get("humidity"),
+                "wind_speed": data.get("wind", {}).get("speed"),
+                "city": data.get("name"),
+                "is_mocked": False
+            }
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Weather API error: {e}")
+        raise HTTPException(status_code=502, detail=f"Weather API error: {str(e)}")
+    except Exception as e:
+        logger.error(f"Weather fetch error: {e}")
+        # Fallback to simulated on error
+        import random
+        return {
+            "temp": random.choice([65, 68, 72, 75, 78]),
+            "condition": random.choice(['sunny', 'cloudy']),
+            "description": "Weather unavailable",
+            "is_mocked": True
+        }
+
+# Push Notification Subscription
+class PushSubscription(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    subscription_id: str
+    user_id: str
+    endpoint: str
+    keys: Dict[str, str]
+    created_at: str
+
+@api_router.post("/push/subscribe")
+async def subscribe_push(request: Request, data: dict):
+    """Register a push notification subscription"""
+    current_user = await get_current_user(request)
+    
+    subscription_id = f"sub_{uuid.uuid4().hex[:12]}"
+    subscription_doc = {
+        "subscription_id": subscription_id,
+        "user_id": current_user['user_id'],
+        "endpoint": data.get('endpoint'),
+        "keys": data.get('keys', {}),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Remove old subscriptions for this user
+    await db.push_subscriptions.delete_many({"user_id": current_user['user_id']})
+    await db.push_subscriptions.insert_one(subscription_doc)
+    
+    return {"success": True, "subscription_id": subscription_id}
+
+@api_router.delete("/push/unsubscribe")
+async def unsubscribe_push(request: Request):
+    """Remove push notification subscription"""
+    current_user = await get_current_user(request)
+    await db.push_subscriptions.delete_many({"user_id": current_user['user_id']})
+    return {"success": True}
+
+@api_router.get("/push/vapid-key")
+async def get_vapid_key():
+    """Get the public VAPID key for push notifications"""
+    # For production, generate and store VAPID keys properly
+    # This is a placeholder public key
+    return {"publicKey": "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U"}
+
+# Helper function to send push notification
+async def send_push_notification(user_id: str, title: str, body: str, data: dict = None):
+    """Queue a push notification for a user"""
+    notification_doc = {
+        "notification_id": f"push_{uuid.uuid4().hex[:12]}",
+        "user_id": user_id,
+        "title": title,
+        "body": body,
+        "data": data or {},
+        "sent": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.push_queue.insert_one(notification_doc)
+    
+    # Also store in notifications collection for in-app display
+    await db.notifications.insert_one({
+        "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+        "type": "push",
+        "user_id": user_id,
+        "family_id": user_id,  # Will be updated based on context
+        "message": f"{title}: {body}",
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+
 # Helper function to check geofences
 async def check_geofences(user, lat, lng):
     import math
