@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, Text, StyleSheet, ScrollView, TouchableOpacity, 
-  RefreshControl, ActivityIndicator, Modal, TextInput, Alert 
+  RefreshControl, ActivityIndicator, Modal, TextInput, Alert, Image 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
 import AnimatedBackground from '../components/AnimatedBackground';
+import MedalEmblem from '../components/MedalEmblem';
 
 export default function CalendarScreen({ navigation }) {
   const { user } = useAuth();
