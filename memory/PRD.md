@@ -273,6 +273,24 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - [x] Fixed Bearer token authentication in get_current_user()
 - [x] Tutorial endpoints verified working (content, complete, reset)
 
+### Session 13 - Biometric Auth & Real-time Chat (Feb 2026) ✅
+- [x] biometric.service.js for Face ID/Touch ID authentication
+- [x] Check biometric hardware support and enrollment
+- [x] Enable/disable biometric login with SecureStore
+- [x] Biometric login flow with session token retrieval
+- [x] Prompt to enable biometric after successful login
+- [x] websocket.service.js for real-time chat
+- [x] WebSocket connection with auto-reconnect
+- [x] Ping/pong heartbeat to keep connection alive
+- [x] Real-time message, typing, status, read events
+- [x] ChatScreen.js updated with WebSocket integration
+- [x] Typing indicators with animated dots
+- [x] Online status dots on avatars
+- [x] Read receipts (single/double checkmark)
+- [x] LoginScreen.js updated with biometric button
+- [x] SettingsScreen.js with biometric toggle and sync button
+- [x] AuthContext.js integrates WebSocket and biometric services
+
 ## API Endpoints
 
 ### Chat & Real-time (NEW - Session 4)
