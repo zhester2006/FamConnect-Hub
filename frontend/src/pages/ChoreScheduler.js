@@ -519,7 +519,6 @@ export default function ChoreScheduler({ user }) {
                             date={date}
                             dayName={dayName}
                             chores={getDayAssignments(date)}
-                            children={children}
                             onRemoveChore={handleRemoveAssignment}
                           />
                         ))}
