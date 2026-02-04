@@ -248,6 +248,51 @@ code {
     -webkit-text-fill-color: transparent;
 }
 
+/* Page Background Animations */
+@keyframes float-slow {
+  0%, 100% { 
+    transform: translateY(0) translateX(0) rotate(0deg); 
+    opacity: 0.5;
+  }
+  25% { 
+    transform: translateY(-30px) translateX(10px) rotate(5deg); 
+    opacity: 0.3;
+  }
+  50% { 
+    transform: translateY(-20px) translateX(-15px) rotate(-3deg); 
+    opacity: 0.6;
+  }
+  75% { 
+    transform: translateY(-40px) translateX(5px) rotate(2deg); 
+    opacity: 0.4;
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 20s ease-in-out infinite;
+}
+
+.duration-2000 {
+  transition-duration: 2000ms;
+}
+
+/* Radial gradient for vignette effect */
+.bg-radial-gradient {
+  background: radial-gradient(circle at center, transparent 0%, rgba(2, 6, 23, 0.6) 100%);
+}
+
+/* Screensaver Ken Burns effect */
+@keyframes kenburns {
+  0% { transform: scale(1) translate(0, 0); }
+  50% { transform: scale(1.1) translate(-2%, -1%); }
+  100% { transform: scale(1) translate(0, 0); }
+}
+
+.animate-kenburns {
+  animation: kenburns 30s ease-in-out infinite;
+}
+
+
 @layer utilities {
     .scrollbar-hide::-webkit-scrollbar {
         display: none;
