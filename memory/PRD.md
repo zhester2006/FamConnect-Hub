@@ -351,6 +351,14 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - [x] Open in Maps functionality (iOS Maps / Google Maps)
 - [x] Added expo-haptics and expo-location to dependencies
 
+### Session 19 - Sidebar Dropdown Fix (Feb 2026) ✅
+- [x] Fixed collapsed sidebar dropdown menu issue (P0 recurring bug)
+- [x] Removed unused `menuRef` prop from `DropdownMenuContent` component
+- [x] Moved `ref` assignment to wrapper div for proper click-outside detection
+- [x] Removed unused `DropdownPortal` component and `createPortal` import
+- [x] Verified mobile bottom navigation working correctly
+- [x] Verified desktop collapsed dropdown menu with all 15 navigation items
+
 ### Session 18 - Background Tracking, Push Alerts & Battery Monitoring (Feb 2026) ✅
 **Background Location Tracking:**
 - [x] Created location.service.js with full background tracking support
