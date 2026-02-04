@@ -1,38 +1,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, 
-  RefreshControl, ActivityIndicator, Modal, Alert, Switch 
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, 
+  RefreshControl, ActivityIndicator, Modal, TextInput, Alert 
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
-
-const CATEGORIES = [
-  { key: 'all', label: 'All', icon: 'list' },
-  { key: 'groceries', label: 'Groceries', icon: 'basket' },
-  { key: 'household', label: 'Household', icon: 'home' },
-  { key: 'requested', label: 'Requests', icon: 'hand-left' },
-];
+import AnimatedBackground from '../components/AnimatedBackground';
 
 export default function ShoppingListScreen({ navigation }) {
   const { user } = useAuth();
-  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [items, setItems] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newItem, setNewItem] = useState('');
-  const [newCategory, setNewCategory] = useState('groceries');
-  const [isUrgent, setIsUrgent] = useState(false);
-  const [adding, setAdding] = useState(false);
+  const [newItemName, setNewItemName] = useState('');
+  const [processing, setProcessing] = useState(null);
 
   const fetchItems = useCallback(async () => {
     try {
       const data = await apiService.getShoppingList();
       setItems(data.items || []);
     } catch (error) {
-      console.error('Failed to fetch shopping list:', error);
+      console.error('Failed to fetch shopping items:', error);
     } finally {
       setLoading(false);
     }
@@ -49,55 +39,55 @@ export default function ShoppingListScreen({ navigation }) {
   }, [fetchItems]);
 
   const handleAddItem = async () => {
-    if (!newItem.trim()) {
+    if (!newItemName.trim()) {
       Alert.alert('Error', 'Please enter an item name');
       return;
     }
-
-    setAdding(true);
+    
+    setProcessing('add');
     try {
-      await apiService.addShoppingItem({
-        name: newItem,
-        category: newCategory,
-        urgent: isUrgent,
-        requested_by: user?.user_id,
-      });
-      
-      setNewItem('');
-      setIsUrgent(false);
+      await apiService.addShoppingItem({ name: newItemName });
       setShowAddModal(false);
+      setNewItemName('');
       fetchItems();
+      Alert.alert('Added!', 'Item added to shopping list');
     } catch (error) {
       Alert.alert('Error', 'Failed to add item');
     } finally {
-      setAdding(false);
+      setProcessing(null);
     }
   };
 
-  const handleToggleItem = async (itemId, completed) => {
+  const handleUpdateStatus = async (itemId, status) => {
+    setProcessing(itemId);
     try {
-      await apiService.updateShoppingItem(itemId, { completed: !completed });
+      await apiService.updateShoppingItem(itemId, { status });
       fetchItems();
     } catch (error) {
-      console.error('Failed to toggle item:', error);
+      Alert.alert('Error', 'Failed to update item');
+    } finally {
+      setProcessing(null);
     }
   };
 
-  const handleDeleteItem = async (itemId) => {
+  const handleDeleteItem = (item) => {
     Alert.alert(
-      'Delete Item',
-      'Are you sure you want to remove this item?',
+      'Remove Item',
+      `Remove "${item.name}" from the list?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Remove',
           style: 'destructive',
           onPress: async () => {
+            setProcessing(item.item_id);
             try {
-              await apiService.deleteShoppingItem(itemId);
+              await apiService.delete(`/shopping/${item.item_id}`);
               fetchItems();
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete item');
+              Alert.alert('Error', 'Failed to remove item');
+            } finally {
+              setProcessing(null);
             }
           },
         },
@@ -105,76 +95,29 @@ export default function ShoppingListScreen({ navigation }) {
     );
   };
 
-  const filteredItems = items.filter(item => {
-    if (activeCategory === 'all') return true;
-    if (activeCategory === 'requested') return item.is_request;
-    return item.category === activeCategory;
-  });
-
-  const pendingItems = filteredItems.filter(i => !i.completed);
-  const completedItems = filteredItems.filter(i => i.completed);
-
-  const renderItem = ({ item }) => (
-    <TouchableOpacity 
-      style={[styles.itemCard, item.completed && styles.itemCompleted]}
-      onPress={() => handleToggleItem(item.item_id, item.completed)}
-      onLongPress={() => handleDeleteItem(item.item_id)}
-    >
-      <View style={[styles.checkbox, item.completed && styles.checkboxChecked]}>
-        {item.completed && <Ionicons name="checkmark" size={16} color="#fff" />}
-      </View>
-      
-      <View style={styles.itemContent}>
-        <View style={styles.itemHeader}>
-          <Text style={[styles.itemName, item.completed && styles.itemNameCompleted]}>
-            {item.name}
-          </Text>
-          {item.urgent && (
-            <View style={styles.urgentBadge}>
-              <Ionicons name="alert-circle" size={14} color="#ef4444" />
-            </View>
-          )}
-          {item.is_request && (
-            <View style={styles.requestBadge}>
-              <Ionicons name="hand-left" size={12} color="#818cf8" />
-            </View>
-          )}
-        </View>
-        <View style={styles.itemMeta}>
-          <Text style={styles.itemCategory}>{item.category}</Text>
-          {item.requested_by_name && (
-            <Text style={styles.requestedBy}>by {item.requested_by_name}</Text>
-          )}
-        </View>
-      </View>
-
-      <TouchableOpacity 
-        style={styles.deleteButton}
-        onPress={() => handleDeleteItem(item.item_id)}
-      >
-        <Ionicons name="trash-outline" size={18} color="#6b7280" />
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
+  const pendingItems = items.filter(i => i.status === 'pending');
+  const approvedItems = items.filter(i => i.status === 'approved' || !i.status);
+  const purchasedItems = items.filter(i => i.status === 'purchased');
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#818cf8" />
+        <ActivityIndicator size="large" color="#3b82f6" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#1e1b4b', '#312e81', '#1e1b4b']}
-        style={styles.gradient}
-      />
-      
+    <AnimatedBackground page="shopping">
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Shopping List</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>Shopping List</Text>
+          <Text style={styles.subtitle}>{approvedItems.length} items to buy</Text>
+        </View>
         <TouchableOpacity 
           style={styles.addButton}
           onPress={() => setShowAddModal(true)}
@@ -183,68 +126,122 @@ export default function ShoppingListScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Categories */}
-      <View style={styles.categories}>
-        {CATEGORIES.map(cat => (
-          <TouchableOpacity
-            key={cat.key}
-            style={[styles.categoryButton, activeCategory === cat.key && styles.categoryActive]}
-            onPress={() => setActiveCategory(cat.key)}
-          >
-            <Ionicons 
-              name={cat.icon} 
-              size={18} 
-              color={activeCategory === cat.key ? '#818cf8' : '#9ca3af'} 
-            />
-            <Text style={[styles.categoryText, activeCategory === cat.key && styles.categoryTextActive]}>
-              {cat.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Stats */}
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{pendingItems.length}</Text>
-          <Text style={styles.statLabel}>To Buy</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: '#10b981' }]}>{completedItems.length}</Text>
-          <Text style={styles.statLabel}>Done</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: '#ef4444' }]}>
-            {pendingItems.filter(i => i.urgent).length}
-          </Text>
-          <Text style={styles.statLabel}>Urgent</Text>
-        </View>
-      </View>
-
-      {/* Items List */}
-      <FlatList
-        data={[...pendingItems, ...completedItems]}
-        keyExtractor={item => item.item_id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
+      <ScrollView
+        style={styles.scrollView}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#818cf8" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />
         }
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="cart-outline" size={60} color="#6b7280" />
-            <Text style={styles.emptyText}>Shopping list is empty</Text>
-            <Text style={styles.emptySubtext}>Add items to get started</Text>
+      >
+        {/* Pending Approval - Parents Only */}
+        {user?.role === 'parent' && pendingItems.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="time" size={18} color="#f59e0b" />
+              <Text style={styles.sectionTitle}>Pending Approval</Text>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{pendingItems.length}</Text>
+              </View>
+            </View>
+            {pendingItems.map((item) => (
+              <View key={item.item_id} style={styles.itemCard}>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  {item.requested_by && (
+                    <Text style={styles.itemRequester}>Requested by {item.requested_by}</Text>
+                  )}
+                </View>
+                <View style={styles.itemActions}>
+                  <TouchableOpacity 
+                    style={styles.approveBtn}
+                    onPress={() => handleUpdateStatus(item.item_id, 'approved')}
+                    disabled={processing === item.item_id}
+                  >
+                    {processing === item.item_id ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Ionicons name="checkmark" size={20} color="#fff" />
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.rejectBtn}
+                    onPress={() => handleUpdateStatus(item.item_id, 'rejected')}
+                    disabled={processing === item.item_id}
+                  >
+                    <Ionicons name="close" size={20} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
           </View>
-        }
-      />
+        )}
+
+        {/* To Buy */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="cart" size={18} color="#3b82f6" />
+            <Text style={styles.sectionTitle}>To Buy</Text>
+          </View>
+          {approvedItems.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Ionicons name="cart-outline" size={48} color="#6b7280" />
+              <Text style={styles.emptyText}>Shopping list is empty!</Text>
+              <Text style={styles.emptySubtext}>Tap + to add items</Text>
+            </View>
+          ) : (
+            approvedItems.map((item) => (
+              <View key={item.item_id} style={styles.itemCard}>
+                <TouchableOpacity 
+                  style={styles.checkbox}
+                  onPress={() => handleUpdateStatus(item.item_id, 'purchased')}
+                  disabled={processing === item.item_id}
+                >
+                  {processing === item.item_id ? (
+                    <ActivityIndicator size="small" color="#3b82f6" />
+                  ) : (
+                    <Ionicons name="ellipse-outline" size={24} color="#3b82f6" />
+                  )}
+                </TouchableOpacity>
+                <Text style={styles.itemName}>{item.name}</Text>
+                <TouchableOpacity 
+                  style={styles.deleteBtn}
+                  onPress={() => handleDeleteItem(item)}
+                >
+                  <Ionicons name="trash-outline" size={18} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
+        </View>
+
+        {/* Recently Purchased */}
+        {purchasedItems.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="checkmark-circle" size={18} color="#10b981" />
+              <Text style={styles.sectionTitle}>Recently Purchased</Text>
+            </View>
+            {purchasedItems.map((item) => (
+              <View key={item.item_id} style={[styles.itemCard, styles.purchasedCard]}>
+                <View style={styles.checkboxDone}>
+                  <Ionicons name="checkmark-circle" size={24} color="#10b981" />
+                </View>
+                <Text style={styles.itemNameDone}>{item.name}</Text>
+                <TouchableOpacity 
+                  style={styles.deleteBtn}
+                  onPress={() => handleDeleteItem(item)}
+                >
+                  <Ionicons name="trash-outline" size={18} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <View style={{ height: 100 }} />
+      </ScrollView>
 
       {/* Add Item Modal */}
-      <Modal
-        visible={showAddModal}
-        animationType="slide"
-        transparent={true}
-      >
+      <Modal visible={showAddModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -253,323 +250,88 @@ export default function ShoppingListScreen({ navigation }) {
                 <Ionicons name="close" size={24} color="#9ca3af" />
               </TouchableOpacity>
             </View>
-
+            
             <TextInput
               style={styles.input}
               placeholder="Item name"
               placeholderTextColor="#6b7280"
-              value={newItem}
-              onChangeText={setNewItem}
+              value={newItemName}
+              onChangeText={setNewItemName}
               autoFocus
             />
-
-            <Text style={styles.label}>Category</Text>
-            <View style={styles.categorySelector}>
-              {[
-                { key: 'groceries', label: 'Groceries' },
-                { key: 'household', label: 'Household' },
-                { key: 'other', label: 'Other' },
-              ].map(cat => (
-                <TouchableOpacity
-                  key={cat.key}
-                  style={[styles.catOption, newCategory === cat.key && styles.catOptionActive]}
-                  onPress={() => setNewCategory(cat.key)}
-                >
-                  <Text style={[styles.catOptionText, newCategory === cat.key && styles.catOptionTextActive]}>
-                    {cat.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.cancelBtn} 
+                onPress={() => setShowAddModal(false)}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.submitBtn, processing === 'add' && styles.submitBtnDisabled]}
+                onPress={handleAddItem}
+                disabled={processing === 'add'}
+              >
+                {processing === 'add' ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.submitBtnText}>Add Item</Text>
+                )}
+              </TouchableOpacity>
             </View>
-
-            <View style={styles.urgentRow}>
-              <Text style={styles.urgentLabel}>Mark as urgent</Text>
-              <Switch
-                value={isUrgent}
-                onValueChange={setIsUrgent}
-                trackColor={{ false: '#374151', true: '#818cf8' }}
-                thumbColor={isUrgent ? '#fff' : '#9ca3af'}
-              />
-            </View>
-
-            <TouchableOpacity 
-              style={[styles.submitButton, adding && styles.submitButtonDisabled]}
-              onPress={handleAddItem}
-              disabled={adding}
-            >
-              {adding ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.submitButtonText}>Add to List</Text>
-              )}
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </View>
+    </AnimatedBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f0d1a',
-  },
-  gradient: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#0f0d1a',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#818cf8',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  categories: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 16,
-    gap: 8,
-  },
-  categoryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    gap: 6,
-  },
-  categoryActive: {
-    backgroundColor: 'rgba(129, 140, 248, 0.2)',
-    borderWidth: 1,
-    borderColor: '#818cf8',
-  },
-  categoryText: {
-    color: '#9ca3af',
-    fontSize: 13,
-  },
-  categoryTextActive: {
-    color: '#818cf8',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 20,
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#818cf8',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#9ca3af',
-    marginTop: 2,
-  },
-  listContent: {
-    padding: 20,
-    paddingTop: 0,
-    paddingBottom: 100,
-  },
-  itemCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(30, 27, 75, 0.6)',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  itemCompleted: {
-    opacity: 0.6,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#818cf8',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  checkboxChecked: {
-    backgroundColor: '#818cf8',
-  },
-  itemContent: {
-    flex: 1,
-  },
-  itemHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  itemName: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  itemNameCompleted: {
-    textDecorationLine: 'line-through',
-    color: '#9ca3af',
-  },
-  urgentBadge: {
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
-    padding: 4,
-    borderRadius: 6,
-  },
-  requestBadge: {
-    backgroundColor: 'rgba(129, 140, 248, 0.2)',
-    padding: 4,
-    borderRadius: 6,
-  },
-  itemMeta: {
-    flexDirection: 'row',
-    marginTop: 4,
-    gap: 8,
-  },
-  itemCategory: {
-    color: '#6b7280',
-    fontSize: 12,
-    textTransform: 'capitalize',
-  },
-  requestedBy: {
-    color: '#818cf8',
-    fontSize: 12,
-  },
-  deleteButton: {
-    padding: 8,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingTop: 60,
-  },
-  emptyText: {
-    color: '#9ca3af',
-    fontSize: 18,
-    marginTop: 16,
-  },
-  emptySubtext: {
-    color: '#6b7280',
-    fontSize: 14,
-    marginTop: 4,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#1e1b4b',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  input: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
-    padding: 16,
-    color: '#fff',
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  label: {
-    color: '#9ca3af',
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  categorySelector: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
-  },
-  catOption: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    alignItems: 'center',
-  },
-  catOptionActive: {
-    backgroundColor: 'rgba(129, 140, 248, 0.2)',
-    borderWidth: 1,
-    borderColor: '#818cf8',
-  },
-  catOptionText: {
-    color: '#9ca3af',
-    fontSize: 14,
-  },
-  catOptionTextActive: {
-    color: '#818cf8',
-  },
-  urgentRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingVertical: 8,
-  },
-  urgentLabel: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  submitButton: {
-    backgroundColor: '#818cf8',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f0d1a' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 48, paddingBottom: 12 },
+  backButton: { padding: 8 },
+  headerContent: { flex: 1, marginLeft: 8 },
+  title: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+  subtitle: { fontSize: 13, color: '#a5b4fc', marginTop: 2 },
+  addButton: { padding: 10, backgroundColor: '#3b82f6', borderRadius: 14 },
+  scrollView: { flex: 1, padding: 16 },
+  
+  // Sections
+  section: { marginBottom: 24 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  sectionTitle: { color: '#fff', fontSize: 16, fontWeight: 'bold', flex: 1 },
+  badge: { backgroundColor: 'rgba(245, 158, 11, 0.2)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 },
+  badgeText: { color: '#f59e0b', fontSize: 12, fontWeight: 'bold' },
+  
+  // Item Cards
+  itemCard: { backgroundColor: 'rgba(30, 27, 75, 0.8)', borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  purchasedCard: { opacity: 0.6 },
+  itemInfo: { flex: 1 },
+  itemName: { color: '#fff', fontSize: 15, fontWeight: '500', flex: 1 },
+  itemNameDone: { color: '#6b7280', fontSize: 15, textDecorationLine: 'line-through', flex: 1 },
+  itemRequester: { color: '#6b7280', fontSize: 12, marginTop: 2 },
+  itemActions: { flexDirection: 'row', gap: 8 },
+  checkbox: { marginRight: 12 },
+  checkboxDone: { marginRight: 12 },
+  deleteBtn: { padding: 8 },
+  approveBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#10b981', justifyContent: 'center', alignItems: 'center' },
+  rejectBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#ef4444', justifyContent: 'center', alignItems: 'center' },
+  
+  // Empty State
+  emptyCard: { backgroundColor: 'rgba(30, 27, 75, 0.5)', borderRadius: 20, padding: 40, alignItems: 'center' },
+  emptyText: { color: '#6b7280', fontSize: 16, marginTop: 12 },
+  emptySubtext: { color: '#4b5563', fontSize: 13, marginTop: 4 },
+  
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#1e1b4b', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+  input: { backgroundColor: 'rgba(15, 13, 26, 0.8)', borderRadius: 16, padding: 16, color: '#fff', fontSize: 16, borderWidth: 1, borderColor: 'rgba(59, 130, 246, 0.3)', marginBottom: 20 },
+  modalActions: { flexDirection: 'row', gap: 12 },
+  cancelBtn: { flex: 1, backgroundColor: '#374151', paddingVertical: 16, borderRadius: 30, alignItems: 'center' },
+  cancelBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  submitBtn: { flex: 1, backgroundColor: '#3b82f6', paddingVertical: 16, borderRadius: 30, alignItems: 'center' },
+  submitBtnDisabled: { opacity: 0.6 },
+  submitBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 });
