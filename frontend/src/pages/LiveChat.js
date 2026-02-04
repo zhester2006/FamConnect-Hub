@@ -214,8 +214,12 @@ export default function LiveChat({ user }) {
       wsRef.current.onclose = () => {
         console.log('WebSocket disconnected');
         setConnected(false);
-        // Attempt to reconnect after 3 seconds
-        reconnectTimeoutRef.current = setTimeout(connectWebSocket, 3000);
+        // Attempt to reconnect after 3 seconds using ref
+        reconnectTimeoutRef.current = setTimeout(() => {
+          if (connectWebSocketRef.current) {
+            connectWebSocketRef.current();
+          }
+        }, 3000);
       };
 
       wsRef.current.onerror = (error) => {
