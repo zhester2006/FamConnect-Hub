@@ -531,6 +531,58 @@ export default function HomeHubScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* Day Events Popup Modal */}
+      <Modal visible={showDayModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {selectedDay ? new Date(selectedDay.dateStr).toLocaleDateString('en-US', { 
+                  weekday: 'long', month: 'long', day: 'numeric' 
+                }) : 'Events'}
+              </Text>
+              <TouchableOpacity onPress={() => setShowDayModal(false)}>
+                <Ionicons name="close" size={24} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
+            
+            {dayEvents.length === 0 ? (
+              <View style={styles.emptyDayEvents}>
+                <Ionicons name="calendar-outline" size={48} color="#6b7280" />
+                <Text style={styles.emptyDayText}>No events this day</Text>
+                <TouchableOpacity 
+                  style={styles.addEventBtn}
+                  onPress={() => { setShowDayModal(false); setShowAddEvent(true); }}
+                >
+                  <Ionicons name="add" size={18} color="#fff" />
+                  <Text style={styles.addEventBtnText}>Add Event</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <ScrollView style={styles.dayEventsList}>
+                {dayEvents.map((event, index) => (
+                  <View key={event.event_id || index} style={styles.dayEventItem}>
+                    <View style={[
+                      styles.dayEventDot, 
+                      { backgroundColor: event.type === 'work' ? '#3b82f6' : 
+                                        event.type === 'appointment' ? '#f59e0b' : 
+                                        event.type === 'task' ? '#10b981' : '#06b6d4' }
+                    ]} />
+                    <View style={styles.dayEventInfo}>
+                      <Text style={styles.dayEventTitle}>{event.title}</Text>
+                      {event.time && (
+                        <Text style={styles.dayEventTime}>{event.time}</Text>
+                      )}
+                      <Text style={styles.dayEventType}>{event.type || 'event'}</Text>
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
