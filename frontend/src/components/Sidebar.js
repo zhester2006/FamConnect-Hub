@@ -477,49 +477,33 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
         {/* Mobile Bottom Navigation */}
         <MobileBottomNav user={user} currentPath={location.pathname} onNavigate={handleNavigate} />
 
-        {/* Floating Pill Container */}
+        {/* Fixed Top-Left Small Menu Button */}
         <div
           style={{
             position: 'fixed',
-            left: position.x,
-            top: position.y,
+            left: 12,
+            top: 12,
             zIndex: 100,
           }}
           className="hidden md:block"
           data-testid="floating-sidebar"
         >
-          {/* Drag Handle - visible on hover */}
-          <div 
-            ref={dragRef}
-            onMouseDown={handleDragStart}
-            onTouchStart={handleDragStart}
-            className={`absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-4 rounded-full bg-slate-800/80 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity ${isDragging ? 'opacity-100 cursor-grabbing' : 'cursor-grab'}`}
-            style={{ touchAction: 'none' }}
-          >
-            <GripVertical className="w-3 h-3 text-slate-400" />
-          </div>
-
-          {/* Main Pill Button */}
+          {/* Small Menu Button - Fixed Position */}
           <button
             type="button"
             onClick={() => setShowMenu(prev => !prev)}
-            className={`w-14 h-14 rounded-2xl backdrop-blur-xl bg-slate-900/90 border border-white/10 shadow-2xl flex items-center justify-center transition-all hover:scale-105 hover:border-primary/30 hover:shadow-primary/20 ${
+            className={`w-10 h-10 rounded-xl backdrop-blur-xl bg-slate-900/90 border border-white/10 shadow-lg flex items-center justify-center transition-all hover:scale-105 hover:border-primary/30 ${
               showMenu ? 'ring-2 ring-primary/50 border-primary/30' : ''
             }`}
             data-testid="floating-pill-btn"
           >
-            <img 
-              src="https://customer-assets.emergentagent.com/job_homebridge-5/artifacts/2ku9mapg_app_logo.png.png"
-              alt="FamFocus"
-              className="w-8 h-8 rounded-lg object-contain pointer-events-none"
-              draggable={false}
-            />
+            <Menu className="w-4 h-4 text-slate-300" />
           </button>
 
           {/* Dropdown Menu */}
           {showMenu && (
             <div 
-              className="absolute left-0 top-16"
+              className="absolute left-0 top-12"
               ref={menuRef}
               data-testid="floating-dropdown-menu"
             >
