@@ -411,10 +411,10 @@ export default function CalendarScreen({ navigation }) {
             <Text style={styles.inputLabel}>Event Type</Text>
             <View style={styles.typeSelector}>
               {[
-                { type: 'event', label: 'Event', icon: 'calendar' },
-                { type: 'birthday', label: 'Birthday', icon: 'gift' },
-                { type: 'appointment', label: 'Appt', icon: 'time' },
-                { type: 'reminder', label: 'Reminder', icon: 'notifications' },
+                { type: 'event', label: 'Event', icon: 'calendar', color: '#06b6d4' },
+                { type: 'work', label: 'Work', icon: 'briefcase', color: '#3b82f6' },
+                { type: 'appointment', label: 'Appt', icon: 'time', color: '#f59e0b' },
+                { type: 'task', label: 'Task', icon: 'checkbox', color: '#10b981' },
               ].map((item) => (
                 <TouchableOpacity
                   key={item.type}
