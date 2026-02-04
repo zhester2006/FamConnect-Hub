@@ -66,15 +66,21 @@ export default function ChoresScreen({ navigation }) {
   };
 
   const formatDate = (dateStr) => {
-    if (dateStr === 'Unscheduled') return dateStr;
-    const date = new Date(dateStr);
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    if (dateStr === today.toISOString().split('T')[0]) return 'Today';
-    if (dateStr === tomorrow.toISOString().split('T')[0]) return 'Tomorrow';
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    if (!dateStr || dateStr === 'Unscheduled') return dateStr || '';
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr;
+      
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      if (dateStr === today.toISOString().split('T')[0]) return 'Today';
+      if (dateStr === tomorrow.toISOString().split('T')[0]) return 'Tomorrow';
+      return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    } catch (error) {
+      return dateStr || '';
+    }
   };
 
   if (loading) {
