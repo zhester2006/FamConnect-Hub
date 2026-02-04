@@ -37,7 +37,8 @@ def get_session_token(request: Request, authorization: Optional[str] = None) -> 
 
 # Helper function to get current user
 async def get_current_user(request: Request):
-    token = get_session_token(request)
+    authorization = request.headers.get('Authorization')
+    token = get_session_token(request, authorization)
     session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
     if not session:
         raise HTTPException(status_code=401, detail="Invalid session")
