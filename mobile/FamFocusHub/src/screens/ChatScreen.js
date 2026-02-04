@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
 import webSocketService from '../services/websocket.service';
+import { formatTime } from '../utils/dateUtils';
 
 export default function ChatScreen({ navigation }) {
   const { user } = useAuth();
