@@ -267,23 +267,44 @@ export default function ParentDashboard({ user }) {
             </div>
           </div>
 
-          {/* AI Chore Scheduler Button */}
-          <button
-            onClick={() => setShowAiScheduler(true)}
-            className="w-full glass-card rounded-xl p-4 flex items-center justify-between hover:border-primary/50 transition-all group"
-            data-testid="ai-scheduler-btn"
-          >
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-white" />
+          {/* Chore Scheduling Buttons */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* AI Chore Scheduler Button */}
+            <button
+              onClick={() => setShowAiScheduler(true)}
+              className="glass-card rounded-xl p-4 flex items-center justify-between hover:border-primary/50 transition-all group"
+              data-testid="ai-scheduler-btn"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-bold text-white">AI Scheduler</h3>
+                  <p className="text-xs text-slate-400">Auto-generate fair schedule</p>
+                </div>
               </div>
-              <div className="text-left">
-                <h3 className="font-bold text-white">AI Chore Scheduler</h3>
-                <p className="text-xs text-slate-400">Let AI create a fair chore schedule</p>
+              <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-primary transition-all" />
+            </button>
+
+            {/* Drag & Drop Scheduler Button */}
+            <button
+              onClick={() => navigate('/chore-scheduler')}
+              className="glass-card rounded-xl p-4 flex items-center justify-between hover:border-secondary/50 transition-all group"
+              data-testid="dnd-scheduler-btn"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center">
+                  <GripVertical className="w-5 h-5 text-white" />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-bold text-white">Manual Scheduler</h3>
+                  <p className="text-xs text-slate-400">Drag & drop chores</p>
+                </div>
               </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-primary transition-all" />
-          </button>
+              <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-secondary transition-all" />
+            </button>
+          </div>
 
           {/* Children Overview */}
           {children.length > 0 && (
