@@ -29,16 +29,33 @@ export default function RewardsScreen({ navigation }) {
 
   const fetchData = useCallback(async () => {
     try {
-      const [rewardsData, tasksData, pendingData, membersData] = await Promise.all([
+      const [rewardsData, tasksData, pendingData, membersData, leaderboardData] = await Promise.all([
         apiService.getRewards(),
         apiService.get('/tasks').catch(() => ({ tasks: [] })),
         apiService.get('/rewards/pending').catch(() => ({ pending: [] })),
         apiService.getFamilyMembers().catch(() => ({ members: [] })),
+        apiService.getLeaderboard().catch(() => ({ leaderboard: [] })),
       ]);
       setRewards(rewardsData.rewards || []);
       setTasks(tasksData.tasks || []);
       setPendingRedemptions(pendingData.pending || []);
-      setFamilyMembers((membersData.members || []).filter(m => m.role === 'child'));
+      
+      const members = membersData.members || [];
+      const leaderboard = leaderboardData.leaderboard || [];
+      
+      // Create a map of user_id to rank
+      const rankMap = {};
+      leaderboard.forEach((child, index) => {
+        rankMap[child.user_id] = index + 1;
+      });
+      
+      // Add rank to members
+      const childrenWithRank = members.filter(m => m.role === 'child').map(member => ({
+        ...member,
+        rank: rankMap[member.user_id] || null
+      }));
+      
+      setFamilyMembers(childrenWithRank);
     } catch (error) {
       console.error('Failed to fetch rewards:', error);
     } finally {
