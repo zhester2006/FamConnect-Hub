@@ -229,9 +229,16 @@ export default function ParentDashboard({ navigation }) {
                   onPress={() => navigation.navigate('ChildSpace', { child })}
                 >
                   <View style={styles.childLeft}>
-                    <View style={styles.avatar}>
-                      <Text style={styles.avatarText}>{child.name?.charAt(0)}</Text>
-                      {child.online_status && <View style={styles.onlineBadge} />}
+                    <View style={styles.avatarContainer}>
+                      <View style={styles.avatar}>
+                        <Text style={styles.avatarText}>{child.name?.charAt(0)}</Text>
+                        {child.online_status && <View style={styles.onlineBadge} />}
+                      </View>
+                      {child.rank && child.rank <= 3 && (
+                        <View style={styles.medalPosition}>
+                          <MedalEmblem rank={child.rank} size="small" />
+                        </View>
+                      )}
                     </View>
                     <View style={styles.childInfo}>
                       <Text style={styles.childName}>{child.nickname || child.name}</Text>
