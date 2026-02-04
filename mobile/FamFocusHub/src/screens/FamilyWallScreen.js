@@ -283,31 +283,41 @@ export default function FamilyWallScreen({ navigation }) {
     );
   };
 
-  const renderPost = ({ item }) => (
-    <View style={styles.postCard}>
-      <View style={styles.postHeader}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{item.author_name?.charAt(0) || '?'}</Text>
-        </View>
-        <View style={styles.postMeta}>
-          <Text style={styles.authorName}>{item.author_name}</Text>
-          <Text style={styles.postTime}>{formatDate(item.created_at)}</Text>
-        </View>
-        {item.type === 'poll' && (
-          <View style={styles.pollBadge}>
-            <Ionicons name="stats-chart" size={12} color="#818cf8" />
-            <Text style={styles.pollBadgeText}>Poll</Text>
+  const renderPost = ({ item }) => {
+    const authorRank = getUserRank(item.author_id);
+    
+    return (
+      <View style={styles.postCard}>
+        <View style={styles.postHeader}>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{item.author_name?.charAt(0) || '?'}</Text>
+            </View>
+            {authorRank && authorRank <= 3 && (
+              <View style={styles.medalPosition}>
+                <MedalEmblem rank={authorRank} size="tiny" />
+              </View>
+            )}
           </View>
+          <View style={styles.postMeta}>
+            <Text style={styles.authorName}>{item.author_name}</Text>
+            <Text style={styles.postTime}>{formatDate(item.created_at)}</Text>
+          </View>
+          {item.type === 'poll' && (
+            <View style={styles.pollBadge}>
+              <Ionicons name="stats-chart" size={12} color="#818cf8" />
+              <Text style={styles.pollBadgeText}>Poll</Text>
+            </View>
+          )}
+        </View>
+
+        <Text style={styles.postContent}>{item.content}</Text>
+        
+        {item.gif_url && (
+          <Image source={{ uri: item.gif_url }} style={styles.gifImage} resizeMode="cover" />
         )}
-      </View>
 
-      <Text style={styles.postContent}>{item.content}</Text>
-      
-      {item.gif_url && (
-        <Image source={{ uri: item.gif_url }} style={styles.gifImage} resizeMode="cover" />
-      )}
-
-      {item.image_url && (
+        {item.image_url && (
         <Image source={{ uri: item.image_url }} style={styles.postImage} resizeMode="cover" />
       )}
 
