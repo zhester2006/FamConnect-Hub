@@ -303,15 +303,16 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 ## Backlog / Future Tasks
 
 ### P1 - Medium Priority
-- [ ] Advanced chore scheduling with drag-and-drop
-- [ ] Welcome tutorial video for new users
-- [ ] Child nickname display in UI components
+- [ ] Family switching UI (use existing endpoints)
+- [ ] Family invite system completion
+- [ ] Drag-and-drop chore calendar
+- [ ] Video welcome tutorial
 
 ### P2 - Low Priority
-- [ ] Advanced analytics/reporting
-- [ ] Multiple family support
-- [ ] Export data feature
+- [ ] Advanced analytics with charts library
 - [ ] Mobile app (React Native)
+- [ ] PDF export option
+- [ ] Notification preferences granularity
 
 ## Notes
 - **Weather**: Uses OpenWeatherMap API (fallback to simulated if no key)
