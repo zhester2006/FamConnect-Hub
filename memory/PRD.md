@@ -344,16 +344,17 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 ## Backlog / Future Tasks
 
 ### P1 - Medium Priority
+- [ ] AI Daily Quote enhancement (currently static quote)
+- [ ] Live Chat read receipts & online status indicators
 - [ ] Family switching UI (use existing endpoints)
 - [ ] Family invite system completion
-- [ ] Drag-and-drop chore calendar
-- [ ] Video welcome tutorial
 
 ### P2 - Low Priority
 - [ ] Advanced analytics with charts library
 - [ ] Mobile app (React Native)
 - [ ] PDF export option
 - [ ] Notification preferences granularity
+- [ ] Profile background customization
 
 ## Notes
 - **Weather**: Uses OpenWeatherMap API (fallback to simulated if no key)
