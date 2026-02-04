@@ -63,23 +63,17 @@ export default function ChatScreen({ navigation }) {
   const initializeChat = async () => {
     await fetchMessages();
     
-    const token = await getSessionToken();
+    // Get token from API service (which stores it after login)
+    const token = apiService.sessionToken;
     if (token) {
       webSocketService.setSessionToken(token);
       setupWebSocketListeners();
       webSocketService.connect();
+    } else {
+      console.log('No session token available for WebSocket');
     }
     
     setLoading(false);
-  };
-
-  const getSessionToken = async () => {
-    try {
-      const SecureStore = require('expo-secure-store');
-      return await SecureStore.getItemAsync('famfocus_session_token');
-    } catch (error) {
-      return null;
-    }
   };
 
   const setupWebSocketListeners = () => {
