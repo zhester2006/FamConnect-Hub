@@ -127,11 +127,21 @@ export default function ChatScreen({ navigation }) {
 
   const fetchMessages = async () => {
     try {
-      const data = await apiService.getMessages();
-      setMessages(data.messages || []);
+      const [messagesData, leaderboardData] = await Promise.all([
+        apiService.getMessages(),
+        apiService.getLeaderboard().catch(() => ({ leaderboard: [] })),
+      ]);
+      setMessages(messagesData.messages || []);
+      setLeaderboard(leaderboardData.leaderboard || []);
     } catch (error) {
       console.error('Failed to fetch messages:', error);
     }
+  };
+
+  // Get user's rank from leaderboard
+  const getUserRank = (userId) => {
+    const index = leaderboard.findIndex(u => u.user_id === userId);
+    return index !== -1 ? index + 1 : null;
   };
 
   const handleSend = async () => {
