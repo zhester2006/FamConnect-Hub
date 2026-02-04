@@ -49,7 +49,10 @@ export default function WelcomePage() {
         credentials: 'include'
       });
       const data = await response.json();
-      if (data.user) {
+      if (data.user && data.session_token) {
+        // Store token in localStorage for dev mode
+        localStorage.setItem('dev_session_token', data.session_token);
+        localStorage.setItem('dev_user', JSON.stringify(data.user));
         window.location.href = role === 'parent' ? '/dashboard' : '/space';
       }
     } catch (error) {
