@@ -347,8 +347,20 @@ export default function ChoresScreen({ navigation }) {
                   <View style={styles.choreMeta}>
                     {chore.assignee_name && (
                       <View style={styles.assigneeBadge}>
-                        <Ionicons name="person" size={12} color="#a5b4fc" />
+                        {chore.assignee_picture ? (
+                          <Image 
+                            source={{ uri: chore.assignee_picture }} 
+                            style={styles.assigneeAvatar}
+                          />
+                        ) : (
+                          <View style={styles.assigneeAvatarPlaceholder}>
+                            <Text style={styles.assigneeAvatarText}>{chore.assignee_name?.charAt(0)}</Text>
+                          </View>
+                        )}
                         <Text style={styles.assigneeText}>{chore.assignee_name}</Text>
+                        {chore.assignee_rank && chore.assignee_rank <= 3 && (
+                          <MedalEmblem rank={chore.assignee_rank} size="tiny" />
+                        )}
                       </View>
                     )}
                     <Text style={styles.dateText}>{formatDate(chore.scheduled_date)}</Text>
