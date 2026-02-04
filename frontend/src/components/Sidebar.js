@@ -383,12 +383,15 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
           data-testid="floating-sidebar"
         >
           {/* Main Pill Button */}
-          <div
+          <button
+            type="button"
             onMouseDown={handleDragStart}
             onTouchStart={handleDragStart}
             onClick={(e) => {
-              if (!isDragging) {
-                e.stopPropagation();
+              e.stopPropagation();
+              // Only toggle menu if we weren't dragging
+              const dragDuration = Date.now() - dragStartTime.current;
+              if (dragDuration < 300 || !isDragging) {
                 setShowMenu(prev => !prev);
               }
             }}
@@ -402,7 +405,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
               className="w-8 h-8 rounded-lg object-contain pointer-events-none"
               draggable={false}
             />
-          </div>
+          </button>
 
           {/* Drag Handle Indicator */}
           <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex gap-0.5 opacity-50">
