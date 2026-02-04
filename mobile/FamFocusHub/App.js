@@ -3,6 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, StyleSheet, AppState } from 'react-native';
 import { AuthProvider } from './src/context/AuthContext';
+import { ThemeProvider } from './src/context/ThemeContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import pushNotificationService from './src/services/push.service';
 import offlineService from './src/services/offline.service';
