@@ -1,5 +1,5 @@
 // API Configuration for FamFocus Hub Mobile App
-const API_BASE_URL = 'https://famhub-app.preview.emergentagent.com/api';
+const API_BASE_URL = 'https://familyhub-65.preview.emergentagent.com/api';
 
 export const API_ENDPOINTS = {
   // Auth
