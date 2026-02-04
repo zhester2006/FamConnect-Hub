@@ -107,10 +107,49 @@ export default function Settings({ user }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showThemes, setShowThemes] = useState(false);
+  
+  // Push notification state
+  const [pushSupported, setPushSupported] = useState(false);
+  const [pushPermission, setPushPermission] = useState('default');
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
 
   useEffect(() => {
     applyTheme(theme, themeMode);
   }, [theme, themeMode]);
+
+  useEffect(() => {
+    // Check push notification status
+    setPushSupported(isPushSupported());
+    setPushPermission(getPermissionStatus());
+    
+    const checkPushStatus = async () => {
+      const subscribed = await isSubscribed();
+      setPushEnabled(subscribed);
+    };
+    checkPushStatus();
+  }, []);
+
+  const handleTogglePush = async () => {
+    setPushLoading(true);
+    try {
+      if (pushEnabled) {
+        await unsubscribeFromPush();
+        setPushEnabled(false);
+        toast.success('Push notifications disabled');
+      } else {
+        await subscribeToPush();
+        setPushEnabled(true);
+        setPushPermission('granted');
+        toast.success('Push notifications enabled!');
+      }
+    } catch (error) {
+      console.error('Push toggle error:', error);
+      toast.error(error.message || 'Failed to toggle push notifications');
+    } finally {
+      setPushLoading(false);
+    }
+  };
 
   const handleSaveSettings = async () => {
     setSaving(true);
