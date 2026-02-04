@@ -195,6 +195,48 @@ export default function ChildSpace({ navigation, route }) {
           </ScrollView>
         </View>
 
+        {/* Reading Log Preview */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>📚 Reading Log</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('ReadingLogs')}>
+              <Text style={styles.seeAll}>See All</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {readingLogs.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Ionicons name="book-outline" size={40} color="#6b7280" />
+              <Text style={styles.emptyTitle}>No Books Yet</Text>
+              <Text style={styles.emptyText}>Start reading and log your books!</Text>
+            </View>
+          ) : (
+            readingLogs.map((log) => (
+              <View key={log.log_id} style={styles.readingCard}>
+                <View style={styles.readingInfo}>
+                  <Text style={styles.bookTitle}>{log.book_title}</Text>
+                  <Text style={styles.bookAuthor}>{log.author || 'Unknown Author'}</Text>
+                  <View style={styles.readingMeta}>
+                    <Ionicons name="book" size={12} color="#6b7280" />
+                    <Text style={styles.pagesText}>{log.pages_read || 0} pages</Text>
+                  </View>
+                </View>
+                <View style={[
+                  styles.statusBadge,
+                  { backgroundColor: log.status === 'approved' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(251, 191, 36, 0.2)' }
+                ]}>
+                  <Text style={[
+                    styles.statusText,
+                    { color: log.status === 'approved' ? '#10b981' : '#fbbf24' }
+                  ]}>
+                    {log.status === 'approved' ? '✓ Approved' : '⏳ Pending'}
+                  </Text>
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <TouchableOpacity 
