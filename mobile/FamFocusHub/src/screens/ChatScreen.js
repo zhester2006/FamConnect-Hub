@@ -305,6 +305,101 @@ export default function ChatScreen({ navigation }) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Image picker
+  const handlePickImage = async () => {
+    setShowAttachmentMenu(false);
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Needed', 'Please allow access to your photos.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setSelectedImage(result.assets[0]);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to select image');
+    }
+  };
+
+  // Send image message
+  const sendImageMessage = async () => {
+    if (!selectedImage) return;
+    setSending(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', {
+        uri: selectedImage.uri,
+        type: 'image/jpeg',
+        name: 'chat_image.jpg',
+      });
+
+      const uploadResponse = await fetch(`${apiService.baseUrl}/upload/image`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiService.sessionToken}` },
+        body: formData,
+      });
+
+      let imageUrl = selectedImage.uri;
+      if (uploadResponse.ok) {
+        const uploadData = await uploadResponse.json();
+        imageUrl = uploadData.url || selectedImage.uri;
+      }
+
+      await apiService.post('/messages', {
+        content: newMessage || '📷 Image',
+        type: 'image',
+        image_url: imageUrl,
+      });
+
+      setSelectedImage(null);
+      setNewMessage('');
+      fetchMessages();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to send image');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // GIF search
+  const searchGifs = async (query) => {
+    if (!query.trim()) return;
+    try {
+      const data = await apiService.searchGifs(query);
+      setGifs(data.results || []);
+    } catch (error) {
+      console.error('GIF search failed:', error);
+    }
+  };
+
+  // Send GIF message
+  const sendGifMessage = async (gif) => {
+    setShowGifModal(false);
+    setSending(true);
+    
+    try {
+      await apiService.post('/messages', {
+        content: '📷 GIF',
+        type: 'gif',
+        gif_url: gif.url,
+      });
+      fetchMessages();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to send GIF');
+    } finally {
+      setSending(false);
+    }
+  };
+
   const renderMessage = ({ item }) => {
     const isOwn = item.user_id === user?.user_id;
     const isOnline = onlineUsers.includes(item.user_id);
