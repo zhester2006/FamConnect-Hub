@@ -2278,6 +2278,111 @@ async def switch_family(family_id: str, request: Request):
     
     return {"success": True, "current_family_id": family_id}
 
+@api_router.get("/families/invites/pending")
+async def get_pending_invites(request: Request):
+    """Get pending invites for current user"""
+    current_user = await get_current_user(request)
+    email = current_user.get('email')
+    
+    invites = await db.family_invites.find(
+        {"email": email, "status": "pending"},
+        {"_id": 0}
+    ).to_list(50)
+    
+    # Get family details for each invite
+    for invite in invites:
+        family = await db.families.find_one(
+            {"family_id": invite['family_id']},
+            {"_id": 0}
+        )
+        if family:
+            invite['family_name'] = family.get('name', 'Unknown Family')
+        else:
+            # If family_id is user_id (parent's family)
+            parent = await db.users.find_one({"user_id": invite['family_id']}, {"_id": 0})
+            if parent:
+                invite['family_name'] = parent.get('family_name', f"{parent.get('name')}'s Family")
+    
+    return {"invites": invites}
+
+@api_router.post("/families/invites/{invite_id}/accept")
+async def accept_invite(invite_id: str, request: Request):
+    """Accept a family invitation"""
+    current_user = await get_current_user(request)
+    
+    invite = await db.family_invites.find_one({"invite_id": invite_id}, {"_id": 0})
+    if not invite:
+        raise HTTPException(status_code=404, detail="Invite not found")
+    
+    if invite['email'] != current_user.get('email'):
+        raise HTTPException(status_code=403, detail="This invite is not for you")
+    
+    if invite['status'] != 'pending':
+        raise HTTPException(status_code=400, detail="Invite already processed")
+    
+    # Create membership
+    membership_doc = {
+        "membership_id": f"mem_{uuid.uuid4().hex[:12]}",
+        "family_id": invite['family_id'],
+        "user_id": current_user['user_id'],
+        "role": invite.get('role', 'member'),
+        "joined_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.family_memberships.insert_one(membership_doc)
+    
+    # Update invite status
+    await db.family_invites.update_one(
+        {"invite_id": invite_id},
+        {"$set": {"status": "accepted", "accepted_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"success": True, "family_id": invite['family_id']}
+
+@api_router.post("/families/invites/{invite_id}/decline")
+async def decline_invite(invite_id: str, request: Request):
+    """Decline a family invitation"""
+    current_user = await get_current_user(request)
+    
+    invite = await db.family_invites.find_one({"invite_id": invite_id}, {"_id": 0})
+    if not invite:
+        raise HTTPException(status_code=404, detail="Invite not found")
+    
+    if invite['email'] != current_user.get('email'):
+        raise HTTPException(status_code=403, detail="This invite is not for you")
+    
+    await db.family_invites.update_one(
+        {"invite_id": invite_id},
+        {"$set": {"status": "declined", "declined_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"success": True}
+
+@api_router.delete("/families/{family_id}/leave")
+async def leave_family(family_id: str, request: Request):
+    """Leave a family"""
+    current_user = await get_current_user(request)
+    
+    # Can't leave own family as parent
+    if current_user['user_id'] == family_id:
+        raise HTTPException(status_code=400, detail="Cannot leave your own family")
+    
+    result = await db.family_memberships.delete_one({
+        "family_id": family_id,
+        "user_id": current_user['user_id']
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Membership not found")
+    
+    # If this was current family, switch to primary
+    if current_user.get('current_family_id') == family_id:
+        await db.users.update_one(
+            {"user_id": current_user['user_id']},
+            {"$unset": {"current_family_id": ""}}
+        )
+    
+    return {"success": True}
+
 # ==================== WELCOME TUTORIAL ====================
 
 @api_router.get("/tutorial/content")
