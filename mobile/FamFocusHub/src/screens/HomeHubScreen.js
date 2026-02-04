@@ -434,7 +434,21 @@ export default function HomeHubScreen({ navigation }) {
                     />
                     <View style={styles.choreInfo}>
                       <Text style={styles.choreTitle} numberOfLines={1}>{chore.title}</Text>
-                      <Text style={styles.chorePoints}>+{chore.points || 10}pts</Text>
+                      <View style={styles.choreMetaRow}>
+                        {chore.assignee_name && (
+                          <View style={styles.choreAssignee}>
+                            {chore.assignee_picture ? (
+                              <Image source={{ uri: chore.assignee_picture }} style={styles.choreAssigneeAvatar} />
+                            ) : (
+                              <View style={styles.choreAssigneeAvatarPlaceholder}>
+                                <Text style={styles.choreAssigneeAvatarText}>{chore.assignee_name?.charAt(0)}</Text>
+                              </View>
+                            )}
+                            <Text style={styles.choreAssigneeName}>{chore.assignee_name}</Text>
+                          </View>
+                        )}
+                        <Text style={styles.chorePoints}>+{chore.points || 10}pts</Text>
+                      </View>
                     </View>
                   </View>
                 ))
