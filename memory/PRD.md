@@ -247,14 +247,13 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 ## Backlog / Future Tasks
 
 ### P0 - High Priority
-- [ ] Real-time chat (WebSocket)
-- [ ] AI Onboarding Guide with Pixie
+- [ ] Live Chat read receipts enhancement (show who read)
+- [ ] GPS integration with Google Maps API (needs API key activation)
 
 ### P1 - Medium Priority
-- [ ] Profile picture uploads
 - [ ] GIF attachments in Family Wall
-- [ ] Dinner planner AI
-- [ ] Welcome tutorial for new users
+- [ ] Advanced chore scheduling with AI
+- [ ] Welcome tutorial video for new users
 - [ ] Child nickname customization
 
 ### P2 - Low Priority
