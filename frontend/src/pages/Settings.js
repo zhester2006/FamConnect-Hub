@@ -434,6 +434,64 @@ export default function Settings({ user }) {
             </div>
           </div>
 
+          {/* Battery Sharing (for children only) */}
+          {user?.role === 'child' && (
+            <div className="glass-card rounded-xl p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <Shield className="w-5 h-5" style={{ color: 'var(--color-secondary)' }} />
+                  <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Privacy & Permissions</h2>
+                </div>
+              </div>
+              
+              {/* Current Battery Status */}
+              {batteryLevel !== null && (
+                <div className="flex items-center space-x-3 mb-4 p-3 rounded-xl" style={{ backgroundColor: 'var(--color-bg)' }}>
+                  {isCharging ? (
+                    <BatteryCharging className="w-6 h-6 text-green-400" />
+                  ) : (
+                    <Battery className={`w-6 h-6 ${batteryLevel <= 20 ? 'text-red-400' : batteryLevel <= 50 ? 'text-yellow-400' : 'text-green-400'}`} />
+                  )}
+                  <div className="flex-1">
+                    <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                      Current Battery: {batteryLevel}%
+                      {isCharging && <span className="text-green-400 ml-2">Charging</span>}
+                    </p>
+                    <div className="mt-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--color-card)' }}>
+                      <div 
+                        className={`h-full transition-all ${batteryLevel <= 20 ? 'bg-red-500' : batteryLevel <= 50 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                        style={{ width: `${batteryLevel}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Battery Sharing Toggle */}
+              <div className="flex items-center justify-between p-3 rounded-xl" style={{ backgroundColor: 'var(--color-bg)' }}>
+                <div className="flex-1">
+                  <p className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>Share Battery with Parents</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--color-text)', opacity: 0.5 }}>
+                    Let your parents see your device's battery level
+                  </p>
+                </div>
+                <button
+                  onClick={handleToggleBattery}
+                  className={`relative w-12 h-7 rounded-full transition-all ${shareBattery ? 'bg-green-500' : 'bg-slate-600'}`}
+                  data-testid="battery-toggle"
+                >
+                  <div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${shareBattery ? 'left-6' : 'left-1'}`} />
+                </button>
+              </div>
+              
+              {shareBattery && (
+                <p className="text-xs mt-2 px-3" style={{ color: 'var(--color-text)', opacity: 0.4 }}>
+                  Your battery status will be visible to your parents. They'll be notified if your battery gets very low.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Theme Selection */}
           <div className="glass-card rounded-xl p-4">
             <div className="flex items-center space-x-2 mb-4">
