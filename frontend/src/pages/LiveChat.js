@@ -802,31 +802,72 @@ export default function LiveChat({ user }) {
 
         {/* Input */}
         <div className="sticky bottom-0 z-20 p-3 lg:p-4 pb-20 md:pb-4 glass-card border-t border-white/10 backdrop-blur-2xl bg-slate-950/90">
-          <form onSubmit={handleSendMessage} className="flex items-center space-x-2" data-testid="message-form">
-            <button
-              type="button"
-              className="p-2.5 lg:p-3 hover:bg-white/5 rounded-full transition-all flex-shrink-0"
-              data-testid="emoji-button"
-            >
-              <Smile className="w-5 h-5 text-slate-400" />
-            </button>
-            <input
-              type="text"
-              value={newMessage}
-              onChange={handleTyping}
-              placeholder="Type a message..."
-              className="flex-1 bg-slate-900/50 border border-slate-800 rounded-full px-4 py-3 text-white placeholder:text-slate-600 focus:border-primary focus:outline-none text-sm lg:text-base"
-              data-testid="message-input"
+          {/* Voice Recorder */}
+          {showVoiceRecorder ? (
+            <VoiceRecorder
+              onRecordingComplete={handleVoiceSend}
+              onCancel={() => setShowVoiceRecorder(false)}
             />
-            <button
-              type="submit"
-              disabled={!newMessage.trim()}
-              className="p-2.5 lg:p-3 bg-primary hover:bg-primary/80 disabled:bg-slate-700 disabled:cursor-not-allowed active:scale-95 rounded-full transition-all neon-glow flex-shrink-0"
-              data-testid="send-button"
-            >
-              <Send className="w-5 h-5 text-white" />
-            </button>
-          </form>
+          ) : (
+            <>
+              {/* Emoji Quick Picker */}
+              {showEmojiPicker && (
+                <div className="mb-3 p-3 bg-slate-800/80 rounded-2xl border border-slate-700" data-testid="emoji-picker">
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {quickEmojis.map((emoji, i) => (
+                      <button
+                        key={i}
+                        onClick={() => insertEmoji(emoji)}
+                        className="w-10 h-10 flex items-center justify-center hover:bg-slate-700 rounded-lg transition-all text-xl hover:scale-110"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <form onSubmit={handleSendMessage} className="flex items-center space-x-2" data-testid="message-form">
+                <button
+                  type="button"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className={`p-2.5 lg:p-3 rounded-full transition-all flex-shrink-0 ${
+                    showEmojiPicker ? 'bg-primary/20 text-primary' : 'hover:bg-white/5 text-slate-400'
+                  }`}
+                  data-testid="emoji-button"
+                >
+                  <Smile className="w-5 h-5" />
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => setShowVoiceRecorder(true)}
+                  className="p-2.5 lg:p-3 hover:bg-white/5 rounded-full transition-all flex-shrink-0"
+                  data-testid="voice-button"
+                  title="Record voice message"
+                >
+                  <Mic className="w-5 h-5 text-slate-400" />
+                </button>
+                
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={handleTyping}
+                  placeholder="Type a message..."
+                  className="flex-1 bg-slate-900/50 border border-slate-800 rounded-full px-4 py-3 text-white placeholder:text-slate-600 focus:border-primary focus:outline-none text-sm lg:text-base"
+                  data-testid="message-input"
+                />
+                <button
+                  type="submit"
+                  disabled={!newMessage.trim()}
+                  className="p-2.5 lg:p-3 bg-primary hover:bg-primary/80 disabled:bg-slate-700 disabled:cursor-not-allowed active:scale-95 rounded-full transition-all neon-glow flex-shrink-0"
+                  data-testid="send-button"
+                >
+                  <Send className="w-5 h-5 text-white" />
+                </button>
+              </form>
+            </>
+          )}
         </div>
       </main>
     </div>
