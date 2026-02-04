@@ -369,22 +369,29 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
         {/* Mobile Bottom Navigation */}
         <MobileBottomNav user={user} currentPath={location.pathname} onNavigate={handleNavigate} />
 
-        {/* Floating Pill - Hidden on mobile, shown on desktop */}
+        {/* Floating Pill Container */}
         <div
-          ref={dragRef}
-          onMouseDown={handleDragStart}
-          onTouchStart={handleDragStart}
           style={{
             position: 'fixed',
             left: position.x,
             top: position.y,
             zIndex: 100,
-            touchAction: 'none',
           }}
-          className={`hidden md:block select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+          className="hidden md:block"
           data-testid="floating-sidebar"
         >
-          {/* Main Pill Button - separate from drag container */}
+          {/* Drag Handle - visible on hover */}
+          <div 
+            ref={dragRef}
+            onMouseDown={handleDragStart}
+            onTouchStart={handleDragStart}
+            className={`absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-4 rounded-full bg-slate-800/80 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity ${isDragging ? 'opacity-100 cursor-grabbing' : 'cursor-grab'}`}
+            style={{ touchAction: 'none' }}
+          >
+            <GripVertical className="w-3 h-3 text-slate-400" />
+          </div>
+
+          {/* Main Pill Button */}
           <button
             type="button"
             onClick={() => setShowMenu(prev => !prev)}
@@ -401,7 +408,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
             />
           </button>
 
-          {/* Dropdown Menu - rendered directly below the pill */}
+          {/* Dropdown Menu */}
           {showMenu && (
             <div className="absolute left-0 top-16" ref={menuRef}>
               <DropdownMenuContent 
@@ -415,13 +422,6 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
               />
             </div>
           )}
-
-          {/* Drag Handle Indicator */}
-          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex gap-0.5 opacity-50">
-            <div className="w-1 h-1 rounded-full bg-slate-500" />
-            <div className="w-1 h-1 rounded-full bg-slate-500" />
-            <div className="w-1 h-1 rounded-full bg-slate-500" />
-          </div>
         </div>
       </>
     );
