@@ -132,6 +132,7 @@ export default function SettingsScreen({ navigation }) {
         { icon: 'chatbubbles-outline', label: 'Family Wall', onPress: () => navigation.navigate('FamilyWall') },
         { icon: 'cart-outline', label: 'Shopping List', onPress: () => navigation.navigate('Shopping') },
         { icon: 'restaurant-outline', label: 'Dinner Planner', onPress: () => navigation.navigate('DinnerPlanner') },
+        { icon: 'location-outline', label: 'Location & Check-in', onPress: () => navigation.navigate('Location') },
         { icon: 'trophy-outline', label: 'Leaderboard', onPress: () => navigation.navigate('Leaderboard') },
       ]
     },
