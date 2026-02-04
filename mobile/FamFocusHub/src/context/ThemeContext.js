@@ -1,85 +1,79 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const THEME_KEY = 'famfocus_theme';
-const THEME_MODE_KEY = 'famfocus_theme_mode';
+const THEME_KEY = '@famfocus_theme';
+const THEME_MODE_KEY = '@famfocus_theme_mode';
 
+// Available color themes
 export const THEMES = {
-  cosmic_explorer: {
-    id: 'cosmic_explorer',
-    name: 'Cosmic Explorer',
-    colors: ['#1e1b4b', '#312e81', '#4c1d95'],
+  purple: {
+    id: 'purple',
+    name: 'Purple Dream',
     primary: '#6366f1',
     secondary: '#818cf8',
-    accent: '#a855f7',
+    accent: '#a5b4fc',
+    colors: ['#1e1b4b', '#312e81', '#4f46e5'],
   },
-  ocean_breeze: {
-    id: 'ocean_breeze',
-    name: 'Ocean Breeze',
-    colors: ['#164e63', '#0e7490', '#06b6d4'],
-    primary: '#06b6d4',
-    secondary: '#22d3ee',
-    accent: '#67e8f9',
-  },
-  forest_haven: {
-    id: 'forest_haven',
-    name: 'Forest Haven',
-    colors: ['#14532d', '#166534', '#22c55e'],
+  green: {
+    id: 'green',
+    name: 'Forest',
     primary: '#22c55e',
     secondary: '#4ade80',
     accent: '#86efac',
+    colors: ['#064e3b', '#065f46', '#059669'],
   },
-  sunset_glow: {
-    id: 'sunset_glow',
-    name: 'Sunset Glow',
-    colors: ['#7c2d12', '#c2410c', '#f97316'],
-    primary: '#f97316',
-    secondary: '#fb923c',
-    accent: '#fdba74',
+  blue: {
+    id: 'blue',
+    name: 'Ocean',
+    primary: '#3b82f6',
+    secondary: '#60a5fa',
+    accent: '#93c5fd',
+    colors: ['#1e3a8a', '#1d4ed8', '#2563eb'],
   },
-  cherry_blossom: {
-    id: 'cherry_blossom',
-    name: 'Cherry Blossom',
-    colors: ['#831843', '#be185d', '#ec4899'],
+  pink: {
+    id: 'pink',
+    name: 'Sunset',
     primary: '#ec4899',
     secondary: '#f472b6',
     accent: '#f9a8d4',
+    colors: ['#831843', '#be185d', '#db2777'],
   },
-  midnight_sky: {
-    id: 'midnight_sky',
-    name: 'Midnight Sky',
-    colors: ['#0f172a', '#1e293b', '#334155'],
-    primary: '#64748b',
-    secondary: '#94a3b8',
-    accent: '#cbd5e1',
+  teal: {
+    id: 'teal',
+    name: 'Aqua',
+    primary: '#14b8a6',
+    secondary: '#2dd4bf',
+    accent: '#5eead4',
+    colors: ['#134e4a', '#115e59', '#0f766e'],
+  },
+  orange: {
+    id: 'orange',
+    name: 'Amber',
+    primary: '#f59e0b',
+    secondary: '#fbbf24',
+    accent: '#fcd34d',
+    colors: ['#78350f', '#92400e', '#b45309'],
   },
 };
 
+// Theme modes: Standard (default dark) vs Custom (user-selected)
 export const THEME_MODES = {
-  dark: {
-    id: 'dark',
-    name: 'Dark Mode',
-    icon: 'moon',
+  standard: {
+    id: 'standard',
+    name: 'Standard',
+    icon: 'contrast',
+    // Default dark colors
     background: '#0f0d1a',
     surface: 'rgba(30, 27, 75, 0.8)',
     text: '#ffffff',
     textSecondary: '#a5b4fc',
     textMuted: '#6b7280',
-  },
-  light: {
-    id: 'light',
-    name: 'Light Mode',
-    icon: 'sunny',
-    background: '#f8fafc',
-    surface: 'rgba(255, 255, 255, 0.95)',
-    text: '#1e293b',
-    textSecondary: '#475569',
-    textMuted: '#94a3b8',
   },
   custom: {
     id: 'custom',
     name: 'Custom',
     icon: 'color-palette',
+    // Custom applies the selected theme colors
     background: '#0f0d1a',
     surface: 'rgba(30, 27, 75, 0.8)',
     text: '#ffffff',
@@ -88,11 +82,11 @@ export const THEME_MODES = {
   },
 };
 
-const ThemeContext = createContext();
+const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
-  const [currentTheme, setCurrentTheme] = useState(THEMES.cosmic_explorer);
-  const [themeMode, setThemeMode] = useState(THEME_MODES.dark);
+  const [currentTheme, setCurrentTheme] = useState(THEMES.purple);
+  const [themeMode, setThemeMode] = useState(THEME_MODES.standard);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -122,6 +116,11 @@ export function ThemeProvider({ children }) {
   const changeTheme = async (themeId) => {
     if (THEMES[themeId]) {
       setCurrentTheme(THEMES[themeId]);
+      // Automatically switch to custom mode when selecting a theme
+      if (themeMode.id === 'standard') {
+        setThemeMode(THEME_MODES.custom);
+        await AsyncStorage.setItem(THEME_MODE_KEY, 'custom');
+      }
       try {
         await AsyncStorage.setItem(THEME_KEY, themeId);
       } catch (error) {
@@ -141,6 +140,27 @@ export function ThemeProvider({ children }) {
     }
   };
 
+  // Calculate active colors based on mode
+  const getActiveColors = () => {
+    if (themeMode.id === 'custom') {
+      return {
+        primary: currentTheme.primary,
+        secondary: currentTheme.secondary,
+        accent: currentTheme.accent,
+        gradientColors: currentTheme.colors,
+      };
+    }
+    // Standard mode uses default purple
+    return {
+      primary: THEMES.purple.primary,
+      secondary: THEMES.purple.secondary,
+      accent: THEMES.purple.accent,
+      gradientColors: THEMES.purple.colors,
+    };
+  };
+
+  const activeColors = getActiveColors();
+
   const value = {
     currentTheme,
     themeMode,
@@ -149,17 +169,21 @@ export function ThemeProvider({ children }) {
     changeTheme,
     changeThemeMode,
     isLoading,
-    // Convenience getters
-    colors: currentTheme.colors,
-    primary: currentTheme.primary,
-    secondary: currentTheme.secondary,
-    accent: currentTheme.accent,
+    // Active colors (respects mode)
+    primary: activeColors.primary,
+    secondary: activeColors.secondary,
+    accent: activeColors.accent,
+    gradientColors: activeColors.gradientColors,
+    // Mode-based colors
     background: themeMode.background,
     surface: themeMode.surface,
     text: themeMode.text,
     textSecondary: themeMode.textSecondary,
     textMuted: themeMode.textMuted,
-    isDark: themeMode.id !== 'light',
+    // Legacy support
+    colors: currentTheme.colors,
+    isDark: true,
+    isCustomMode: themeMode.id === 'custom',
   };
 
   return (
