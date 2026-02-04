@@ -1,7 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Smile, Check, CheckCheck, Wifi, WifiOff, Circle } from 'lucide-react';
+import { Send, Smile, Check, CheckCheck, Wifi, WifiOff, Circle, Mic, MicOff, X, Play, Pause, Heart, ThumbsUp, Laugh, Angry, Frown } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { toast } from 'sonner';
+
+// Emoji Reactions Configuration
+const EMOJI_REACTIONS = [
+  { emoji: '❤️', icon: Heart, name: 'love', color: 'text-red-400' },
+  { emoji: '👍', icon: ThumbsUp, name: 'like', color: 'text-blue-400' },
+  { emoji: '😂', icon: Laugh, name: 'laugh', color: 'text-yellow-400' },
+  { emoji: '😢', icon: Frown, name: 'sad', color: 'text-sky-400' },
+  { emoji: '😡', icon: Angry, name: 'angry', color: 'text-orange-400' },
+];
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const WS_URL = BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://');
