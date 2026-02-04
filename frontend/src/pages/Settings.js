@@ -287,6 +287,61 @@ export default function Settings({ user }) {
             </div>
           </div>
 
+          {/* Push Notifications - Browser */}
+          <div className="glass-card rounded-xl p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                {pushEnabled ? (
+                  <BellRing className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
+                ) : (
+                  <BellOff className="w-5 h-5" style={{ color: 'var(--color-text)', opacity: 0.5 }} />
+                )}
+                <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Browser Notifications</h2>
+              </div>
+            </div>
+            
+            {!pushSupported ? (
+              <p className="text-sm" style={{ color: 'var(--color-text)', opacity: 0.6 }}>
+                Push notifications are not supported in this browser.
+              </p>
+            ) : pushPermission === 'denied' ? (
+              <div>
+                <p className="text-sm mb-2" style={{ color: '#EF4444' }}>
+                  Notifications are blocked. Please enable them in your browser settings.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm" style={{ color: 'var(--color-text)', opacity: 0.6 }}>
+                  Receive alerts for chores, messages, and location updates even when the app is closed.
+                </p>
+                <button
+                  onClick={handleTogglePush}
+                  disabled={pushLoading}
+                  className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center space-x-2 ${
+                    pushEnabled ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' : 'text-white'
+                  }`}
+                  style={!pushEnabled ? { backgroundColor: 'var(--color-primary)' } : {}}
+                  data-testid="toggle-push-btn"
+                >
+                  {pushLoading ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-current" />
+                  ) : pushEnabled ? (
+                    <>
+                      <BellOff className="w-4 h-4" />
+                      <span>Disable Notifications</span>
+                    </>
+                  ) : (
+                    <>
+                      <BellRing className="w-4 h-4" />
+                      <span>Enable Notifications</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Notifications Section - Only for parents */}
           {user?.role === 'parent' && (
             <div className="glass-card rounded-xl p-4">
