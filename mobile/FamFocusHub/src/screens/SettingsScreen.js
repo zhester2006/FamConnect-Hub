@@ -286,6 +286,7 @@ const styles = StyleSheet.create({
   themeModeOption: { flex: 1, alignItems: 'center', padding: 14, borderRadius: 14, backgroundColor: 'rgba(15, 13, 26, 0.5)', gap: 8 },
   themeModeOptionActive: { backgroundColor: '#6366f1' },
   themeModeText: { color: '#6b7280', fontSize: 12, fontWeight: '600' },
+  themeModeHint: { color: '#6b7280', fontSize: 12, textAlign: 'center', marginTop: 8, fontStyle: 'italic' },
   themeModeTextActive: { color: '#fff' },
   themeModeHint: { color: '#9ca3af', fontSize: 12, marginTop: 12, textAlign: 'center', fontStyle: 'italic' },
   
