@@ -820,6 +820,8 @@ const styles = StyleSheet.create({
   connectionStatus: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   connectionDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
   connectionText: { fontSize: 12, fontWeight: '600' },
+  encryptionBadge: { flexDirection: 'row', alignItems: 'center', marginLeft: 8, backgroundColor: 'rgba(16, 185, 129, 0.15)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, gap: 2 },
+  encryptionText: { fontSize: 9, color: '#10b981', fontWeight: '600' },
   chatContainer: { flex: 1 },
   messagesList: { padding: 16, flexGrow: 1 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 100 },
