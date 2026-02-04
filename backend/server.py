@@ -1307,22 +1307,23 @@ async def check_geofences(user, lat, lng):
             }
             await db.notifications.insert_one(notification_doc)
 
-# GIF Search using GIPHY API (free tier)
+# GIF Search using Tenor API (Google's GIF service - free)
 @api_router.get("/gifs/search")
 async def search_gifs(q: str, limit: int = 20):
-    """Search for GIFs using GIPHY API"""
-    # Using GIPHY public beta key (limited but works for demo)
-    api_key = "dc6zaTOxFJmzC"  # GIPHY public beta key
+    """Search for GIFs using Tenor API"""
+    # Tenor API key (free anonymous key)
+    api_key = "AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ"
     
     try:
         async with httpx.AsyncClient() as client:
             res = await client.get(
-                "https://api.giphy.com/v1/gifs/search",
+                "https://tenor.googleapis.com/v2/search",
                 params={
-                    "api_key": api_key,
+                    "key": api_key,
                     "q": q,
                     "limit": limit,
-                    "rating": "g"  # Family-friendly only
+                    "contentfilter": "high",  # Family-friendly
+                    "media_filter": "gif,tinygif"
                 },
                 timeout=10
             )
@@ -1330,14 +1331,15 @@ async def search_gifs(q: str, limit: int = 20):
             data = res.json()
             
             gifs = []
-            for gif in data.get("data", []):
+            for gif in data.get("results", []):
+                media = gif.get("media_formats", {})
                 gifs.append({
-                    "id": gif["id"],
-                    "title": gif.get("title", ""),
-                    "url": gif["images"]["fixed_height"]["url"],
-                    "preview": gif["images"]["fixed_height_small"]["url"],
-                    "width": gif["images"]["fixed_height"]["width"],
-                    "height": gif["images"]["fixed_height"]["height"]
+                    "id": gif.get("id"),
+                    "title": gif.get("content_description", ""),
+                    "url": media.get("gif", {}).get("url", ""),
+                    "preview": media.get("tinygif", {}).get("url", "") or media.get("gif", {}).get("url", ""),
+                    "width": media.get("gif", {}).get("dims", [200])[0],
+                    "height": media.get("gif", {}).get("dims", [200, 200])[1] if len(media.get("gif", {}).get("dims", [])) > 1 else 200
                 })
             
             return {"gifs": gifs}
@@ -1348,17 +1350,18 @@ async def search_gifs(q: str, limit: int = 20):
 # GIF Trending
 @api_router.get("/gifs/trending")
 async def trending_gifs(limit: int = 20):
-    """Get trending GIFs"""
-    api_key = "dc6zaTOxFJmzC"
+    """Get trending GIFs using Tenor API"""
+    api_key = "AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ"
     
     try:
         async with httpx.AsyncClient() as client:
             res = await client.get(
-                "https://api.giphy.com/v1/gifs/trending",
+                "https://tenor.googleapis.com/v2/featured",
                 params={
-                    "api_key": api_key,
+                    "key": api_key,
                     "limit": limit,
-                    "rating": "g"
+                    "contentfilter": "high",
+                    "media_filter": "gif,tinygif"
                 },
                 timeout=10
             )
@@ -1366,14 +1369,15 @@ async def trending_gifs(limit: int = 20):
             data = res.json()
             
             gifs = []
-            for gif in data.get("data", []):
+            for gif in data.get("results", []):
+                media = gif.get("media_formats", {})
                 gifs.append({
-                    "id": gif["id"],
-                    "title": gif.get("title", ""),
-                    "url": gif["images"]["fixed_height"]["url"],
-                    "preview": gif["images"]["fixed_height_small"]["url"],
-                    "width": gif["images"]["fixed_height"]["width"],
-                    "height": gif["images"]["fixed_height"]["height"]
+                    "id": gif.get("id"),
+                    "title": gif.get("content_description", ""),
+                    "url": media.get("gif", {}).get("url", ""),
+                    "preview": media.get("tinygif", {}).get("url", "") or media.get("gif", {}).get("url", ""),
+                    "width": media.get("gif", {}).get("dims", [200])[0],
+                    "height": media.get("gif", {}).get("dims", [200, 200])[1] if len(media.get("gif", {}).get("dims", [])) > 1 else 200
                 })
             
             return {"gifs": gifs}
