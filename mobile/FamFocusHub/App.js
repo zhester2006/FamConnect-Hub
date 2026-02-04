@@ -119,8 +119,10 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <StatusBar style="light" />
-      <AppContent />
+      <ThemeProvider>
+        <StatusBar style="light" />
+        <AppContent />
+      </ThemeProvider>
     </AuthProvider>
   );
 }
