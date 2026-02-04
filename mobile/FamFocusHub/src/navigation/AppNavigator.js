@@ -23,6 +23,9 @@ import FamilyWallScreen from '../screens/FamilyWallScreen';
 import ShoppingListScreen from '../screens/ShoppingListScreen';
 import DinnerPlannerScreen from '../screens/DinnerPlannerScreen';
 import LocationScreen from '../screens/LocationScreen';
+import ReadingLogsScreen from '../screens/ReadingLogsScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import HomeHubScreen from '../screens/HomeHubScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -102,7 +105,7 @@ function ChildTabs() {
 }
 
 function OnboardingWrapper({ children, onComplete }) {
-  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
   useEffect(() => {
@@ -178,6 +181,10 @@ export default function AppNavigator() {
                 <Stack.Screen name="Location" component={LocationScreen} />
                 <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
                 <Stack.Screen name="Settings" component={SettingsScreen} />
+                <Stack.Screen name="ReadingLogs" component={ReadingLogsScreen} />
+                <Stack.Screen name="Profile" component={ProfileScreen} />
+                <Stack.Screen name="HomeHub" component={HomeHubScreen} />
+                <Stack.Screen name="ChildSpace" component={ChildSpace} />
               </>
             ) : (
               <>
@@ -193,6 +200,8 @@ export default function AppNavigator() {
                 <Stack.Screen name="Location" component={LocationScreen} />
                 <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
                 <Stack.Screen name="Settings" component={SettingsScreen} />
+                <Stack.Screen name="ReadingLogs" component={ReadingLogsScreen} />
+                <Stack.Screen name="Profile" component={ProfileScreen} />
               </>
             )}
           </>
