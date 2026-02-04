@@ -112,6 +112,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     { icon: Award, label: 'Rewards', path: '/rewards', color: 'text-purple-400' },
     { icon: Book, label: 'Reading', path: '/reading', color: 'text-cyan-400' },
     { icon: MapPin, label: 'Location', path: '/checkins', color: 'text-red-400' },
+    { icon: BarChart3, label: 'Analytics', path: '/analytics', color: 'text-emerald-400' },
     { icon: Settings, label: 'Settings', path: '/settings', color: 'text-slate-400' },
   ];
 
