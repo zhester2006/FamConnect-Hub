@@ -221,14 +221,7 @@ export default function LoginScreen({ navigation }) {
       >
         {/* Header with Logo */}
         <View style={styles.header}>
-          <View style={styles.logoRow}>
-            <Image 
-              source={{ uri: 'https://customer-assets.emergentagent.com/job_homebridge-5/artifacts/2ku9mapg_app_logo.png.png' }}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={styles.logoText}>FamFocus Hub</Text>
-          </View>
+          <Text style={styles.logoText}>FamFocus Hub</Text>
         </View>
 
         {/* Main Content */}
