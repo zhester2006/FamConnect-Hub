@@ -502,9 +502,14 @@ export default function ChoresScreen({ navigation }) {
                     style={[styles.memberOption, choreForm.assignedTo === member.user_id && styles.memberOptionActive]}
                     onPress={() => setChoreForm({ ...choreForm, assignedTo: member.user_id })}
                   >
-                    <Text style={[styles.memberOptionText, choreForm.assignedTo === member.user_id && styles.memberOptionTextActive]}>
-                      {member.nickname || member.name}
-                    </Text>
+                    <View style={styles.memberOptionContent}>
+                      <Text style={[styles.memberOptionText, choreForm.assignedTo === member.user_id && styles.memberOptionTextActive]}>
+                        {member.nickname || member.name}
+                      </Text>
+                      {member.rank && member.rank <= 3 && (
+                        <MedalEmblem rank={member.rank} size="tiny" />
+                      )}
+                    </View>
                   </TouchableOpacity>
                 ))}
               </View>
