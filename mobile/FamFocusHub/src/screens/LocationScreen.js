@@ -714,13 +714,13 @@ export default function LocationScreen({ navigation }) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add Safe Zone</Text>
-              <TouchableOpacity onPress={() => setShowAddGeofence(false)}>
+              <TouchableOpacity onPress={() => { setShowAddGeofence(false); setSelectedLocation(null); }}>
                 <Ionicons name="close" size={24} color="#9ca3af" />
               </TouchableOpacity>
             </View>
 
             <Text style={styles.modalSubtext}>
-              Creates a safe zone at your current location. You'll get notifications when entering or leaving.
+              Select a location on the map or use your current location for this safe zone.
             </Text>
 
             <TextInput
@@ -731,6 +731,24 @@ export default function LocationScreen({ navigation }) {
               onChangeText={(text) => setNewGeofence(prev => ({ ...prev, name: text }))}
               autoFocus
             />
+
+            <Text style={styles.label}>Select Location</Text>
+            <View style={styles.locationButtons}>
+              <TouchableOpacity 
+                style={styles.locationButton}
+                onPress={handleUseCurrentLocation}
+              >
+                <Ionicons name="locate" size={18} color="#818cf8" />
+                <Text style={styles.locationButtonText}>Use Current</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.locationButton, styles.mapButton]}
+                onPress={handleOpenMapPicker}
+              >
+                <Ionicons name="map" size={18} color="#10b981" />
+                <Text style={[styles.locationButtonText, { color: '#10b981' }]}>Choose on Map</Text>
+              </TouchableOpacity>
+            </View>
 
             <Text style={styles.label}>Radius (feet)</Text>
             <View style={styles.radiusOptions}>
@@ -750,12 +768,20 @@ export default function LocationScreen({ navigation }) {
               ))}
             </View>
 
-            {currentLocation && (
+            {(selectedLocation || currentLocation) && (
               <View style={styles.locationPreview}>
                 <Ionicons name="location" size={16} color="#818cf8" />
                 <Text style={styles.locationPreviewText}>
-                  {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
+                  {selectedLocation 
+                    ? `Selected: ${selectedLocation.latitude.toFixed(4)}, ${selectedLocation.longitude.toFixed(4)}`
+                    : `Current: ${currentLocation.latitude.toFixed(4)}, ${currentLocation.longitude.toFixed(4)}`
+                  }
                 </Text>
+                {selectedLocation && (
+                  <TouchableOpacity onPress={() => setSelectedLocation(null)}>
+                    <Ionicons name="close-circle" size={18} color="#ef4444" />
+                  </TouchableOpacity>
+                )}
               </View>
             )}
 
@@ -773,6 +799,100 @@ export default function LocationScreen({ navigation }) {
                 </>
               )}
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Map Picker Modal */}
+      <Modal visible={showMapPicker} animationType="slide">
+        <View style={styles.mapContainer}>
+          <View style={styles.mapHeader}>
+            <TouchableOpacity onPress={() => setShowMapPicker(false)} style={styles.mapBackButton}>
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
+            <View style={styles.mapTitleContainer}>
+              <Text style={styles.mapTitle}>Select Location</Text>
+              <Text style={styles.mapSubtitle}>Tap on the map to place the safe zone</Text>
+            </View>
+            <TouchableOpacity onPress={handleUseCurrentLocation} style={styles.mapLocateButton}>
+              <Ionicons name="locate" size={22} color="#818cf8" />
+            </TouchableOpacity>
+          </View>
+          
+          <MapView
+            ref={mapRef}
+            style={styles.map}
+            provider={PROVIDER_GOOGLE}
+            initialRegion={{
+              latitude: selectedLocation?.latitude || currentLocation?.latitude || 37.78825,
+              longitude: selectedLocation?.longitude || currentLocation?.longitude || -122.4324,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
+            }}
+            onPress={handleMapPress}
+            showsUserLocation
+            showsMyLocationButton={false}
+          >
+            {selectedLocation && (
+              <>
+                <Marker
+                  coordinate={selectedLocation}
+                  pinColor="#818cf8"
+                  title={newGeofence.name || "New Safe Zone"}
+                />
+                <Circle
+                  center={selectedLocation}
+                  radius={newGeofence.radius * 0.3048} // Convert feet to meters
+                  strokeColor="rgba(129, 140, 248, 0.8)"
+                  fillColor="rgba(129, 140, 248, 0.2)"
+                  strokeWidth={2}
+                />
+              </>
+            )}
+            
+            {/* Show existing geofences on map */}
+            {geofences.map((fence) => (
+              <React.Fragment key={fence.geofence_id}>
+                <Marker
+                  coordinate={{ latitude: fence.latitude, longitude: fence.longitude }}
+                  pinColor="#10b981"
+                  title={fence.name}
+                  description={`${fence.radius_feet} ft radius`}
+                />
+                <Circle
+                  center={{ latitude: fence.latitude, longitude: fence.longitude }}
+                  radius={fence.radius_feet * 0.3048}
+                  strokeColor="rgba(16, 185, 129, 0.8)"
+                  fillColor="rgba(16, 185, 129, 0.15)"
+                  strokeWidth={2}
+                />
+              </React.Fragment>
+            ))}
+          </MapView>
+          
+          {/* Bottom info panel */}
+          <View style={styles.mapBottomPanel}>
+            {selectedLocation ? (
+              <>
+                <View style={styles.mapLocationInfo}>
+                  <Ionicons name="location" size={20} color="#818cf8" />
+                  <Text style={styles.mapLocationText}>
+                    {selectedLocation.latitude.toFixed(5)}, {selectedLocation.longitude.toFixed(5)}
+                  </Text>
+                </View>
+                <TouchableOpacity 
+                  style={styles.mapConfirmButton}
+                  onPress={() => setShowMapPicker(false)}
+                >
+                  <Ionicons name="checkmark" size={20} color="#fff" />
+                  <Text style={styles.mapConfirmText}>Use This Location</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <Text style={styles.mapHelpText}>
+                Tap anywhere on the map to select a location for your safe zone
+              </Text>
+            )}
           </View>
         </View>
       </Modal>
