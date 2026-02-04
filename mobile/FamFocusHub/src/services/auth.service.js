@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const BACKEND_URL = 'https://family-central-8.preview.emergentagent.com';
+const BACKEND_URL = 'https://famport.preview.emergentagent.com';
 const SESSION_KEY = 'famfocus_session_token';
 
 class AuthService {
