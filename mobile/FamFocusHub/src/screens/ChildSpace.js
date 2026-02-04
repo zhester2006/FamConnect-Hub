@@ -103,7 +103,12 @@ export default function ChildSpace({ navigation, route }) {
             </TouchableOpacity>
           )}
           <View style={isParentViewing ? { flex: 1, marginLeft: 8 } : {}}>
-            <Text style={styles.greeting}>{isParentViewing ? `${targetChild?.name}'s Space` : 'Hey there,'}</Text>
+            <View style={styles.nameRow}>
+              <Text style={styles.greeting}>{isParentViewing ? `${targetChild?.name}'s Space` : 'Hey there,'}</Text>
+              {childRank && childRank <= 3 && (
+                <MedalEmblem rank={childRank} size="medium" />
+              )}
+            </View>
             {!isParentViewing && (
               <Text style={styles.userName}>{targetChild?.nickname || targetChild?.name || 'Champ'}! 🌟</Text>
             )}
