@@ -372,6 +372,8 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
         {/* Floating Pill - Hidden on mobile, shown on desktop */}
         <div
           ref={dragRef}
+          onMouseDown={handleDragStart}
+          onTouchStart={handleDragStart}
           style={{
             position: 'fixed',
             left: position.x,
@@ -382,15 +384,10 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
           className={`hidden md:block select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
           data-testid="floating-sidebar"
         >
-          {/* Main Pill Button */}
+          {/* Main Pill Button - separate from drag container */}
           <button
             type="button"
-            onMouseDown={handleDragStart}
-            onTouchStart={handleDragStart}
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowMenu(prev => !prev);
-            }}
+            onClick={() => setShowMenu(prev => !prev)}
             className={`w-14 h-14 rounded-2xl backdrop-blur-xl bg-slate-900/90 border border-white/10 shadow-2xl flex items-center justify-center transition-all hover:scale-105 hover:border-primary/30 hover:shadow-primary/20 ${
               showMenu ? 'ring-2 ring-primary/50 border-primary/30' : ''
             }`}
