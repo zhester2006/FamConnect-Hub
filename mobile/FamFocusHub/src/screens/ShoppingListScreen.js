@@ -50,7 +50,12 @@ export default function ShoppingListScreen({ navigation }) {
       setShowAddModal(false);
       setNewItemName('');
       fetchItems();
-      Alert.alert('Added!', 'Item added to shopping list');
+      
+      if (user?.role === 'child') {
+        Alert.alert('Submitted!', 'Your item has been submitted for parent approval.');
+      } else {
+        Alert.alert('Added!', 'Item added to shopping list');
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to add item');
     } finally {
