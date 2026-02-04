@@ -9,7 +9,30 @@ import {
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
-// Mobile Bottom Navigation Component with swipe gestures
+// Haptic feedback utility
+const triggerHaptic = (type = 'light') => {
+  // Web Vibration API
+  if ('vibrate' in navigator) {
+    switch (type) {
+      case 'light':
+        navigator.vibrate(10);
+        break;
+      case 'medium':
+        navigator.vibrate(20);
+        break;
+      case 'heavy':
+        navigator.vibrate([30, 10, 30]);
+        break;
+      case 'success':
+        navigator.vibrate([10, 50, 20]);
+        break;
+      default:
+        navigator.vibrate(10);
+    }
+  }
+};
+
+// Mobile Bottom Navigation Component with swipe gestures and haptic feedback
 function MobileBottomNav({ user, currentPath, onNavigate }) {
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
@@ -31,6 +54,11 @@ function MobileBottomNav({ user, currentPath, onNavigate }) {
 
   const currentIndex = navItems.findIndex(item => item.path === currentPath);
 
+  const navigateWithHaptic = useCallback((path) => {
+    triggerHaptic('light');
+    onNavigate(path);
+  }, [onNavigate]);
+
   const handleTouchStart = (e) => {
     touchStartX.current = e.touches[0].clientX;
   };
@@ -45,9 +73,11 @@ function MobileBottomNav({ user, currentPath, onNavigate }) {
     if (Math.abs(diff) > swipeThreshold) {
       if (diff > 0 && currentIndex < navItems.length - 1) {
         // Swipe left - go to next tab
+        triggerHaptic('medium');
         onNavigate(navItems[currentIndex + 1].path);
       } else if (diff < 0 && currentIndex > 0) {
         // Swipe right - go to previous tab
+        triggerHaptic('medium');
         onNavigate(navItems[currentIndex - 1].path);
       }
     }
@@ -73,6 +103,7 @@ function MobileBottomNav({ user, currentPath, onNavigate }) {
         const diff = touchStartX.current - touchEndX.current;
         
         if (Math.abs(diff) > swipeThreshold) {
+          triggerHaptic('medium');
           if (diff > 0 && currentIndex < navItems.length - 1) {
             onNavigate(navItems[currentIndex + 1].path);
           } else if (diff < 0 && currentIndex > 0) {
@@ -122,7 +153,7 @@ function MobileBottomNav({ user, currentPath, onNavigate }) {
             return (
               <button
                 key={item.path}
-                onClick={() => onNavigate(item.path)}
+                onClick={() => navigateWithHaptic(item.path)}
                 className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all ${
                   isActive 
                     ? 'text-primary bg-primary/10' 
