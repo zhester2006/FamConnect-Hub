@@ -9,6 +9,7 @@ import * as Notifications from 'expo-notifications';
 import { useAuth } from '../context/AuthContext';
 import { useTheme, THEMES, THEME_MODES } from '../context/ThemeContext';
 import AnimatedBackground from '../components/AnimatedBackground';
+import apiService from '../services/api.service';
 
 export default function SettingsScreen({ navigation }) {
   const { user, logout } = useAuth();
@@ -26,6 +27,28 @@ export default function SettingsScreen({ navigation }) {
       setNotificationsEnabled(status === 'granted');
     } catch (error) {
       console.error('Failed to check notification status:', error);
+    }
+  };
+
+  const handleShowTutorial = async () => {
+    try {
+      await apiService.resetTutorial();
+      Alert.alert(
+        'Tutorial Reset',
+        'The tutorial will show on your next app restart. Would you like to restart now?',
+        [
+          { text: 'Later', style: 'cancel' },
+          { text: 'Restart', onPress: () => {
+            // Force a re-render by navigating
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'ParentMain' }],
+            });
+          }}
+        ]
+      );
+    } catch (error) {
+      Alert.alert('Error', 'Failed to reset tutorial');
     }
   };
 
