@@ -121,6 +121,7 @@ export default function LiveChat({ user }) {
   const [connected, setConnected] = useState(false);
   const [typingUsers, setTypingUsers] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const [familyMembers, setFamilyMembers] = useState([]);
   const messagesEndRef = useRef(null);
   const wsRef = useRef(null);
   const typingTimeoutRef = useRef(null);
