@@ -2393,6 +2393,112 @@ async def reset_tutorial(request: Request):
     
     return {"success": True}
 
+# ==================== BATTERY STATUS ====================
+
+@api_router.post("/battery/update")
+async def update_battery_status(request: Request, data: dict):
+    """Update user's battery status (called from child's device)"""
+    current_user = await get_current_user(request)
+    
+    battery_level = data.get('level')  # 0-100
+    is_charging = data.get('is_charging', False)
+    
+    if battery_level is None or not (0 <= battery_level <= 100):
+        raise HTTPException(status_code=400, detail="Invalid battery level")
+    
+    # Check if user has granted permission to share battery
+    if not current_user.get('permissions', {}).get('share_battery', False):
+        return {"success": False, "message": "Battery sharing not enabled"}
+    
+    await db.users.update_one(
+        {"user_id": current_user['user_id']},
+        {"$set": {
+            "battery": {
+                "level": battery_level,
+                "is_charging": is_charging,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+        }}
+    )
+    
+    # Create notification if battery is critically low
+    if battery_level <= 15 and not is_charging:
+        parent_id = current_user.get('parent_id')
+        if parent_id:
+            await db.notifications.insert_one({
+                "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+                "type": "battery_low",
+                "user_id": parent_id,
+                "family_id": parent_id,
+                "message": f"{current_user['name']}'s battery is critically low ({battery_level}%)",
+                "read": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+    
+    return {"success": True, "level": battery_level}
+
+@api_router.get("/battery/family")
+async def get_family_battery_status(request: Request):
+    """Get battery status for all family members (parents only)"""
+    current_user = await get_current_user(request)
+    
+    if current_user.get('role') != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can view family battery status")
+    
+    family_id = current_user['user_id']
+    
+    # Get all children with battery sharing enabled
+    children = await db.users.find(
+        {
+            "parent_id": family_id,
+            "permissions.share_battery": True
+        },
+        {"_id": 0, "user_id": 1, "name": 1, "nickname": 1, "picture": 1, "battery": 1}
+    ).to_list(20)
+    
+    battery_status = []
+    for child in children:
+        battery = child.get('battery', {})
+        battery_status.append({
+            "user_id": child['user_id'],
+            "name": child.get('nickname') or child['name'],
+            "picture": child.get('picture'),
+            "level": battery.get('level'),
+            "is_charging": battery.get('is_charging', False),
+            "updated_at": battery.get('updated_at'),
+            "is_stale": battery.get('updated_at') and (
+                datetime.now(timezone.utc) - datetime.fromisoformat(battery['updated_at'].replace('Z', '+00:00'))
+            ).total_seconds() > 3600  # Stale if older than 1 hour
+        })
+    
+    return {"battery_status": battery_status}
+
+@api_router.put("/permissions/battery")
+async def toggle_battery_permission(request: Request, data: dict):
+    """Toggle battery sharing permission"""
+    current_user = await get_current_user(request)
+    
+    share_battery = data.get('share_battery', False)
+    
+    await db.users.update_one(
+        {"user_id": current_user['user_id']},
+        {"$set": {"permissions.share_battery": share_battery}}
+    )
+    
+    return {"success": True, "share_battery": share_battery}
+
+@api_router.get("/permissions")
+async def get_permissions(request: Request):
+    """Get user's permission settings"""
+    current_user = await get_current_user(request)
+    
+    return {
+        "permissions": current_user.get('permissions', {
+            "share_battery": False,
+            "share_location": True
+        })
+    }
+
 app.include_router(api_router)
 
 app.add_middleware(
