@@ -647,12 +647,24 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - `/app/frontend/src/components/Sidebar.js` (Fixed - no more draggable, clean dropdown)
 - `/app/frontend/src/pages/FamilyManagement.js` (Rewritten - single family model)
 
+**Session Updates (Feb 2025):**
+- `/app/frontend/src/components/Sidebar.js` - REDESIGNED: Now shows icon-only sidebar when collapsed (no overlapping dropdown), fixed position
+- `/app/mobile/FamFocusHub/src/services/api.service.js` - Fixed auth: Changed from Cookie to Bearer token for better session handling
+- `/app/mobile/FamFocusHub/src/screens/CalendarScreen.js` - Added event categories (work/event/appointment/task), color legend, improved popup
+- `/app/mobile/FamFocusHub/src/screens/FamilyWallScreen.js` - REWROTE: Added photo upload, poll functionality, GIF search
+- `/app/mobile/FamFocusHub/src/screens/ChatScreen.js` - Added photo/GIF attachment functionality
+- `/app/mobile/FamFocusHub/src/screens/ChildSpace.js` - Added Reading Log section, parent view capability for child profiles
+- `/app/mobile/FamFocusHub/src/screens/ShoppingListScreen.js` - Added child notification when items need parent approval
+- `/app/mobile/FamFocusHub/src/screens/ProfileScreen.js` - Fixed image upload auth (Bearer token)
+
+**Build Status:**
+- Build ID: 81eb3ee5-5187-4506-8e76-bd0f68cfd7d2 (in progress)
+- Build URL: https://expo.dev/accounts/zhester06/projects/famfocus-hub/builds/81eb3ee5-5187-4506-8e76-bd0f68cfd7d2
+
 **Remaining Issues to Address:**
-- [ ] Themes (light/dark/custom) not working on mobile
-- [ ] Profile picture and background customization
-- [ ] Weather auto-update every hour
-- [ ] Home Hub screensaver with nature/historical photos
-- [ ] Notifications permissions not prompted
-- [ ] Chat WebSocket connection issues
-- [ ] Photo/GIF upload functionality
+- [ ] Verify theme persistence after app restart
+- [ ] Test WebSocket chat connectivity 
+- [ ] Verify all navigation links work
+- [ ] Test photo/GIF uploads end-to-end
+
 
