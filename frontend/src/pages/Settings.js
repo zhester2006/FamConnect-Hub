@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { Palette, Bell, Moon, Sun, ChevronDown, Check, Sparkles, BellRing, BellOff } from 'lucide-react';
+import { Palette, Bell, Moon, Sun, ChevronDown, Check, Sparkles, BellRing, BellOff, Camera, User, Image } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { isPushSupported, getPermissionStatus, subscribeToPush, unsubscribeFromPush, isSubscribed } from '@/utils/pushNotifications';
 
