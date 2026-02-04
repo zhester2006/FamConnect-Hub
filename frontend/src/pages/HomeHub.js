@@ -123,13 +123,32 @@ export default function HomeHub({ user }) {
   const [newItem, setNewItem] = useState('');
   const [selectedDay, setSelectedDay] = useState(null);
   const [dayEvents, setDayEvents] = useState([]);
+  
+  // Screensaver background state
+  const [bgIndex, setBgIndex] = useState(() => Math.floor(Math.random() * SCREENSAVER_IMAGES.length));
+  const [nextBgIndex, setNextBgIndex] = useState(() => (Math.floor(Math.random() * SCREENSAVER_IMAGES.length) + 1) % SCREENSAVER_IMAGES.length);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     fetchHubData();
     fetchWeather();
-    return () => clearInterval(timer);
-  }, []);
+    
+    // Background rotation every 15 seconds
+    const bgTimer = setInterval(() => {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setBgIndex(nextBgIndex);
+        setNextBgIndex((nextBgIndex + 1 + Math.floor(Math.random() * 3)) % SCREENSAVER_IMAGES.length);
+        setIsTransitioning(false);
+      }, 2000);
+    }, 15000);
+    
+    return () => {
+      clearInterval(timer);
+      clearInterval(bgTimer);
+    };
+  }, [nextBgIndex]);
 
   const fetchWeather = async () => {
     try {
