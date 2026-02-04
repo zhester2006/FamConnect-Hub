@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import biometricService from '../services/biometric.service';
 
-const API_BASE = 'https://familyhub-64.preview.emergentagent.com';
+const API_BASE = 'https://famhub-app.preview.emergentagent.com';
 const { width } = Dimensions.get('window');
 
 WebBrowser.maybeCompleteAuthSession();
