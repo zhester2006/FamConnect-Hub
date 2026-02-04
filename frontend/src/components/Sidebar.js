@@ -268,6 +268,19 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
   const menuRef = useRef(null);
   const startPos = useRef({ x: 0, y: 0 });
   const dragStartTime = useRef(0);
+  
+  // Get notification context if available
+  let notificationContext = null;
+  try {
+    if (useNotifications) {
+      notificationContext = useNotifications();
+    }
+  } catch (e) {
+    // Context not available
+  }
+  
+  const unreadCount = notificationContext?.unreadCount || 0;
+  const setShowNotificationPanel = notificationContext?.setShowNotificationPanel;
 
   // Close menu when clicking outside
   useEffect(() => {
