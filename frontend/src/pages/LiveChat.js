@@ -703,6 +703,8 @@ export default function LiveChat({ user }) {
             const isOwn = message.user_id === user?.user_id;
             const isOnline = onlineUsers.includes(message.user_id);
             const sender = familyMembers.find(m => m.user_id === message.user_id);
+            const showReactionPicker = selectedMessageForReaction === message.message_id;
+            
             return (
               <div
                 key={message.message_id}
@@ -722,22 +724,49 @@ export default function LiveChat({ user }) {
                       <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-950 ${isOnline ? 'bg-green-400' : 'bg-slate-500'}`} />
                     </div>
                   )}
-                  <div className="flex flex-col">
+                  <div className="flex flex-col relative">
                     {!isOwn && (
                       <div className="flex items-center gap-2 ml-2 mb-1">
                         <span className="text-xs text-slate-400 font-medium">{message.user_name}</span>
                         {isOnline && <span className="text-[10px] text-green-400">online</span>}
                       </div>
                     )}
+                    
+                    {/* Message bubble with long-press for reactions */}
                     <div
-                      className={`rounded-2xl p-3 lg:p-4 ${
+                      className={`rounded-2xl p-3 lg:p-4 cursor-pointer ${
                         isOwn
                           ? 'bg-primary text-white rounded-br-md'
                           : 'glass-card text-white rounded-bl-md'
                       }`}
+                      onClick={() => setSelectedMessageForReaction(showReactionPicker ? null : message.message_id)}
                     >
-                      <p className="text-sm break-words leading-relaxed">{message.content}</p>
+                      {message.type === 'voice' && message.audio_url ? (
+                        <div className="flex items-center gap-2 min-w-[150px]">
+                          <VoicePlayer audioUrl={message.audio_url} />
+                          <span className="text-xs opacity-70">{message.duration}s</span>
+                        </div>
+                      ) : (
+                        <p className="text-sm break-words leading-relaxed">{message.content}</p>
+                      )}
                     </div>
+                    
+                    {/* Reaction Picker */}
+                    {showReactionPicker && (
+                      <EmojiReactionPicker
+                        onReact={(reaction) => handleReaction(message.message_id, reaction)}
+                        onClose={() => setSelectedMessageForReaction(null)}
+                        position={isOwn ? 'top' : 'bottom'}
+                      />
+                    )}
+                    
+                    {/* Message Reactions */}
+                    <MessageReactions 
+                      reactions={message.reactions}
+                      onReact={(reaction) => handleReaction(message.message_id, reaction)}
+                      currentUserId={user?.user_id}
+                    />
+                    
                     <div className={`flex items-center gap-2 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
                       <span className="text-xs text-slate-500">
                         {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
