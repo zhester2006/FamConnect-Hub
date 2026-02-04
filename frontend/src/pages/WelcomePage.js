@@ -32,10 +32,29 @@ const PixieGreeting = () => {
   );
 };
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+
 export default function WelcomePage() {
   const handleLogin = () => {
     const redirectUrl = `${REDIRECT_URL_BASE}/dashboard`;
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+  };
+
+  const handleDevLogin = async (role = 'parent') => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/auth/dev-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+        credentials: 'include'
+      });
+      const data = await response.json();
+      if (data.user) {
+        window.location.href = role === 'parent' ? '/dashboard' : '/space';
+      }
+    } catch (error) {
+      console.error('Dev login failed:', error);
+    }
   };
 
   return (
