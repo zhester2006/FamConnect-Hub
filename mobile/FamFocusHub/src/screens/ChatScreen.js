@@ -405,6 +405,8 @@ export default function ChatScreen({ navigation }) {
     const isOnline = onlineUsers.includes(item.user_id);
     const isRead = item.read_by?.length > 1;
     const isVoice = item.type === 'voice';
+    const isImage = item.type === 'image';
+    const isGif = item.type === 'gif';
     const reactions = item.reactions || {};
     
     return (
@@ -424,6 +426,24 @@ export default function ChatScreen({ navigation }) {
           )}
           <View style={[styles.messageBubble, isOwn ? styles.ownBubble : styles.otherBubble]}>
             {!isOwn && <Text style={styles.senderName}>{item.user_name}</Text>}
+            
+            {/* Image message */}
+            {isImage && item.image_url && (
+              <Image 
+                source={{ uri: item.image_url }} 
+                style={styles.chatImage} 
+                resizeMode="cover"
+              />
+            )}
+            
+            {/* GIF message */}
+            {isGif && item.gif_url && (
+              <Image 
+                source={{ uri: item.gif_url }} 
+                style={styles.chatGif} 
+                resizeMode="cover"
+              />
+            )}
             
             {isVoice ? (
               <View style={styles.voiceMessage}>
@@ -445,7 +465,7 @@ export default function ChatScreen({ navigation }) {
                   {formatDuration(item.duration || 0)}
                 </Text>
               </View>
-            ) : (
+            ) : !isImage && !isGif ? (
               <Text style={[styles.messageText, isOwn && styles.ownMessageText]}>
                 {item.content}
               </Text>
