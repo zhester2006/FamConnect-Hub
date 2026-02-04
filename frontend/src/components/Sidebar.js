@@ -241,7 +241,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
 
   const handleDragStart = useCallback((e) => {
     if (!isFloating) return;
-    e.preventDefault();
+    // Don't prevent default for click handling
     e.stopPropagation();
     setIsDragging(true);
     dragStartTime.current = Date.now();
