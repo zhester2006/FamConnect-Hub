@@ -351,7 +351,8 @@ export default function ParentDashboard({ user }) {
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
