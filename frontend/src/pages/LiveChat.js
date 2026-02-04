@@ -231,6 +231,11 @@ export default function LiveChat({ user }) {
     }
   }, [user?.user_id]);
 
+  // Store the connect function in ref for reconnection
+  useEffect(() => {
+    connectWebSocketRef.current = connectWebSocket;
+  }, [connectWebSocket]);
+
   // Initial load and WebSocket connection
   useEffect(() => {
     fetchMessages();
