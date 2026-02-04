@@ -41,13 +41,30 @@ export default function ChoresScreen({ navigation }) {
 
   const fetchData = useCallback(async () => {
     try {
-      const [choresData, membersData] = await Promise.all([
+      const [choresData, membersData, leaderboardData] = await Promise.all([
         apiService.getChores(),
         apiService.getFamilyMembers(),
+        apiService.getLeaderboard().catch(() => ({ leaderboard: [] })),
       ]);
       setChores(choresData.chores || []);
-      setFamilyMembers(membersData.members || []);
-      setIncludedMembers((membersData.members || []).filter(m => m.role === 'child').map(m => m.user_id));
+      
+      const members = membersData.members || [];
+      const leaderboard = leaderboardData.leaderboard || [];
+      
+      // Create a map of user_id to rank
+      const rankMap = {};
+      leaderboard.forEach((child, index) => {
+        rankMap[child.user_id] = index + 1;
+      });
+      
+      // Add rank to members
+      const membersWithRank = members.map(member => ({
+        ...member,
+        rank: rankMap[member.user_id] || null
+      }));
+      
+      setFamilyMembers(membersWithRank);
+      setIncludedMembers(membersWithRank.filter(m => m.role === 'child').map(m => m.user_id));
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
