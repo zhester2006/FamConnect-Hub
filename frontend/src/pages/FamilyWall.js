@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Heart, MessageCircle, Image as ImageIcon, Plus, TrendingUp, Smile, Send, X, BarChart2, Check } from 'lucide-react';
+import { Heart, MessageCircle, Image as ImageIcon, Plus, TrendingUp, Smile, Send, X, BarChart2, Check, Search, Loader2 } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { toast } from 'sonner';
 
@@ -59,11 +59,123 @@ const PollComponent = ({ poll, user, onVote }) => {
   );
 };
 
+// GIF Picker Component
+const GifPicker = ({ onSelect, onClose }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [gifs, setGifs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [showTrending, setShowTrending] = useState(true);
+
+  useEffect(() => {
+    fetchTrending();
+  }, []);
+
+  const fetchTrending = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/gifs/trending?limit=20`, { credentials: 'include' });
+      const data = await res.json();
+      setGifs(data.gifs || []);
+      setShowTrending(true);
+    } catch (error) {
+      console.error('Failed to fetch trending GIFs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const searchGifs = async () => {
+    if (!searchQuery.trim()) {
+      fetchTrending();
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/gifs/search?q=${encodeURIComponent(searchQuery)}&limit=20`, { credentials: 'include' });
+      const data = await res.json();
+      setGifs(data.gifs || []);
+      setShowTrending(false);
+    } catch (error) {
+      console.error('Failed to search GIFs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="absolute bottom-12 left-0 w-80 max-h-96 bg-slate-900 border border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden" data-testid="gif-picker">
+      <div className="p-3 border-b border-slate-800">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-bold text-white">GIFs</span>
+          <button onClick={onClose} className="p-1 hover:bg-slate-800 rounded">
+            <X className="w-4 h-4 text-slate-400" />
+          </button>
+        </div>
+        <div className="flex items-center space-x-2">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && searchGifs()}
+            placeholder="Search GIFs..."
+            className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-500"
+            data-testid="gif-search-input"
+          />
+          <button
+            onClick={searchGifs}
+            className="p-2 bg-primary hover:bg-primary/80 rounded-lg transition-all"
+            data-testid="gif-search-btn"
+          >
+            <Search className="w-4 h-4 text-white" />
+          </button>
+        </div>
+      </div>
+      
+      <div className="p-2 max-h-64 overflow-y-auto">
+        {showTrending && !searchQuery && (
+          <p className="text-xs text-slate-500 mb-2 px-1">Trending</p>
+        )}
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 text-primary animate-spin" />
+          </div>
+        ) : gifs.length > 0 ? (
+          <div className="grid grid-cols-2 gap-2">
+            {gifs.map((gif) => (
+              <button
+                key={gif.id}
+                onClick={() => onSelect(gif)}
+                className="relative overflow-hidden rounded-lg hover:ring-2 hover:ring-primary transition-all"
+                data-testid={`gif-${gif.id}`}
+              >
+                <img
+                  src={gif.preview}
+                  alt={gif.title}
+                  className="w-full h-24 object-cover"
+                  loading="lazy"
+                />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500 text-center py-8">No GIFs found</p>
+        )}
+      </div>
+      
+      <div className="p-2 border-t border-slate-800 text-center">
+        <span className="text-[10px] text-slate-600">Powered by GIPHY</span>
+      </div>
+    </div>
+  );
+};
+
 export default function FamilyWall({ user }) {
   const [posts, setPosts] = useState([]);
   const [quote, setQuote] = useState('');
   const [newPost, setNewPost] = useState('');
+  const [selectedGif, setSelectedGif] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showGifPicker, setShowGifPicker] = useState(false);
   const [showPollCreator, setShowPollCreator] = useState(false);
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState(['', '']);
@@ -99,16 +211,22 @@ export default function FamilyWall({ user }) {
 
   const handleSubmitPost = async (e) => {
     e.preventDefault();
-    if (!newPost.trim()) return;
+    if (!newPost.trim() && !selectedGif) return;
 
     try {
       await fetch(`${BACKEND_URL}/api/family-wall`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ content: newPost, post_type: 'text' })
+        body: JSON.stringify({ 
+          content: newPost, 
+          post_type: selectedGif ? 'gif' : 'text',
+          media_url: selectedGif?.url,
+          media_type: selectedGif ? 'gif' : null
+        })
       });
       setNewPost('');
+      setSelectedGif(null);
       fetchPosts();
       toast.success('Posted!');
     } catch (error) {
@@ -162,6 +280,11 @@ export default function FamilyWall({ user }) {
     setNewPost(prev => prev + emoji);
     setShowEmojiPicker(false);
     inputRef.current?.focus();
+  };
+
+  const handleSelectGif = (gif) => {
+    setSelectedGif(gif);
+    setShowGifPicker(false);
   };
 
   const addPollOption = () => {
@@ -222,13 +345,16 @@ export default function FamilyWall({ user }) {
                     </div>
                   </div>
                   
-                  <p className="text-white text-sm leading-relaxed mb-3">{post.content}</p>
+                  {post.content && (
+                    <p className="text-white text-sm leading-relaxed mb-3">{post.content}</p>
+                  )}
                   
                   {post.media_url && (
                     <img 
                       src={post.media_url} 
                       alt="Post media" 
                       className="rounded-xl max-h-64 w-full object-cover mb-3"
+                      data-testid="post-media"
                     />
                   )}
 
@@ -255,11 +381,24 @@ export default function FamilyWall({ user }) {
 
         {/* Sticky Input Bar at Bottom */}
         <div className={`fixed bottom-0 left-0 right-0 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800 p-3 z-40 transition-all duration-300 ${sidebarCollapsed ? 'lg:left-16' : 'lg:left-64'}`}>
+          {/* Selected GIF Preview */}
+          {selectedGif && (
+            <div className="mb-2 relative inline-block">
+              <img src={selectedGif.preview} alt="Selected GIF" className="h-20 rounded-lg" />
+              <button
+                onClick={() => setSelectedGif(null)}
+                className="absolute -top-2 -right-2 p-1 bg-red-500 rounded-full"
+              >
+                <X className="w-3 h-3 text-white" />
+              </button>
+            </div>
+          )}
+          
           <form onSubmit={handleSubmitPost} className="flex items-center space-x-2">
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                onClick={() => { setShowEmojiPicker(!showEmojiPicker); setShowGifPicker(false); }}
                 className="p-2 hover:bg-slate-800 rounded-full transition-all"
                 data-testid="emoji-btn"
               >
@@ -285,6 +424,22 @@ export default function FamilyWall({ user }) {
               )}
             </div>
 
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => { setShowGifPicker(!showGifPicker); setShowEmojiPicker(false); }}
+                className={`p-2 hover:bg-slate-800 rounded-full transition-all ${showGifPicker ? 'bg-slate-800' : ''}`}
+                data-testid="gif-btn"
+              >
+                <span className="text-xs font-bold text-slate-400">GIF</span>
+              </button>
+              
+              {/* GIF Picker */}
+              {showGifPicker && (
+                <GifPicker onSelect={handleSelectGif} onClose={() => setShowGifPicker(false)} />
+              )}
+            </div>
+
             <button
               type="button"
               className="p-2 hover:bg-slate-800 rounded-full transition-all"
@@ -305,7 +460,7 @@ export default function FamilyWall({ user }) {
 
             <button
               type="submit"
-              disabled={!newPost.trim()}
+              disabled={!newPost.trim() && !selectedGif}
               className="p-2.5 bg-primary hover:bg-primary/80 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-full transition-all"
               data-testid="send-btn"
             >
