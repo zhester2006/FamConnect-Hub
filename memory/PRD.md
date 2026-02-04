@@ -291,6 +291,18 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - [x] SettingsScreen.js with biometric toggle and sync button
 - [x] AuthContext.js integrates WebSocket and biometric services
 
+### Session 14 - Draggable Collapsed Sidebar (Feb 2026) ✅
+- [x] Sidebar collapses to floating draggable pill on all platforms
+- [x] Mouse and touch event support for drag operations
+- [x] Position persists to localStorage
+- [x] Collapse toggle visible on mobile screens (was hidden before)
+- [x] Auto-float when collapsed for better UX
+- [x] Drag constraints to keep sidebar within viewport
+- [x] Click-to-toggle dropdown menu from collapsed state
+- [x] Visual drag indicator (3 dots) below pill
+- [x] Dev login endpoint (POST /api/auth/dev-login) for testing
+- [x] Fixed CORS configuration for credentials with specific origins
+
 ## API Endpoints
 
 ### Chat & Real-time (NEW - Session 4)
