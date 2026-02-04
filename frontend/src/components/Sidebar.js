@@ -40,7 +40,7 @@ function MobileBottomNav({ user, currentPath, onNavigate }) {
   const touchEndX = useRef(0);
   const swipeThreshold = 50;
 
-  const navItems = user?.role === 'parent' ? [
+  const navItems = useMemo(() => user?.role === 'parent' ? [
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Calendar, label: 'Calendar', path: '/calendar' },
     { icon: MessageCircle, label: 'Chat', path: '/chat' },
@@ -52,7 +52,7 @@ function MobileBottomNav({ user, currentPath, onNavigate }) {
     { icon: MessageCircle, label: 'Chat', path: '/chat' },
     { icon: Trophy, label: 'Rewards', path: '/rewards' },
     { icon: Settings, label: 'More', path: '/settings' },
-  ];
+  ], [user?.role]);
 
   const currentIndex = navItems.findIndex(item => item.path === currentPath);
 
