@@ -351,6 +351,42 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - [x] Open in Maps functionality (iOS Maps / Google Maps)
 - [x] Added expo-haptics and expo-location to dependencies
 
+### Session 18 - Background Tracking, Push Alerts & Battery Monitoring (Feb 2026) ✅
+**Background Location Tracking:**
+- [x] Created location.service.js with full background tracking support
+- [x] expo-task-manager for background tasks
+- [x] TaskManager.defineTask for LOCATION_TASK_NAME
+- [x] Background permission request flow with user-friendly modal
+- [x] Foreground service notification for Android ("Tracking your location for family safety")
+- [x] Location updates every 50m or 60s in background
+- [x] Automatic geofence checking in background
+
+**Push Notifications for Geofence Alerts:**
+- [x] Local notifications on geofence enter/exit via push.service.js
+- [x] Backend endpoint POST /api/location/geofence-alert
+- [x] Backend endpoint GET /api/location/alerts
+- [x] Alert records stored in location_alerts collection
+- [x] Notifications with zone name and action (enter/exit)
+- [x] Native geofencing via expo-location startGeofencingAsync
+
+**Battery Level Monitoring:**
+- [x] Created battery.service.js with full battery monitoring
+- [x] expo-battery for battery level and state
+- [x] Battery level listener for significant changes (5%, low thresholds)
+- [x] Battery state listener (charging/unplugged)
+- [x] Auto-report on state changes
+- [x] Backend endpoint POST /api/battery/update (existing)
+- [x] Backend endpoint GET /api/battery/family-status (new)
+- [x] Parent dashboard shows children's battery levels with icons
+- [x] Low battery warning colors (<20% red, <50% yellow)
+- [x] Battery sharing toggle in settings
+
+**Navigate to Child:**
+- [x] "Navigate" button on children's cards
+- [x] Opens native Maps app with turn-by-turn directions
+- [x] iOS: maps: scheme with daddr parameter
+- [x] Android: google.navigation: scheme
+
 ## API Endpoints
 
 ### Chat & Real-time (NEW - Session 4)
