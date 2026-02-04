@@ -1415,7 +1415,7 @@ async def ai_schedule_chores(request: Request, data: dict):
     children_info = []
     for child in children:
         points = child_points.get(child['user_id'], 0)
-        recent = child_chores.get(child['user_id'], [])[:5]
+        recent = [c for c in child_chores.get(child['user_id'], [])[:5] if c]  # Filter out None values
         children_info.append(f"- {child['name']}: {points} points earned, recent chores: {', '.join(recent) if recent else 'none'}")
     
     chores_info = [f"- {c['name']} ({c.get('points', 10)} points, {c.get('frequency', 'daily')})" for c in chores[:15]]
