@@ -85,26 +85,22 @@ export default function SettingsScreen({ navigation }) {
       title: 'Account',
       items: [
         { icon: 'person', label: 'Profile', screen: 'Profile', color: '#6366f1' },
-        { icon: 'people', label: 'Family', screen: 'Family', color: '#06b6d4' },
-        { icon: 'key', label: 'Security', screen: 'Security', color: '#f59e0b' },
+        ...(user?.role === 'parent' ? [{ icon: 'people', label: 'Family', screen: 'Family', color: '#06b6d4' }] : []),
       ],
     },
     {
       title: 'Features',
       items: [
         { icon: 'home', label: 'Home Hub', screen: 'HomeHub', color: '#818cf8' },
-        { icon: 'checkbox', label: 'Chores', screen: 'Chores', color: '#10b981' },
+        { icon: 'calendar', label: 'Calendar', screen: 'Calendar', color: '#fbbf24' },
+        ...(user?.role === 'parent' ? [{ icon: 'checkbox', label: 'Chores', screen: 'Chores', color: '#10b981' }] : []),
         { icon: 'gift', label: 'Rewards', screen: 'Rewards', color: '#a855f7' },
         { icon: 'book', label: 'Reading Logs', screen: 'ReadingLogs', color: '#3b82f6' },
+        { icon: 'restaurant', label: 'Dinner Planner', screen: 'DinnerPlanner', color: '#f97316' },
+        { icon: 'cart', label: 'Shopping List', screen: 'Shopping', color: '#14b8a6' },
+        { icon: 'trophy', label: 'Leaderboard', screen: 'Leaderboard', color: '#eab308' },
+        { icon: 'chatbubbles', label: 'Family Wall', screen: 'FamilyWall', color: '#ec4899' },
         { icon: 'location', label: 'Location', screen: 'Location', color: '#ef4444' },
-      ],
-    },
-    {
-      title: 'Support',
-      items: [
-        { icon: 'help-circle', label: 'Help Center', screen: 'Help', color: '#6b7280' },
-        { icon: 'document-text', label: 'Privacy Policy', screen: 'Privacy', color: '#6b7280' },
-        { icon: 'information-circle', label: 'About', screen: 'About', color: '#6b7280' },
       ],
     },
   ];
