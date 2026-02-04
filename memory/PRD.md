@@ -306,6 +306,17 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - [x] Dev login endpoint (POST /api/auth/dev-login) for testing
 - [x] Fixed CORS configuration for credentials with specific origins
 
+### Session 15 - Mobile UI Polish & Dropdown Fix (Feb 2026) ✅
+- [x] Fixed dropdown menu for collapsed sidebar (now shows 15 navigation items)
+- [x] Added mobile bottom navigation bar (Glass Dock style)
+- [x] Bottom nav includes: Home, Calendar, Chat, Wall, More tabs
+- [x] Added safe area padding for iOS devices
+- [x] Added bottom padding to all pages (pb-24 md:pb-6) for mobile nav clearance
+- [x] Removed duplicate PixieOnboarding component (kept WelcomeTutorial only)
+- [x] Separated drag handle from click button for better UX
+- [x] Refactored Sidebar component (moved nested components outside)
+- [x] Design guidelines created at /app/design_guidelines.json
+
 ## API Endpoints
 
 ### Chat & Real-time (NEW - Session 4)
