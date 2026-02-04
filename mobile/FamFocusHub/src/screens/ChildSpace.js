@@ -497,6 +497,7 @@ const styles = StyleSheet.create({
   quickActions: {
     flexDirection: 'row',
     gap: 12,
+    marginBottom: 12,
   },
   quickAction: {
     flex: 1,
@@ -509,5 +510,48 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '500',
+  },
+  backButton: {
+    padding: 8,
+  },
+  readingCard: {
+    backgroundColor: 'rgba(6, 78, 59, 0.8)',
+    borderRadius: 12,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  readingInfo: {
+    flex: 1,
+  },
+  bookTitle: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  bookAuthor: {
+    color: '#6ee7b7',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  readingMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  pagesText: {
+    color: '#6b7280',
+    fontSize: 11,
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 });
