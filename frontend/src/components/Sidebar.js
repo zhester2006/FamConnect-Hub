@@ -389,15 +389,12 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
             onTouchStart={handleDragStart}
             onClick={(e) => {
               e.stopPropagation();
-              // Only toggle menu if we weren't dragging
-              const dragDuration = Date.now() - dragStartTime.current;
-              if (dragDuration < 300 || !isDragging) {
-                setShowMenu(prev => !prev);
-              }
+              setShowMenu(prev => !prev);
             }}
             className={`w-14 h-14 rounded-2xl backdrop-blur-xl bg-slate-900/90 border border-white/10 shadow-2xl flex items-center justify-center transition-all hover:scale-105 hover:border-primary/30 hover:shadow-primary/20 ${
               showMenu ? 'ring-2 ring-primary/50 border-primary/30' : ''
             }`}
+            data-testid="floating-pill-btn"
           >
             <img 
               src="https://customer-assets.emergentagent.com/job_homebridge-5/artifacts/2ku9mapg_app_logo.png.png"
@@ -407,6 +404,21 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
             />
           </button>
 
+          {/* Dropdown Menu - rendered directly below the pill */}
+          {showMenu && (
+            <div className="absolute left-0 top-16" ref={menuRef}>
+              <DropdownMenuContent 
+                user={user}
+                menuItems={menuItems}
+                currentPath={location.pathname}
+                onNavigate={handleNavigate}
+                onCollapse={handleCollapse}
+                onLogout={handleLogout}
+                menuRef={null}
+              />
+            </div>
+          )}
+
           {/* Drag Handle Indicator */}
           <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex gap-0.5 opacity-50">
             <div className="w-1 h-1 rounded-full bg-slate-500" />
@@ -414,9 +426,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
             <div className="w-1 h-1 rounded-full bg-slate-500" />
           </div>
         </div>
-
-        {/* Dropdown Menu using Portal */}
-        <DropdownPortal isOpen={showMenu} position={position}>
+      </>
           <DropdownMenuContent 
             user={user}
             menuItems={menuItems}
