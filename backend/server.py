@@ -1209,6 +1209,94 @@ async def delete_geofence(geofence_id: str, request: Request):
     await db.geofences.delete_one({"geofence_id": geofence_id})
     return {"success": True}
 
+# Geofence Alert from Mobile
+@api_router.post("/location/geofence-alert")
+async def geofence_alert(request: Request, data: dict):
+    """Handle geofence enter/exit alerts from mobile app"""
+    current_user = await get_current_user(request)
+    
+    geofence_id = data.get('geofence_id')
+    entered = data.get('entered', False)
+    latitude = data.get('latitude')
+    longitude = data.get('longitude')
+    region_name = data.get('region_name', 'Unknown Zone')
+    
+    # Get geofence details
+    geofence = await db.geofences.find_one({"geofence_id": geofence_id}, {"_id": 0})
+    zone_name = geofence['name'] if geofence else region_name
+    
+    # Create alert record
+    alert_doc = {
+        "alert_id": f"alert_{uuid.uuid4().hex[:12]}",
+        "type": "enter" if entered else "exit",
+        "user_id": current_user['user_id'],
+        "child_name": current_user['name'],
+        "geofence_id": geofence_id,
+        "zone_name": zone_name,
+        "latitude": latitude,
+        "longitude": longitude,
+        "family_id": current_user.get('parent_id', current_user['user_id']),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    await db.location_alerts.insert_one(alert_doc)
+    
+    # Create notification for parents
+    notification_doc = {
+        "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+        "type": f"geofence_{'enter' if entered else 'exit'}",
+        "user_id": current_user['user_id'],
+        "user_name": current_user['name'],
+        "family_id": current_user.get('parent_id', current_user['user_id']),
+        "message": f"{current_user['name']} {'entered' if entered else 'left'} {zone_name}",
+        "geofence_name": zone_name,
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.notifications.insert_one(notification_doc)
+    
+    return {"success": True, "alert_id": alert_doc['alert_id']}
+
+# Get Location Alerts
+@api_router.get("/location/alerts")
+async def get_location_alerts(request: Request):
+    """Get recent location alerts for the family"""
+    current_user = await get_current_user(request)
+    parent_id = current_user.get('parent_id', current_user['user_id'])
+    
+    alerts = await db.location_alerts.find(
+        {"family_id": parent_id},
+        {"_id": 0}
+    ).sort("timestamp", -1).limit(50).to_list(50)
+    
+    return {"alerts": alerts}
+
+# Get Family Battery Status (for parents)
+@api_router.get("/battery/family-status")
+async def get_family_battery_status(request: Request):
+    """Get battery status for all family members"""
+    current_user = await get_current_user(request)
+    
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can view family battery status")
+    
+    # Get all family members with battery info
+    members = await db.users.find(
+        {"parent_id": current_user['user_id']},
+        {"_id": 0, "user_id": 1, "name": 1, "battery": 1, "permissions": 1}
+    ).to_list(100)
+    
+    # Filter to only those sharing battery
+    members_with_battery = []
+    for member in members:
+        if member.get('permissions', {}).get('share_battery', False) and member.get('battery'):
+            members_with_battery.append({
+                "user_id": member['user_id'],
+                "name": member['name'],
+                "battery": member['battery']
+            })
+    
+    return {"members": members_with_battery}
+
 # GPS Status Notification
 @api_router.post("/location/gps-disabled")
 async def report_gps_disabled(request: Request, data: dict):
