@@ -1463,10 +1463,10 @@ async def ai_schedule_chores(request: Request, data: dict):
     prompt = f"""Create a {schedule_days}-day chore schedule for this family.
 
 CHILDREN:
-{chr(10).join(children_info)}
+{chr(10).join(children_info) if children_info else 'No children found'}
 
 AVAILABLE CHORES:
-{chr(10).join(chores_info)}
+{chr(10).join(chores_info) if chores_info else 'No chores found'}
 
 SCHEDULING PREFERENCES:
 {preferences if preferences else 'Balance workload fairly across all children'}
@@ -1479,6 +1479,8 @@ RULES:
 5. Don't overload any single day
 
 Format the schedule clearly by day, showing which child does which chore."""
+    
+    logger.info(f"AI Schedule prompt has {len(children_info)} children, {len(chores_info)} chores")
     
     response = await chat.send_message(UserMessage(text=prompt))
     logger.info(f"AI Schedule: Got response of type {type(response)}, length {len(str(response)) if response else 0}")
