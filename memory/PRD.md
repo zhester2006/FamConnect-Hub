@@ -687,25 +687,40 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - [x] ChildSpace.js - Shows medal next to child's name in header
 - [x] ChatScreen.js & FamilyWallScreen.js - Already had medals from previous session
 
-**Key Files Modified:**
-- `/app/mobile/FamFocusHub/package.json` - Added react-native-maps@1.27.1
-- `/app/mobile/FamFocusHub/app.json` - Added Google Maps API configuration
-- `/app/mobile/FamFocusHub/src/screens/LocationScreen.js` - Complete map picker implementation
-- `/app/mobile/FamFocusHub/src/screens/ParentDashboard.js` - Added medal imports and display
-- `/app/mobile/FamFocusHub/src/screens/ChoresScreen.js` - Added medals to member selectors
-- `/app/mobile/FamFocusHub/src/screens/RewardsScreen.js` - Added medals to family members
-- `/app/mobile/FamFocusHub/src/screens/ChildSpace.js` - Added medal to header
+**End-to-End Encryption for Chat:**
+- [x] Created `/app/mobile/FamFocusHub/src/services/encryption.service.js`
+- [x] AES-256 encryption using crypto-js library
+- [x] Encryption keys stored securely per family using expo-secure-store
+- [x] Messages encrypted before sending, decrypted on receipt
+- [x] WebSocket messages support encrypted content
+- [x] REST API updated to store encrypted_content field
+- [x] E2E badge indicator in chat header when encryption is active
+- [x] Backward compatible - supports both encrypted and plaintext messages
 
-**Technical Details:**
-- MapView uses PROVIDER_GOOGLE for consistent experience
-- Geofence radius converted from feet to meters for Circle component (feet * 0.3048)
-- Leaderboard data fetched in parallel with other screen data
-- Rankings mapped to children using user_id lookup
-- Medal emblem sizes: tiny (14px), small (18px), medium (24px), large (32px)
+**Child Profile Photos on Chores/Tasks/Events:**
+- [x] Backend: `GET /api/chores` now returns `assignee_name`, `assignee_picture`, `completed_by_name`, `completed_by_picture`
+- [x] Backend: `GET /api/events` now returns `created_by_name`, `created_by_picture`, `assignee_name`, `assignee_picture`
+- [x] Backend: `GET /api/tasks` now returns `assignee_name`, `assignee_picture`, `completed_by_name`, `completed_by_picture`
+- [x] ChoresScreen.js - Displays assignee avatar and name on each chore card
+- [x] CalendarScreen.js - Shows creator avatar and name on events (main list and day popup)
+- [x] HomeHubScreen.js - Displays assignee avatar on today's chores
+
+**Key Files Modified:**
+- `/app/mobile/FamFocusHub/package.json` - Added react-native-maps@1.27.1, crypto-js@4.2.0
+- `/app/mobile/FamFocusHub/app.json` - Added Google Maps API configuration
+- `/app/mobile/FamFocusHub/src/services/encryption.service.js` - NEW: E2E encryption service
+- `/app/mobile/FamFocusHub/src/services/api.service.js` - Updated sendMessage to support encrypted content
+- `/app/mobile/FamFocusHub/src/screens/ChatScreen.js` - E2E encryption integration + badge
+- `/app/mobile/FamFocusHub/src/screens/LocationScreen.js` - Complete map picker implementation
+- `/app/mobile/FamFocusHub/src/screens/ChoresScreen.js` - Assignee avatars with medals
+- `/app/mobile/FamFocusHub/src/screens/CalendarScreen.js` - Creator avatars on events
+- `/app/mobile/FamFocusHub/src/screens/HomeHubScreen.js` - Assignee avatars on chores
+- `/app/backend/server.py` - Updated chores, events, tasks endpoints with assignee details
 
 **Verification Status:**
 - Web app running ✅
 - Backend API working ✅
+- Chores/Events/Tasks endpoints return assignee info ✅
 - Mobile build needed (changes require EAS build)
 
 
