@@ -137,6 +137,37 @@ export default function LiveChat({ user }) {
     return null;
   };
 
+  // Fetch functions defined before useEffect
+  const fetchMessages = useCallback(async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/messages`, { credentials: 'include' });
+      const data = await res.json();
+      setMessages(data.messages || []);
+    } catch (error) {
+      console.error('Failed to fetch messages:', error);
+    }
+  }, []);
+
+  const fetchFamilyMembers = useCallback(async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/family/members`, { credentials: 'include' });
+      const data = await res.json();
+      setFamilyMembers(data.members || []);
+    } catch (error) {
+      console.error('Failed to fetch family members:', error);
+    }
+  }, []);
+
+  const fetchOnlineUsers = useCallback(async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/family/online`, { credentials: 'include' });
+      const data = await res.json();
+      setOnlineUsers((data.online || []).map(u => u.user_id));
+    } catch (error) {
+      console.error('Failed to fetch online users:', error);
+    }
+  }, []);
+
   // Connect to WebSocket
   const connectWebSocket = useCallback(() => {
     const token = getSessionToken();
@@ -210,7 +241,7 @@ export default function LiveChat({ user }) {
         clearTimeout(reconnectTimeoutRef.current);
       }
     };
-  }, [connectWebSocket]);
+  }, [connectWebSocket, fetchMessages, fetchOnlineUsers, fetchFamilyMembers]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -223,37 +254,7 @@ export default function LiveChat({ user }) {
       const interval = setInterval(fetchMessages, 3000);
       return () => clearInterval(interval);
     }
-  }, [connected]);
-
-  const fetchMessages = async () => {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/messages`, { credentials: 'include' });
-      const data = await res.json();
-      setMessages(data.messages || []);
-    } catch (error) {
-      console.error('Failed to fetch messages:', error);
-    }
-  };
-
-  const fetchFamilyMembers = async () => {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/family/members`, { credentials: 'include' });
-      const data = await res.json();
-      setFamilyMembers(data.members || []);
-    } catch (error) {
-      console.error('Failed to fetch family members:', error);
-    }
-  };
-
-  const fetchOnlineUsers = async () => {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/family/online`, { credentials: 'include' });
-      const data = await res.json();
-      setOnlineUsers((data.online || []).map(u => u.user_id));
-    } catch (error) {
-      console.error('Failed to fetch online users:', error);
-    }
-  };
+  }, [connected, fetchMessages]);
 
   const markMessageAsRead = async (messageId) => {
     try {
