@@ -104,6 +104,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     { icon: Sparkles, label: 'Home Hub', path: '/hub', color: 'text-indigo-400' },
     { icon: Users, label: 'Family', path: '/family', color: 'text-secondary' },
     { icon: Calendar, label: 'Calendar', path: '/calendar', color: 'text-accent' },
+    { icon: GripVertical, label: 'Chore Scheduler', path: '/chore-scheduler', color: 'text-teal-400' },
     { icon: MessageCircle, label: 'Chat', path: '/chat', color: 'text-green-400' },
     { icon: LayoutDashboard, label: 'Wall', path: '/family-wall', color: 'text-pink-400' },
     { icon: ShoppingCart, label: 'Shopping', path: '/shopping', color: 'text-blue-400' },
