@@ -205,7 +205,7 @@ export default function ChatScreen({ navigation }) {
           </Text>
           <View style={styles.messageFooter}>
             <Text style={[styles.timestamp, isOwn && styles.ownTimestamp]}>
-              {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {formatTime(item.created_at) || 'Now'}
             </Text>
             {isOwn && (
               <View style={styles.readReceipt}>
