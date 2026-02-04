@@ -377,8 +377,9 @@ class ApiService {
   }
 
   // Reading Logs
-  async getReadingLogs() {
-    return this.get('/reading-logs', 'reading_logs');
+  async getReadingLogs(childId = null) {
+    const endpoint = childId ? `/reading-logs?child_id=${childId}` : '/reading-logs';
+    return this.get(endpoint, 'reading_logs');
   }
 
   async submitReadingLog(data) {
