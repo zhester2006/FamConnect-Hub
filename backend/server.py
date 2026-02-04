@@ -1393,6 +1393,35 @@ async def get_notifications(request: Request):
     ).sort("created_at", -1).limit(50).to_list(50)
     return {"notifications": notifications}
 
+@api_router.put("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, request: Request):
+    """Mark a notification as read"""
+    current_user = await get_current_user(request)
+    await db.notifications.update_one(
+        {"notification_id": notification_id},
+        {"$set": {"read": True}}
+    )
+    return {"success": True}
+
+@api_router.put("/notifications/read-all")
+async def mark_all_notifications_read(request: Request):
+    """Mark all notifications as read for current user's family"""
+    current_user = await get_current_user(request)
+    parent_id = current_user.get('parent_id', current_user['user_id'])
+    await db.notifications.update_many(
+        {"family_id": parent_id},
+        {"$set": {"read": True}}
+    )
+    return {"success": True}
+
+@api_router.delete("/notifications/clear")
+async def clear_all_notifications(request: Request):
+    """Clear all notifications for current user's family"""
+    current_user = await get_current_user(request)
+    parent_id = current_user.get('parent_id', current_user['user_id'])
+    await db.notifications.delete_many({"family_id": parent_id})
+    return {"success": True}
+
 # Weather API endpoint
 @api_router.get("/weather")
 async def get_weather(lat: float = 40.7128, lon: float = -74.0060):
