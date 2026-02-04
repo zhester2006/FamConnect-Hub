@@ -1,13 +1,98 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import biometricService from '../services/biometric.service';
+import offlineService from '../services/offline.service';
+import apiService from '../services/api.service';
 
 export default function SettingsScreen({ navigation }) {
   const { user, logout } = useAuth();
-  const [notifications, setNotifications] = React.useState(true);
-  const [darkMode, setDarkMode] = React.useState(true);
+  const [notifications, setNotifications] = useState(true);
+  const [darkMode, setDarkMode] = useState(true);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricSupported, setBiometricSupported] = useState(false);
+  const [biometricType, setBiometricType] = useState('Biometric');
+  const [pendingSyncs, setPendingSyncs] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    // Check biometric support
+    const support = await biometricService.checkSupport();
+    setBiometricSupported(support.supported);
+    if (support.supported) {
+      setBiometricType(support.primaryType);
+      const enabled = await biometricService.isBiometricLoginEnabled();
+      setBiometricEnabled(enabled);
+    }
+
+    // Check pending syncs
+    const pending = await apiService.getPendingSyncCount();
+    setPendingSyncs(pending);
+  };
+
+  const handleBiometricToggle = async (enabled) => {
+    if (enabled) {
+      // Get current session token
+      const SecureStore = require('expo-secure-store');
+      const token = await SecureStore.getItemAsync('famfocus_session_token');
+      
+      if (!token) {
+        Alert.alert('Error', 'Please sign in again to enable biometric login');
+        return;
+      }
+
+      const result = await biometricService.enableBiometricLogin(token);
+      if (result.success) {
+        setBiometricEnabled(true);
+        Alert.alert('Success', `${biometricType} login enabled!`);
+      } else {
+        Alert.alert('Failed', result.error || 'Could not enable biometric login');
+      }
+    } else {
+      const result = await biometricService.disableBiometricLogin();
+      if (result.success) {
+        setBiometricEnabled(false);
+      }
+    }
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await apiService.forceSync();
+      const pending = await apiService.getPendingSyncCount();
+      setPendingSyncs(pending);
+      Alert.alert('Sync Complete', pending === 0 ? 'All data synced!' : `${pending} items still pending`);
+    } catch (error) {
+      Alert.alert('Sync Failed', 'Please try again later');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleClearCache = async () => {
+    Alert.alert(
+      'Clear Cache',
+      'This will remove all cached data. You may need to reload some screens.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Clear', 
+          style: 'destructive',
+          onPress: async () => {
+            await offlineService.clearCache();
+            Alert.alert('Done', 'Cache cleared');
+          }
+        }
+      ]
+    );
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -15,9 +100,22 @@ export default function SettingsScreen({ navigation }) {
       'Are you sure you want to log out?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive', onPress: logout }
+        { 
+          text: 'Logout', 
+          style: 'destructive', 
+          onPress: async () => {
+            await biometricService.clearOnLogout();
+            logout();
+          }
+        }
       ]
     );
+  };
+
+  const getBiometricIcon = () => {
+    if (biometricType === 'Face ID') return 'scan';
+    if (biometricType === 'Touch ID') return 'finger-print';
+    return 'lock-closed';
   };
 
   const settingsSections = [
@@ -29,10 +127,35 @@ export default function SettingsScreen({ navigation }) {
       ]
     },
     {
+      title: 'Security',
+      items: [
+        ...(biometricSupported ? [{
+          icon: getBiometricIcon(),
+          label: `${biometricType} Login`,
+          toggle: true,
+          value: biometricEnabled,
+          onToggle: handleBiometricToggle,
+        }] : []),
+      ]
+    },
+    {
       title: 'Preferences',
       items: [
         { icon: 'notifications-outline', label: 'Notifications', toggle: true, value: notifications, onToggle: setNotifications },
         { icon: 'moon-outline', label: 'Dark Mode', toggle: true, value: darkMode, onToggle: setDarkMode },
+      ]
+    },
+    {
+      title: 'Data & Storage',
+      items: [
+        { 
+          icon: 'sync-outline', 
+          label: 'Sync Now', 
+          badge: pendingSyncs > 0 ? pendingSyncs : null,
+          onPress: handleSync,
+          loading: syncing,
+        },
+        { icon: 'trash-outline', label: 'Clear Cache', onPress: handleClearCache },
       ]
     },
     {
@@ -71,38 +194,52 @@ export default function SettingsScreen({ navigation }) {
               <Text style={styles.roleText}>{user?.role || 'Member'}</Text>
             </View>
           </View>
+          {biometricEnabled && (
+            <View style={styles.biometricBadge}>
+              <Ionicons name={getBiometricIcon()} size={16} color="#10b981" />
+            </View>
+          )}
         </View>
 
         {/* Settings Sections */}
         {settingsSections.map((section, sectionIndex) => (
-          <View key={sectionIndex} style={styles.section}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-            <View style={styles.sectionContent}>
-              {section.items.map((item, itemIndex) => (
-                <TouchableOpacity
-                  key={itemIndex}
-                  style={[styles.settingItem, itemIndex < section.items.length - 1 && styles.settingItemBorder]}
-                  onPress={item.onPress}
-                  disabled={item.toggle}
-                >
-                  <View style={styles.settingLeft}>
-                    <Ionicons name={item.icon} size={22} color="#a5b4fc" />
-                    <Text style={styles.settingLabel}>{item.label}</Text>
-                  </View>
-                  {item.toggle ? (
-                    <Switch
-                      value={item.value}
-                      onValueChange={item.onToggle}
-                      trackColor={{ false: '#4b5563', true: '#6366f1' }}
-                      thumbColor={item.value ? '#fff' : '#9ca3af'}
-                    />
-                  ) : (
-                    <Ionicons name="chevron-forward" size={20} color="#6b7280" />
-                  )}
-                </TouchableOpacity>
-              ))}
+          section.items.length > 0 && (
+            <View key={sectionIndex} style={styles.section}>
+              <Text style={styles.sectionTitle}>{section.title}</Text>
+              <View style={styles.sectionContent}>
+                {section.items.map((item, itemIndex) => (
+                  <TouchableOpacity
+                    key={itemIndex}
+                    style={[styles.settingItem, itemIndex < section.items.length - 1 && styles.settingItemBorder]}
+                    onPress={item.onPress}
+                    disabled={item.toggle || item.loading}
+                  >
+                    <View style={styles.settingLeft}>
+                      <Ionicons name={item.icon} size={22} color="#a5b4fc" />
+                      <Text style={styles.settingLabel}>{item.label}</Text>
+                      {item.badge && (
+                        <View style={styles.badge}>
+                          <Text style={styles.badgeText}>{item.badge}</Text>
+                        </View>
+                      )}
+                    </View>
+                    {item.loading ? (
+                      <ActivityIndicator size="small" color="#818cf8" />
+                    ) : item.toggle ? (
+                      <Switch
+                        value={item.value}
+                        onValueChange={item.onToggle}
+                        trackColor={{ false: '#4b5563', true: '#6366f1' }}
+                        thumbColor={item.value ? '#fff' : '#9ca3af'}
+                      />
+                    ) : (
+                      <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
-          </View>
+          )
         ))}
 
         {/* Logout Button */}
@@ -135,6 +272,7 @@ const styles = StyleSheet.create({
   userEmail: { color: '#a5b4fc', fontSize: 14, marginTop: 2 },
   roleBadge: { backgroundColor: 'rgba(99, 102, 241, 0.3)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start', marginTop: 8 },
   roleText: { color: '#818cf8', fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },
+  biometricBadge: { backgroundColor: 'rgba(16, 185, 129, 0.2)', padding: 8, borderRadius: 8 },
   section: { marginBottom: 24 },
   sectionTitle: { color: '#a5b4fc', fontSize: 13, fontWeight: '600', marginBottom: 8, marginLeft: 4, textTransform: 'uppercase' },
   sectionContent: { backgroundColor: 'rgba(30, 27, 75, 0.8)', borderRadius: 12, overflow: 'hidden' },
@@ -142,6 +280,8 @@ const styles = StyleSheet.create({
   settingItemBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.1)' },
   settingLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   settingLabel: { color: '#fff', fontSize: 15 },
+  badge: { backgroundColor: '#ef4444', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  badgeText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
   logoutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 16, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 12, marginTop: 8 },
   logoutText: { color: '#ef4444', fontSize: 16, fontWeight: '600' },
   version: { color: '#4b5563', fontSize: 12, textAlign: 'center', marginTop: 24 },
