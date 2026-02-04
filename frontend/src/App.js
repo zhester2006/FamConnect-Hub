@@ -141,6 +141,7 @@ function AppRouter() {
       <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
       <Route path="/reading" element={<ProtectedRoute><ReadingLogs /></ProtectedRoute>} />
       <Route path="/checkins" element={<ProtectedRoute><CheckIns /></ProtectedRoute>} />
+      <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
     </Routes>
   );
 }
