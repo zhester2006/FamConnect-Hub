@@ -607,9 +607,15 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - [x] Updated ParentDashboard.js - AI Scheduler modal, battery status, stats grid
 - [x] Updated ChatScreen.js - Voice messages, emoji reactions, real-time indicators
 - [x] Updated FamilyScreen.js - Single-family model with member management and role changes
+- [x] Updated CalendarScreen.js - Day popup with events, add/edit/delete events
+- [x] Updated DinnerPlannerScreen.js - AI suggestions, weekly meal plans, quick meal ideas
+- [x] Updated LeaderboardScreen.js - Podium view, full rankings, timeframe filter
+- [x] Updated ShoppingListScreen.js - Pending approvals, purchase tracking
+- [x] Updated RewardsScreen.js - Points shop, redeem rewards, create rewards (parents)
+- [x] Updated ChoresScreen.js - Full chore management, AI scheduler, approval workflow
 - [x] Added expo-av for audio recording in chat
 - [x] Updated app.json with audio, camera, and storage permissions
-- [x] Added expo-image-picker and expo-av plugins
+- [x] Extended api.service.js with family, reading logs, themes methods
 
 **Web App Fixes:**
 - [x] Fixed Sidebar - Now fixed position, no longer draggable/movable
@@ -620,9 +626,9 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - [x] Change member roles
 - [x] Remove members from family
 
-**Mobile Build:**
-- [x] EAS Build completed successfully (Build ID: d1daac6d-979f-47c3-80cb-ff349f0de279)
-- [x] APK available at: https://expo.dev/artifacts/eas/rUZDYBhS1TM5ZfFwQCnL8K.apk
+**Mobile Builds:**
+- [x] Build 1 completed: https://expo.dev/artifacts/eas/rUZDYBhS1TM5ZfFwQCnL8K.apk
+- [x] Build 2 in progress (ID: 4cb903a6-538c-444e-9168-11b9a7ccf86a) - With all screen updates
 
 **Key Files Modified:**
 - `/app/mobile/FamFocusHub/src/components/AnimatedBackground.js` (NEW)
@@ -630,8 +636,23 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - `/app/mobile/FamFocusHub/src/screens/ParentDashboard.js` (Rewritten)
 - `/app/mobile/FamFocusHub/src/screens/ChatScreen.js` (Enhanced with voice/reactions)
 - `/app/mobile/FamFocusHub/src/screens/FamilyScreen.js` (Rewritten - single family model)
+- `/app/mobile/FamFocusHub/src/screens/CalendarScreen.js` (Rewritten - day popup with edit/delete)
+- `/app/mobile/FamFocusHub/src/screens/DinnerPlannerScreen.js` (Rewritten - AI integration)
+- `/app/mobile/FamFocusHub/src/screens/LeaderboardScreen.js` (Rewritten - podium view)
+- `/app/mobile/FamFocusHub/src/screens/ShoppingListScreen.js` (Rewritten - full functionality)
+- `/app/mobile/FamFocusHub/src/screens/RewardsScreen.js` (Rewritten - rewards shop)
+- `/app/mobile/FamFocusHub/src/screens/ChoresScreen.js` (Rewritten - AI scheduler, approvals)
+- `/app/mobile/FamFocusHub/src/services/api.service.js` (Extended)
 - `/app/mobile/FamFocusHub/app.json` (Added permissions and plugins)
-- `/app/mobile/FamFocusHub/package.json` (Added expo-av)
 - `/app/frontend/src/components/Sidebar.js` (Fixed - no more draggable, clean dropdown)
 - `/app/frontend/src/pages/FamilyManagement.js` (Rewritten - single family model)
+
+**Remaining Issues to Address:**
+- [ ] Themes (light/dark/custom) not working on mobile
+- [ ] Profile picture and background customization
+- [ ] Weather auto-update every hour
+- [ ] Home Hub screensaver with nature/historical photos
+- [ ] Notifications permissions not prompted
+- [ ] Chat WebSocket connection issues
+- [ ] Photo/GIF upload functionality
 
