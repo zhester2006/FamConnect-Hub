@@ -5,35 +5,44 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
 
-export default function ChildSpace({ navigation }) {
+export default function ChildSpace({ navigation, route }) {
   const { user } = useAuth();
+  // If viewing another child's profile (parent view), use route.params.child
+  // Otherwise use the logged-in user (child's own view)
+  const viewingChild = route?.params?.child || null;
+  const targetChild = viewingChild || user;
+  const isParentViewing = viewingChild && user?.role === 'parent';
+  
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [chores, setChores] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [rewards, setRewards] = useState([]);
+  const [readingLogs, setReadingLogs] = useState([]);
   const [quote, setQuote] = useState('');
 
   const fetchData = useCallback(async () => {
     try {
-      const [choresData, tasksData, rewardsData, quoteData] = await Promise.all([
+      const [choresData, tasksData, rewardsData, quoteData, logsData] = await Promise.all([
         apiService.getChores(),
         apiService.getTasks(),
         apiService.getRewards(),
         apiService.getDailyQuote().catch(() => ({ quote: 'Have an awesome day!' })),
+        apiService.getReadingLogs(targetChild?.user_id).catch(() => ({ logs: [] })),
       ]);
 
       // Filter chores assigned to this child
-      setChores((choresData.chores || []).filter(c => c.assigned_to === user?.user_id));
+      setChores((choresData.chores || []).filter(c => c.assigned_to === targetChild?.user_id));
       setTasks(tasksData.tasks || []);
       setRewards(rewardsData.rewards || []);
       setQuote(quoteData.quote || '');
+      setReadingLogs((logsData.logs || []).slice(0, 3));
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
     }
-  }, [user?.user_id]);
+  }, [targetChild?.user_id]);
 
   useEffect(() => {
     fetchData();
