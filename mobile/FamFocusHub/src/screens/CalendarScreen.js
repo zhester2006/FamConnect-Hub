@@ -542,9 +542,15 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1, padding: 16 },
   
   // Month Navigation
-  monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   navButton: { padding: 8 },
   monthText: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+  
+  // Event Type Legend
+  legendContainer: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginBottom: 16, flexWrap: 'wrap' },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendText: { color: '#6b7280', fontSize: 11 },
   
   // Calendar Card
   calendarCard: { backgroundColor: 'rgba(30, 27, 75, 0.8)', borderRadius: 20, padding: 16, marginBottom: 20 },
