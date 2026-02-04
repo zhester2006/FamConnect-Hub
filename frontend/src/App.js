@@ -20,7 +20,6 @@ import ReadingLogs from '@/pages/ReadingLogs';
 import CheckIns from '@/pages/CheckIns';
 import Analytics from '@/pages/Analytics';
 import ChoreScheduler from '@/pages/ChoreScheduler';
-import PixieOnboarding from '@/components/PixieOnboarding';
 import WelcomeTutorial from '@/components/WelcomeTutorial';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
