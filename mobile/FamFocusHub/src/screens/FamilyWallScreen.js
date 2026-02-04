@@ -343,6 +343,7 @@ export default function FamilyWallScreen({ navigation }) {
       </View>
     </View>
   );
+  };
 
   if (loading) {
     return (
