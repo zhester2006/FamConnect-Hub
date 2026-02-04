@@ -579,7 +579,33 @@ export default function ChatScreen({ navigation }) {
         />
 
         {/* Input Area */}
-        {isRecording ? (
+        {selectedImage ? (
+          <View style={styles.imagePreviewContainer}>
+            <Image source={{ uri: selectedImage.uri }} style={styles.previewImage} />
+            <TouchableOpacity 
+              style={styles.removeImageBtn}
+              onPress={() => setSelectedImage(null)}
+            >
+              <Ionicons name="close-circle" size={28} color="#ef4444" />
+            </TouchableOpacity>
+            <View style={styles.imageInputRow}>
+              <TextInput
+                style={styles.imageInput}
+                value={newMessage}
+                onChangeText={setNewMessage}
+                placeholder="Add a caption..."
+                placeholderTextColor="#6b7280"
+              />
+              <TouchableOpacity style={styles.sendImageBtn} onPress={sendImageMessage}>
+                {sending ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="send" size={20} color="#fff" />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : isRecording ? (
           <View style={styles.recordingContainer}>
             <TouchableOpacity style={styles.cancelRecordBtn} onPress={cancelRecording}>
               <Ionicons name="close" size={24} color="#ef4444" />
@@ -594,8 +620,8 @@ export default function ChatScreen({ navigation }) {
           </View>
         ) : (
           <View style={styles.inputContainer}>
-            <TouchableOpacity style={styles.micButton} onPress={startRecording}>
-              <Ionicons name="mic" size={24} color="#a5b4fc" />
+            <TouchableOpacity style={styles.attachButton} onPress={() => setShowAttachmentMenu(true)}>
+              <Ionicons name="add-circle" size={28} color="#a5b4fc" />
             </TouchableOpacity>
             <TextInput
               style={styles.input}
@@ -606,6 +632,9 @@ export default function ChatScreen({ navigation }) {
               multiline
               maxLength={500}
             />
+            <TouchableOpacity style={styles.micButton} onPress={startRecording}>
+              <Ionicons name="mic" size={24} color="#a5b4fc" />
+            </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.sendButton, !newMessage.trim() && styles.sendButtonDisabled]}
               onPress={handleSend}
@@ -620,6 +649,68 @@ export default function ChatScreen({ navigation }) {
           </View>
         )}
       </KeyboardAvoidingView>
+
+      {/* Attachment Menu Modal */}
+      <Modal visible={showAttachmentMenu} transparent animationType="fade">
+        <TouchableOpacity 
+          style={styles.attachmentOverlay}
+          activeOpacity={1}
+          onPress={() => setShowAttachmentMenu(false)}
+        >
+          <View style={styles.attachmentMenu}>
+            <TouchableOpacity style={styles.attachmentOption} onPress={handlePickImage}>
+              <View style={[styles.attachmentIcon, { backgroundColor: 'rgba(99, 102, 241, 0.2)' }]}>
+                <Ionicons name="image" size={24} color="#818cf8" />
+              </View>
+              <Text style={styles.attachmentLabel}>Photo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.attachmentOption} onPress={() => { setShowAttachmentMenu(false); setShowGifModal(true); }}>
+              <View style={[styles.attachmentIcon, { backgroundColor: 'rgba(236, 72, 153, 0.2)' }]}>
+                <Ionicons name="happy" size={24} color="#ec4899" />
+              </View>
+              <Text style={styles.attachmentLabel}>GIF</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* GIF Modal */}
+      <Modal visible={showGifModal} transparent animationType="slide">
+        <View style={styles.gifModalOverlay}>
+          <View style={styles.gifModalContent}>
+            <View style={styles.gifModalHeader}>
+              <Text style={styles.gifModalTitle}>Search GIFs</Text>
+              <TouchableOpacity onPress={() => setShowGifModal(false)}>
+                <Ionicons name="close" size={24} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.gifSearchRow}>
+              <TextInput
+                style={styles.gifSearchInput}
+                placeholder="Search GIFs..."
+                placeholderTextColor="#6b7280"
+                value={gifSearch}
+                onChangeText={setGifSearch}
+                onSubmitEditing={() => searchGifs(gifSearch)}
+              />
+              <TouchableOpacity style={styles.gifSearchBtn} onPress={() => searchGifs(gifSearch)}>
+                <Ionicons name="search" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={gifs}
+              numColumns={2}
+              keyExtractor={item => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.gifItem} onPress={() => sendGifMessage(item)}>
+                  <Image source={{ uri: item.preview }} style={styles.gifPreview} />
+                </TouchableOpacity>
+              )}
+              contentContainerStyle={styles.gifGrid}
+            />
+          </View>
+        </View>
+      </Modal>
 
       {/* Reaction Modal */}
       <Modal visible={showReactionModal} transparent animationType="fade">
