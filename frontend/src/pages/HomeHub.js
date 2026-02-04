@@ -126,17 +126,64 @@ export default function HomeHub({ user }) {
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     fetchHubData();
-    simulateWeather();
+    fetchWeather();
     return () => clearInterval(timer);
   }, []);
 
-  const simulateWeather = () => {
-    const conditions = ['sunny', 'cloudy', 'rainy', 'windy'];
-    const temps = [65, 68, 72, 75, 78, 80, 82];
-    setWeather({
-      condition: conditions[Math.floor(Math.random() * conditions.length)],
-      temp: temps[Math.floor(Math.random() * temps.length)]
-    });
+  const fetchWeather = async () => {
+    try {
+      // Try to get user's location for accurate weather
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const res = await fetch(
+              `${BACKEND_URL}/api/weather?lat=${position.coords.latitude}&lon=${position.coords.longitude}`,
+              { credentials: 'include' }
+            );
+            if (res.ok) {
+              const data = await res.json();
+              setWeather({
+                condition: data.condition || 'sunny',
+                temp: data.temp || 72,
+                description: data.description,
+                city: data.city,
+                isMocked: data.is_mocked
+              });
+            }
+          },
+          async () => {
+            // Fallback to default location if geolocation fails
+            const res = await fetch(`${BACKEND_URL}/api/weather`, { credentials: 'include' });
+            if (res.ok) {
+              const data = await res.json();
+              setWeather({
+                condition: data.condition || 'sunny',
+                temp: data.temp || 72,
+                description: data.description,
+                city: data.city,
+                isMocked: data.is_mocked
+              });
+            }
+          }
+        );
+      } else {
+        // No geolocation, use default
+        const res = await fetch(`${BACKEND_URL}/api/weather`, { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setWeather({
+            condition: data.condition || 'sunny',
+            temp: data.temp || 72,
+            description: data.description,
+            city: data.city,
+            isMocked: data.is_mocked
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch weather:', error);
+      // Keep default simulated weather on error
+    }
   };
 
   const fetchHubData = async () => {
