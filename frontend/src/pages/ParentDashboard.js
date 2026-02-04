@@ -31,7 +31,22 @@ export default function ParentDashboard({ user }) {
 
   useEffect(() => {
     fetchDashboardData();
+    fetchBatteryStatus();
+    
+    // Refresh battery status every 30 seconds
+    const batteryInterval = setInterval(fetchBatteryStatus, 30000);
+    return () => clearInterval(batteryInterval);
   }, []);
+
+  const fetchBatteryStatus = async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/battery/family`, { credentials: 'include' });
+      const data = await res.json();
+      setBatteryStatus(data.battery_status || []);
+    } catch (error) {
+      console.error('Failed to fetch battery status:', error);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
