@@ -245,6 +245,99 @@ async def logout(request: Request, response: Response):
     response.delete_cookie("session_token", path="/")
     return {"message": "Logged out"}
 
+# Mobile OAuth callback handler
+@api_router.get("/auth/google/mobile")
+async def google_mobile_auth(redirect_uri: str):
+    """Start Google OAuth for mobile app"""
+    # The mobile app will handle the OAuth flow, this just validates the redirect URI
+    return {"redirect_uri": redirect_uri, "message": "Use standard OAuth flow"}
+
+@api_router.post("/auth/mobile/callback")
+async def mobile_auth_callback(request: Request, response: Response, data: dict):
+    """Handle mobile OAuth callback and return session token"""
+    session_id = data.get('session_id')
+    if not session_id:
+        raise HTTPException(status_code=400, detail="Session ID required")
+    
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            'https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data',
+            headers={'X-Session-ID': session_id}
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=401, detail="Invalid session ID")
+        session_data = resp.json()
+    
+    user = await db.users.find_one({"email": session_data['email']}, {"_id": 0})
+    if not user:
+        user_id = f"user_{uuid.uuid4().hex[:12]}"
+        user_doc = {
+            "user_id": user_id,
+            "email": session_data['email'],
+            "name": session_data['name'],
+            "picture": session_data.get('picture'),
+            "role": "parent",
+            "points": 0,
+            "badges": [],
+            "settings": {"theme": "cosmic_explorer", "notifications_enabled": True},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "online_status": True,
+            "last_seen": datetime.now(timezone.utc).isoformat()
+        }
+        await db.users.insert_one(user_doc)
+        user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    
+    session_token = f"session_{uuid.uuid4().hex}"
+    await db.user_sessions.insert_one({
+        "session_token": session_token,
+        "user_id": user['user_id'],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "expires_at": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+    })
+    
+    # Return token directly for mobile (no cookie needed)
+    return {"session_token": session_token, "user": user}
+
+# Push notification device registration
+@api_router.post("/notifications/register-device")
+async def register_device_for_push(request: Request, data: dict):
+    """Register a device for push notifications"""
+    current_user = await get_current_user(request)
+    
+    token = data.get('token')
+    platform = data.get('platform', 'unknown')
+    
+    if not token:
+        raise HTTPException(status_code=400, detail="Push token required")
+    
+    # Update or insert device registration
+    await db.push_devices.update_one(
+        {"user_id": current_user['user_id'], "token": token},
+        {"$set": {
+            "user_id": current_user['user_id'],
+            "token": token,
+            "platform": platform,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    
+    return {"success": True}
+
+@api_router.delete("/notifications/unregister-device")
+async def unregister_device(request: Request, data: dict):
+    """Unregister a device from push notifications"""
+    current_user = await get_current_user(request)
+    token = data.get('token')
+    
+    if token:
+        await db.push_devices.delete_one({
+            "user_id": current_user['user_id'],
+            "token": token
+        })
+    
+    return {"success": True}
+
 # User/Profile endpoints
 @api_router.get("/users/{user_id}", response_model=User)
 async def get_user(user_id: str, request: Request):
