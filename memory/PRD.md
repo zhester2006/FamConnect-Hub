@@ -371,12 +371,12 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 ## Backlog / Future Tasks
 
 ### P1 - Medium Priority
-- [ ] Family switching UI (use existing endpoints)
-- [ ] Family invite system completion
+- [ ] Mobile app OAuth integration (complete Google login flow)
+- [ ] Push notifications for mobile app
+- [ ] Mobile app offline mode with data sync
 
 ### P2 - Low Priority
 - [ ] Advanced analytics with charts library
-- [ ] Mobile app (React Native)
 - [ ] PDF export option
 - [ ] Notification preferences granularity
 - [ ] Video welcome tutorial
