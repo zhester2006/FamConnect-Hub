@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Heart, MessageCircle, Image as ImageIcon, Plus, TrendingUp, Smile, Send, X, BarChart2, Check, Search, Loader2 } from 'lucide-react';
+import { Heart, MessageCircle, Image as ImageIcon, Plus, TrendingUp, Smile, Send, X, BarChart2, Check, Search, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { toast } from 'sonner';
 
