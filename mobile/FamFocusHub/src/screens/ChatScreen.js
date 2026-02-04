@@ -804,6 +804,11 @@ const styles = StyleSheet.create({
     borderWidth: 2, 
     borderColor: '#0f0d1a' 
   },
+  medalPosition: {
+    position: 'absolute',
+    bottom: -2,
+    left: -2,
+  },
   messageBubble: { maxWidth: '75%', padding: 12, borderRadius: 16 },
   otherBubble: { backgroundColor: 'rgba(30, 27, 75, 0.9)', borderBottomLeftRadius: 4 },
   ownBubble: { backgroundColor: '#6366f1', borderBottomRightRadius: 4 },
