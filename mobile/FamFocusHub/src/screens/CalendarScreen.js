@@ -178,8 +178,11 @@ export default function CalendarScreen({ navigation }) {
 
   const getEventTypeColor = (type) => {
     switch (type) {
-      case 'birthday': return '#ec4899';
+      case 'event': return '#06b6d4';
+      case 'work': return '#3b82f6';
       case 'appointment': return '#f59e0b';
+      case 'task': return '#10b981';
+      case 'birthday': return '#ec4899';
       case 'holiday': return '#10b981';
       case 'reminder': return '#6366f1';
       default: return '#06b6d4';
