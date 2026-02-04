@@ -559,7 +559,7 @@ export default function ChoreScheduler({ user }) {
           {/* Help Text */}
           <div className="glass-card rounded-xl p-4 border-dashed border-2 border-slate-700">
             <p className="text-sm text-slate-400">
-              <strong className="text-white">How it works:</strong> Drag chores from the left panel and drop them onto either a day (in Calendar View) or directly onto a child (in Children View). Click the X to remove an assignment. When you're done, click Save Schedule to create the chores.
+              <strong className="text-white">How it works:</strong> Drag chores from the left panel and drop them onto either a day (in Calendar View) or directly onto a child (in Children View). Click the X to remove an assignment. When you&apos;re done, click Save Schedule to create the chores.
             </p>
           </div>
         </div>
