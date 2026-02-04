@@ -1307,6 +1307,386 @@ async def check_geofences(user, lat, lng):
             }
             await db.notifications.insert_one(notification_doc)
 
+# WebSocket Connection Manager for Real-time Chat
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: Dict[str, List[WebSocket]] = {}  # family_id -> list of websockets
+        self.user_connections: Dict[str, WebSocket] = {}  # user_id -> websocket
+        self.typing_users: Dict[str, set] = {}  # family_id -> set of user_ids typing
+    
+    async def connect(self, websocket: WebSocket, user_id: str, family_id: str):
+        await websocket.accept()
+        if family_id not in self.active_connections:
+            self.active_connections[family_id] = []
+        self.active_connections[family_id].append(websocket)
+        self.user_connections[user_id] = websocket
+        
+        # Update user online status
+        await db.users.update_one(
+            {"user_id": user_id},
+            {"$set": {"online_status": True, "last_seen": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        # Broadcast user joined
+        await self.broadcast_status(family_id, user_id, "online")
+    
+    def disconnect(self, websocket: WebSocket, user_id: str, family_id: str):
+        if family_id in self.active_connections:
+            if websocket in self.active_connections[family_id]:
+                self.active_connections[family_id].remove(websocket)
+        if user_id in self.user_connections:
+            del self.user_connections[user_id]
+    
+    async def broadcast_message(self, family_id: str, message: dict):
+        if family_id in self.active_connections:
+            for connection in self.active_connections[family_id]:
+                try:
+                    await connection.send_json({"type": "message", "data": message})
+                except:
+                    pass
+    
+    async def broadcast_typing(self, family_id: str, user_id: str, user_name: str, is_typing: bool):
+        if family_id not in self.typing_users:
+            self.typing_users[family_id] = set()
+        
+        if is_typing:
+            self.typing_users[family_id].add(user_id)
+        else:
+            self.typing_users[family_id].discard(user_id)
+        
+        if family_id in self.active_connections:
+            for connection in self.active_connections[family_id]:
+                try:
+                    await connection.send_json({
+                        "type": "typing",
+                        "data": {"user_id": user_id, "user_name": user_name, "is_typing": is_typing}
+                    })
+                except:
+                    pass
+    
+    async def broadcast_status(self, family_id: str, user_id: str, status: str):
+        if family_id in self.active_connections:
+            for connection in self.active_connections[family_id]:
+                try:
+                    await connection.send_json({
+                        "type": "status",
+                        "data": {"user_id": user_id, "status": status}
+                    })
+                except:
+                    pass
+
+manager = ConnectionManager()
+
+# WebSocket endpoint for real-time chat
+@app.websocket("/ws/chat/{session_token}")
+async def websocket_chat(websocket: WebSocket, session_token: str):
+    # Verify session
+    session = await db.user_sessions.find_one({"session_token": session_token}, {"_id": 0})
+    if not session:
+        await websocket.close(code=4001)
+        return
+    
+    user = await db.users.find_one({"user_id": session["user_id"]}, {"_id": 0})
+    if not user:
+        await websocket.close(code=4001)
+        return
+    
+    family_id = user.get('parent_id', user['user_id'])
+    user_id = user['user_id']
+    
+    await manager.connect(websocket, user_id, family_id)
+    
+    try:
+        while True:
+            data = await websocket.receive_json()
+            
+            if data.get("type") == "message":
+                # Save message to database
+                message_id = f"msg_{uuid.uuid4().hex[:12]}"
+                message_doc = {
+                    "message_id": message_id,
+                    "family_id": family_id,
+                    "user_id": user_id,
+                    "user_name": user['name'],
+                    "user_picture": user.get('picture'),
+                    "content": data.get("content", ""),
+                    "media_url": data.get("media_url"),
+                    "media_type": data.get("media_type"),
+                    "read_by": [user_id],
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                await db.messages.insert_one(message_doc)
+                
+                # Broadcast to all family members
+                await manager.broadcast_message(family_id, message_doc)
+            
+            elif data.get("type") == "typing":
+                await manager.broadcast_typing(
+                    family_id, user_id, user['name'], data.get("is_typing", False)
+                )
+            
+            elif data.get("type") == "read":
+                # Mark messages as read
+                message_ids = data.get("message_ids", [])
+                for msg_id in message_ids:
+                    await db.messages.update_one(
+                        {"message_id": msg_id},
+                        {"$addToSet": {"read_by": user_id}}
+                    )
+    
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, user_id, family_id)
+        await db.users.update_one(
+            {"user_id": user_id},
+            {"$set": {"online_status": False, "last_seen": datetime.now(timezone.utc).isoformat()}}
+        )
+        await manager.broadcast_status(family_id, user_id, "offline")
+
+# Profile picture upload endpoint
+@api_router.post("/users/{user_id}/upload-picture")
+async def upload_profile_picture(user_id: str, request: Request, data: dict):
+    current_user = await get_current_user(request)
+    if current_user['user_id'] != user_id and current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    image_data = data.get('image')  # Base64 encoded image
+    image_type = data.get('type', 'profile')  # 'profile' or 'background'
+    
+    if not image_data:
+        raise HTTPException(status_code=400, detail="No image data provided")
+    
+    # Store in database (for simplicity, storing base64 directly)
+    # In production, would upload to cloud storage
+    update_field = 'picture' if image_type == 'profile' else 'profile_background'
+    
+    await db.users.update_one(
+        {"user_id": user_id},
+        {"$set": {update_field: image_data}}
+    )
+    
+    return await db.users.find_one({"user_id": user_id}, {"_id": 0})
+
+# Pixie AI Onboarding - Get onboarding steps
+@api_router.get("/onboarding/steps")
+async def get_onboarding_steps(request: Request):
+    current_user = await get_current_user(request)
+    role = current_user.get('role', 'member')
+    
+    # Check if user has completed onboarding
+    if current_user.get('settings', {}).get('onboarding_completed'):
+        return {"completed": True, "steps": []}
+    
+    # Role-specific onboarding steps
+    parent_steps = [
+        {
+            "step": 1,
+            "title": "Welcome to FamFocus Hub!",
+            "message": "Hey there! I'm Pixie, your family's AI assistant. I'm here to help you get the most out of FamFocus Hub. Let me show you around!",
+            "target": None,
+            "position": "center"
+        },
+        {
+            "step": 2,
+            "title": "Your Dashboard",
+            "message": "This is your Parent Dashboard - your command center! Here you can see your children's activities, pending approvals, and manage the family.",
+            "target": "parent-dashboard",
+            "position": "bottom"
+        },
+        {
+            "step": 3,
+            "title": "Home Hub",
+            "message": "The Home Hub is perfect for a quick family overview - weather, calendar, chores, and shopping list all in one place!",
+            "target": "sidebar-home-hub",
+            "position": "right"
+        },
+        {
+            "step": 4,
+            "title": "Manage Chores",
+            "message": "Create and assign chores to your children. I can even help schedule them fairly using AI! Set point values to motivate everyone.",
+            "target": "sidebar-dashboard",
+            "position": "right"
+        },
+        {
+            "step": 5,
+            "title": "Safe Zones & Location",
+            "message": "Set up safe zones like home and school. You'll get notified when your children leave these areas.",
+            "target": "sidebar-location",
+            "position": "right"
+        },
+        {
+            "step": 6,
+            "title": "Rewards Shop",
+            "message": "Create rewards that children can earn with their points. It's a great way to motivate good behavior!",
+            "target": "sidebar-rewards",
+            "position": "right"
+        },
+        {
+            "step": 7,
+            "title": "You're All Set!",
+            "message": "That's the basics! Explore the app and remember - I'm always here in the Family Wall with daily inspiration. Have fun with your family!",
+            "target": None,
+            "position": "center"
+        }
+    ]
+    
+    child_steps = [
+        {
+            "step": 1,
+            "title": "Welcome to FamFocus Hub!",
+            "message": "Hey there, superstar! I'm Pixie, and I'm going to help you explore FamFocus Hub. It's going to be fun!",
+            "target": None,
+            "position": "center"
+        },
+        {
+            "step": 2,
+            "title": "Your Space",
+            "message": "This is YOUR space! See your daily missions (chores), earn points, and check your progress.",
+            "target": "child-space",
+            "position": "bottom"
+        },
+        {
+            "step": 3,
+            "title": "Complete Chores, Earn Points!",
+            "message": "When you finish a chore, mark it complete. Your parents will approve it, and you'll earn points!",
+            "target": "today-missions",
+            "position": "bottom"
+        },
+        {
+            "step": 4,
+            "title": "Rewards Shop",
+            "message": "Spend your hard-earned points on awesome rewards! Check out what's available.",
+            "target": "sidebar-rewards",
+            "position": "right"
+        },
+        {
+            "step": 5,
+            "title": "Family Chat",
+            "message": "Chat with your family in real-time! Share updates, ask questions, or just say hi.",
+            "target": "sidebar-chat",
+            "position": "right"
+        },
+        {
+            "step": 6,
+            "title": "Reading Log",
+            "message": "Love reading? Log your books here and share summaries with your parents!",
+            "target": "sidebar-reading",
+            "position": "right"
+        },
+        {
+            "step": 7,
+            "title": "You're Ready!",
+            "message": "That's it! Go complete some missions, earn points, and have fun with your family!",
+            "target": None,
+            "position": "center"
+        }
+    ]
+    
+    return {
+        "completed": False,
+        "steps": parent_steps if role == 'parent' else child_steps,
+        "total_steps": 7
+    }
+
+# Mark onboarding complete
+@api_router.post("/onboarding/complete")
+async def complete_onboarding(request: Request):
+    current_user = await get_current_user(request)
+    
+    await db.users.update_one(
+        {"user_id": current_user['user_id']},
+        {"$set": {"settings.onboarding_completed": True}}
+    )
+    
+    return {"success": True}
+
+# Reset onboarding (for testing)
+@api_router.post("/onboarding/reset")
+async def reset_onboarding(request: Request):
+    current_user = await get_current_user(request)
+    
+    await db.users.update_one(
+        {"user_id": current_user['user_id']},
+        {"$set": {"settings.onboarding_completed": False}}
+    )
+    
+    return {"success": True}
+
+# Enhanced Dinner Planner with weekly meal planning
+@api_router.post("/dinner/weekly-plan")
+async def create_weekly_meal_plan(request: Request, data: dict):
+    current_user = await get_current_user(request)
+    
+    family_size = data.get('family_size', 4)
+    preferences = data.get('preferences', '')
+    budget = data.get('budget', 'moderate')
+    
+    chat = LlmChat(
+        api_key=os.environ['EMERGENT_LLM_KEY'],
+        session_id=f"mealplan_{uuid.uuid4().hex[:8]}",
+        system_message="You are a helpful family meal planning assistant."
+    ).with_model("openai", "gpt-5.2")
+    
+    prompt = f"""Create a weekly dinner plan for a family of {family_size}.
+Preferences: {preferences}
+Budget: {budget}
+
+For each day (Monday-Sunday), provide:
+1. Meal name
+2. Brief description
+3. Estimated prep time
+4. Key ingredients
+
+Format as a clear list for each day."""
+    
+    response = await chat.send_message(UserMessage(text=prompt))
+    
+    # Store the meal plan
+    plan_id = f"mealplan_{uuid.uuid4().hex[:12]}"
+    plan_doc = {
+        "plan_id": plan_id,
+        "family_id": current_user.get('parent_id', current_user['user_id']),
+        "week_start": datetime.now(timezone.utc).date().isoformat(),
+        "plan": response,
+        "preferences": preferences,
+        "created_by": current_user['user_id'],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.meal_plans.insert_one(plan_doc)
+    
+    return {"plan_id": plan_id, "plan": response}
+
+# Get saved meal plans
+@api_router.get("/dinner/plans")
+async def get_meal_plans(request: Request):
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    plans = await db.meal_plans.find(
+        {"family_id": family_id},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(10).to_list(10)
+    
+    return {"plans": plans}
+
+# Get online family members
+@api_router.get("/family/online")
+async def get_online_members(request: Request):
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    online_members = await db.users.find(
+        {
+            "$or": [
+                {"user_id": family_id},
+                {"parent_id": family_id}
+            ],
+            "online_status": True
+        },
+        {"_id": 0, "user_id": 1, "name": 1, "picture": 1, "last_seen": 1}
+    ).to_list(50)
+    
+    return {"online": online_members}
+
 app.include_router(api_router)
 
 app.add_middleware(
