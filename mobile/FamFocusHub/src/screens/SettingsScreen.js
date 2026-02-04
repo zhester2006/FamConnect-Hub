@@ -134,7 +134,7 @@ export default function SettingsScreen({ navigation }) {
 
         {/* Theme Mode Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Appearance</Text>
+          <Text style={styles.sectionTitle}>Theme Mode</Text>
           <View style={styles.themeModeRow}>
             {Object.values(THEME_MODES).map((mode) => (
               <TouchableOpacity
@@ -159,32 +159,39 @@ export default function SettingsScreen({ navigation }) {
               </TouchableOpacity>
             ))}
           </View>
+          <Text style={styles.themeModeHint}>
+            {themeMode.id === 'standard' 
+              ? 'Standard mode uses default colors'
+              : 'Custom mode applies your selected theme colors across the app'}
+          </Text>
         </View>
 
-        {/* Theme Colors Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Theme Colors</Text>
-          <View style={styles.themesGrid}>
-            {Object.values(THEMES).map((theme) => (
-              <TouchableOpacity
-                key={theme.id}
-                style={[
-                  styles.themeOption,
-                  currentTheme.id === theme.id && styles.themeOptionActive
-                ]}
-                onPress={() => changeTheme(theme.id)}
-              >
-                <LinearGradient colors={theme.colors} style={styles.themePreview} />
-                <Text style={styles.themeName}>{theme.name}</Text>
-                {currentTheme.id === theme.id && (
-                  <View style={styles.themeCheck}>
-                    <Ionicons name="checkmark-circle" size={18} color="#10b981" />
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
+        {/* Theme Colors Section - Only show when Custom mode is selected */}
+        {themeMode.id === 'custom' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Choose Your Colors</Text>
+            <View style={styles.themesGrid}>
+              {Object.values(THEMES).map((theme) => (
+                <TouchableOpacity
+                  key={theme.id}
+                  style={[
+                    styles.themeOption,
+                    currentTheme.id === theme.id && styles.themeOptionActive
+                  ]}
+                  onPress={() => changeTheme(theme.id)}
+                >
+                  <LinearGradient colors={theme.colors} style={styles.themePreview} />
+                  <Text style={styles.themeName}>{theme.name}</Text>
+                  {currentTheme.id === theme.id && (
+                    <View style={styles.themeCheck}>
+                      <Ionicons name="checkmark-circle" size={18} color="#10b981" />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Notifications */}
         <View style={styles.section}>
