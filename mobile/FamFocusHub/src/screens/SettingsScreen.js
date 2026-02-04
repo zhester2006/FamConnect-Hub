@@ -287,6 +287,7 @@ const styles = StyleSheet.create({
   themeModeOptionActive: { backgroundColor: '#6366f1' },
   themeModeText: { color: '#6b7280', fontSize: 12, fontWeight: '600' },
   themeModeTextActive: { color: '#fff' },
+  themeModeHint: { color: '#9ca3af', fontSize: 12, marginTop: 12, textAlign: 'center', fontStyle: 'italic' },
   
   // Theme Colors
   themesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
