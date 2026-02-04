@@ -42,24 +42,29 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (sessionToken) => {
+  const login = async (sessionToken, userData = null) => {
     try {
       await apiService.setSession(sessionToken);
-      const userData = await apiService.getCurrentUser();
       
-      if (!userData || !userData.user_id) {
+      // Use provided userData or fetch from API
+      let user = userData;
+      if (!user) {
+        user = await apiService.getCurrentUser();
+      }
+      
+      if (!user || !user.user_id) {
         await apiService.clearSession();
         throw new Error('Invalid session');
       }
       
-      setUser(userData);
+      setUser(user);
       setIsAuthenticated(true);
       
       // Initialize WebSocket
       webSocketService.setSessionToken(sessionToken);
       webSocketService.connect();
       
-      return userData;
+      return user;
     } catch (error) {
       await apiService.clearSession();
       throw error;
