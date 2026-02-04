@@ -553,9 +553,16 @@ export default function LocationScreen({ navigation }) {
               return (
                 <View key={child.user_id} style={styles.childCard}>
                   <View style={styles.childHeader}>
-                    <View style={styles.childAvatar}>
-                      <Text style={styles.childAvatarText}>{child.name?.charAt(0)}</Text>
-                      <View style={[styles.onlineIndicator, isOnline && styles.onlineIndicatorActive]} />
+                    <View style={styles.childAvatarContainer}>
+                      <View style={styles.childAvatar}>
+                        <Text style={styles.childAvatarText}>{child.name?.charAt(0)}</Text>
+                        <View style={[styles.onlineIndicator, isOnline && styles.onlineIndicatorActive]} />
+                      </View>
+                      {child.rank && child.rank <= 3 && (
+                        <View style={styles.childMedalPosition}>
+                          <MedalEmblem rank={child.rank} size="small" />
+                        </View>
+                      )}
                     </View>
                     <View style={styles.childInfo}>
                       <Text style={styles.childName}>{child.nickname || child.name}</Text>
