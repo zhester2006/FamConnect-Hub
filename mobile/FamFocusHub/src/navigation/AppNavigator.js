@@ -202,6 +202,9 @@ export default function AppNavigator() {
                 <Stack.Screen name="Settings" component={SettingsScreen} />
                 <Stack.Screen name="ReadingLogs" component={ReadingLogsScreen} />
                 <Stack.Screen name="Profile" component={ProfileScreen} />
+                <Stack.Screen name="HomeHub" component={HomeHubScreen} />
+                <Stack.Screen name="Calendar" component={CalendarScreen} />
+                <Stack.Screen name="DinnerPlanner" component={DinnerPlannerScreen} />
               </>
             )}
           </>
