@@ -109,10 +109,33 @@ class WebSocketService {
         this.emit('typing', data.data);
         break;
       case 'status':
-        this.emit('status', data.data);
+        // Handle user online/offline status
+        if (data.data) {
+          if (data.data.status === 'online') {
+            this.onlineMembers.add(data.data.user_id);
+          } else {
+            this.onlineMembers.delete(data.data.user_id);
+          }
+          this.emit('status', data.data);
+          this.emit('presence', { 
+            user_id: data.data.user_id, 
+            status: data.data.status,
+            online_members: Array.from(this.onlineMembers)
+          });
+        }
         break;
       case 'read':
         this.emit('read', data.data);
+        break;
+      case 'reaction':
+        this.emit('reaction', data.data);
+        break;
+      case 'members_online':
+        // Update full list of online members
+        if (data.data && data.data.members) {
+          this.onlineMembers = new Set(data.data.members);
+          this.emit('members_online', { members: data.data.members });
+        }
         break;
       case 'pong':
         // Heartbeat response
