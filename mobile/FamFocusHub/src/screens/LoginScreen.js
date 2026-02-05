@@ -330,8 +330,8 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1 
   },
-  scrollContent: {
-    flexGrow: 1,
+  content: {
+    flex: 1,
     paddingBottom: 40,
   },
   header: {
