@@ -1,190 +1,166 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const THEME_KEY = '@famfocus_theme';
-const THEME_MODE_KEY = '@famfocus_theme_mode';
-
-// Available color themes
-export const THEMES = {
-  purple: {
-    id: 'purple',
-    name: 'Purple Dream',
-    primary: '#6366f1',
-    secondary: '#818cf8',
-    accent: '#a5b4fc',
-    colors: ['#1e1b4b', '#312e81', '#4f46e5'],
-  },
-  green: {
-    id: 'green',
-    name: 'Forest',
-    primary: '#22c55e',
-    secondary: '#4ade80',
-    accent: '#86efac',
-    colors: ['#064e3b', '#065f46', '#059669'],
-  },
-  blue: {
-    id: 'blue',
-    name: 'Ocean',
-    primary: '#3b82f6',
-    secondary: '#60a5fa',
-    accent: '#93c5fd',
-    colors: ['#1e3a8a', '#1d4ed8', '#2563eb'],
-  },
-  pink: {
-    id: 'pink',
-    name: 'Sunset',
-    primary: '#ec4899',
-    secondary: '#f472b6',
-    accent: '#f9a8d4',
-    colors: ['#831843', '#be185d', '#db2777'],
-  },
-  teal: {
-    id: 'teal',
-    name: 'Aqua',
-    primary: '#14b8a6',
-    secondary: '#2dd4bf',
-    accent: '#5eead4',
-    colors: ['#134e4a', '#115e59', '#0f766e'],
-  },
-  orange: {
-    id: 'orange',
-    name: 'Amber',
-    primary: '#f59e0b',
-    secondary: '#fbbf24',
-    accent: '#fcd34d',
-    colors: ['#78350f', '#92400e', '#b45309'],
-  },
+// Default theme - Standard violet/purple palette
+const DEFAULT_THEME = {
+  mode: 'standard', // 'standard' or 'custom'
+  primary: '#6366f1',
+  secondary: '#818cf8',
+  accent: '#a5b4fc',
+  background: '#0f0d1a',
+  surface: '#1e1b4b',
+  text: '#ffffff',
+  textSecondary: '#9ca3af',
+  success: '#10b981',
+  warning: '#f59e0b',
+  error: '#ef4444',
+  // Gradient colors
+  gradientStart: '#1e1b4b',
+  gradientEnd: '#0f0d1a',
 };
 
-// Theme modes: Standard (default dark) vs Custom (user-selected)
-export const THEME_MODES = {
-  standard: {
-    id: 'standard',
-    name: 'Standard',
-    icon: 'contrast',
-    // Default dark colors
-    background: '#0f0d1a',
-    surface: 'rgba(30, 27, 75, 0.8)',
-    text: '#ffffff',
-    textSecondary: '#a5b4fc',
-    textMuted: '#6b7280',
-  },
-  custom: {
-    id: 'custom',
-    name: 'Custom',
-    icon: 'color-palette',
-    // Custom applies the selected theme colors
-    background: '#0f0d1a',
-    surface: 'rgba(30, 27, 75, 0.8)',
-    text: '#ffffff',
-    textSecondary: '#a5b4fc',
-    textMuted: '#6b7280',
-  },
-};
+// Standard theme (non-editable baseline)
+const STANDARD_THEME = { ...DEFAULT_THEME, mode: 'standard' };
 
 const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
-  const [currentTheme, setCurrentTheme] = useState(THEMES.purple);
-  const [themeMode, setThemeMode] = useState(THEME_MODES.standard);
-  const [isLoading, setIsLoading] = useState(true);
+  const [theme, setTheme] = useState(DEFAULT_THEME);
+  const [isCustomMode, setIsCustomMode] = useState(false);
+  const [loading, setLoading] = useState(true);
 
+  // Load saved theme on mount
   useEffect(() => {
     loadTheme();
   }, []);
 
   const loadTheme = async () => {
     try {
-      const [savedTheme, savedMode] = await Promise.all([
-        AsyncStorage.getItem(THEME_KEY),
-        AsyncStorage.getItem(THEME_MODE_KEY),
-      ]);
+      const savedTheme = await AsyncStorage.getItem('familyTheme');
+      const savedMode = await AsyncStorage.getItem('themeMode');
       
-      if (savedTheme && THEMES[savedTheme]) {
-        setCurrentTheme(THEMES[savedTheme]);
-      }
-      if (savedMode && THEME_MODES[savedMode]) {
-        setThemeMode(THEME_MODES[savedMode]);
+      if (savedMode === 'custom' && savedTheme) {
+        const parsed = JSON.parse(savedTheme);
+        setTheme({ ...DEFAULT_THEME, ...parsed, mode: 'custom' });
+        setIsCustomMode(true);
+      } else {
+        setTheme(STANDARD_THEME);
+        setIsCustomMode(false);
       }
     } catch (error) {
       console.error('Failed to load theme:', error);
+      setTheme(STANDARD_THEME);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const changeTheme = async (themeId) => {
-    if (THEMES[themeId]) {
-      setCurrentTheme(THEMES[themeId]);
-      // Automatically switch to custom mode when selecting a theme
-      if (themeMode.id === 'standard') {
-        setThemeMode(THEME_MODES.custom);
-        await AsyncStorage.setItem(THEME_MODE_KEY, 'custom');
-      }
-      try {
-        await AsyncStorage.setItem(THEME_KEY, themeId);
-      } catch (error) {
-        console.error('Failed to save theme:', error);
-      }
+  // Save theme changes
+  const saveTheme = async (newTheme) => {
+    try {
+      await AsyncStorage.setItem('familyTheme', JSON.stringify(newTheme));
+      await AsyncStorage.setItem('themeMode', newTheme.mode || 'custom');
+    } catch (error) {
+      console.error('Failed to save theme:', error);
     }
   };
 
-  const changeThemeMode = async (modeId) => {
-    if (THEME_MODES[modeId]) {
-      setThemeMode(THEME_MODES[modeId]);
-      try {
-        await AsyncStorage.setItem(THEME_MODE_KEY, modeId);
-      } catch (error) {
-        console.error('Failed to save theme mode:', error);
-      }
+  // Update a single color
+  const updateColor = (colorKey, value) => {
+    if (!isCustomMode) return; // Can only update in custom mode
+    
+    const newTheme = { ...theme, [colorKey]: value, mode: 'custom' };
+    setTheme(newTheme);
+    saveTheme(newTheme);
+  };
+
+  // Update multiple colors at once
+  const updateColors = (colors) => {
+    if (!isCustomMode) return;
+    
+    const newTheme = { ...theme, ...colors, mode: 'custom' };
+    setTheme(newTheme);
+    saveTheme(newTheme);
+  };
+
+  // Switch to custom mode
+  const enableCustomMode = () => {
+    setIsCustomMode(true);
+    const customTheme = { ...theme, mode: 'custom' };
+    setTheme(customTheme);
+    saveTheme(customTheme);
+  };
+
+  // Switch to standard mode
+  const enableStandardMode = () => {
+    setIsCustomMode(false);
+    setTheme(STANDARD_THEME);
+    AsyncStorage.setItem('themeMode', 'standard');
+  };
+
+  // Reset to default colors (only in custom mode)
+  const resetToDefault = () => {
+    if (isCustomMode) {
+      const resetTheme = { ...DEFAULT_THEME, mode: 'custom' };
+      setTheme(resetTheme);
+      saveTheme(resetTheme);
     }
   };
 
-  // Calculate active colors based on mode
-  const getActiveColors = () => {
-    if (themeMode.id === 'custom') {
-      return {
-        primary: currentTheme.primary,
-        secondary: currentTheme.secondary,
-        accent: currentTheme.accent,
-        gradientColors: currentTheme.colors,
-      };
+  // Get computed styles for common elements
+  const getButtonStyle = (variant = 'primary') => {
+    switch (variant) {
+      case 'primary':
+        return { backgroundColor: theme.primary };
+      case 'secondary':
+        return { backgroundColor: theme.secondary };
+      case 'success':
+        return { backgroundColor: theme.success };
+      case 'warning':
+        return { backgroundColor: theme.warning };
+      case 'error':
+        return { backgroundColor: theme.error };
+      case 'outline':
+        return { borderColor: theme.primary, borderWidth: 1, backgroundColor: 'transparent' };
+      default:
+        return { backgroundColor: theme.primary };
     }
-    // Standard mode uses default purple
-    return {
-      primary: THEMES.purple.primary,
-      secondary: THEMES.purple.secondary,
-      accent: THEMES.purple.accent,
-      gradientColors: THEMES.purple.colors,
-    };
   };
 
-  const activeColors = getActiveColors();
+  const getCardStyle = () => ({
+    backgroundColor: `${theme.surface}99`, // with transparency
+    borderColor: `${theme.primary}33`,
+  });
 
   const value = {
-    currentTheme,
-    themeMode,
-    themes: THEMES,
-    themeModes: THEME_MODES,
-    changeTheme,
-    changeThemeMode,
-    isLoading,
-    // Active colors (respects mode)
-    primary: activeColors.primary,
-    secondary: activeColors.secondary,
-    accent: activeColors.accent,
-    gradientColors: activeColors.gradientColors,
-    // Mode-based colors
-    background: themeMode.background,
-    surface: themeMode.surface,
-    text: themeMode.text,
-    textSecondary: themeMode.textSecondary,
-    textMuted: themeMode.textMuted,
-    // Legacy support
-    colors: currentTheme.colors,
-    isDark: true,
-    isCustomMode: themeMode.id === 'custom',
+    // Current theme colors
+    ...theme,
+    
+    // Theme state
+    isCustomMode,
+    loading,
+    
+    // Actions
+    updateColor,
+    updateColors,
+    enableCustomMode,
+    enableStandardMode,
+    resetToDefault,
+    
+    // Utility functions
+    getButtonStyle,
+    getCardStyle,
+    
+    // Constants for pickers
+    availableColors: {
+      primary: ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6'],
+      accent: ['#a5b4fc', '#c4b5fd', '#f9a8d4', '#fca5a5', '#fdba74', '#fde047', '#86efac', '#5eead4', '#7dd3fc'],
+    },
   };
+
+  if (loading) {
+    return null; // Or a loading spinner
+  }
 
   return (
     <ThemeContext.Provider value={value}>
@@ -196,7 +172,8 @@ export function ThemeProvider({ children }) {
 export function useTheme() {
   const context = useContext(ThemeContext);
   if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    console.warn('useTheme must be used within a ThemeProvider');
+    return DEFAULT_THEME;
   }
   return context;
 }
