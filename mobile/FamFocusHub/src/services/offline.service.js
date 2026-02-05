@@ -59,6 +59,21 @@ class OfflineCacheService {
     }
   }
 
+  // Add network listener (alias for onConnectivityChange for backward compatibility)
+  addNetworkListener(callback) {
+    this.listeners.push(callback);
+    // Return initial state
+    callback(this.isOnline);
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== callback);
+    };
+  }
+
+  // Sync pending actions (alias for processQueue for backward compatibility)
+  async syncPendingActions() {
+    return this.processQueue();
+  }
+
   // Subscribe to connectivity changes
   onConnectivityChange(callback) {
     this.listeners.push(callback);
