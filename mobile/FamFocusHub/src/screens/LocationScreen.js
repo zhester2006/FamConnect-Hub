@@ -151,16 +151,16 @@ export default function LocationScreen({ navigation }) {
   const fetchData = async () => {
     try {
       const [geofencesRes, membersRes, alertsRes, batteryRes, leaderboardRes] = await Promise.all([
-        apiService.getGeofences(),
-        apiService.getFamilyMembers(),
-        apiService.getLocationAlerts().catch(() => ({ alerts: [] })),
-        user?.role === 'parent' ? apiService.getFamilyBatteryStatus().catch(() => ({ members: [] })) : null,
-        apiService.getLeaderboard().catch(() => ({ leaderboard: [] })),
+        apiService.getGeofences().catch(e => { console.warn('Geofences fetch:', e); return { geofences: [] }; }),
+        apiService.getFamilyMembers().catch(e => { console.warn('Members fetch:', e); return { members: [] }; }),
+        apiService.getLocationAlerts().catch(e => { console.warn('Alerts fetch:', e); return { alerts: [] }; }),
+        user?.role === 'parent' ? apiService.getFamilyBatteryStatus().catch(e => { console.warn('Battery status:', e); return { members: [] }; }) : Promise.resolve(null),
+        apiService.getLeaderboard().catch(e => { console.warn('Leaderboard fetch:', e); return { leaderboard: [] }; }),
       ]);
       
-      setGeofences(geofencesRes.geofences || []);
-      const members = membersRes.members || [];
-      const leaderboard = leaderboardRes.leaderboard || [];
+      setGeofences(geofencesRes?.geofences || []);
+      const members = membersRes?.members || [];
+      const leaderboard = leaderboardRes?.leaderboard || [];
       
       // Create a map of user_id to rank
       const rankMap = {};
@@ -179,7 +179,7 @@ export default function LocationScreen({ navigation }) {
       });
       
       setChildren(childMembers);
-      setAlerts(alertsRes.alerts || []);
+      setAlerts(alertsRes?.alerts || []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     }
