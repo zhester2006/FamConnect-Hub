@@ -98,7 +98,12 @@ export function ThemeProvider({ children }) {
       // Check if auto mode is enabled
       if (savedAutoMode === 'true') {
         setAutoMode(true);
-        const currentScheme = Appearance.getColorScheme();
+        let currentScheme = 'dark'; // Default to dark
+        try {
+          currentScheme = Appearance.getColorScheme() || 'dark';
+        } catch (e) {
+          console.warn('Could not get color scheme:', e);
+        }
         const baseTheme = currentScheme === 'light' ? LIGHT_THEME : DARK_THEME;
         setTheme({ ...baseTheme, mode: 'auto' });
         setIsCustomMode(false);
