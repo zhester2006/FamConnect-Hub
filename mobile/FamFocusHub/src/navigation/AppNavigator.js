@@ -26,6 +26,7 @@ import LocationScreen from '../screens/LocationScreen';
 import ReadingLogsScreen from '../screens/ReadingLogsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import HomeHubScreen from '../screens/HomeHubScreen';
+import AchievementsScreen from '../screens/AchievementsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
