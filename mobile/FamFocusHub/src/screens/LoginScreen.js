@@ -215,10 +215,7 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <LinearGradient colors={['#0f172a', '#1e1b4b', '#0f172a']} style={styles.container}>
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.content}>
         {/* Header with Logo */}
         <View style={styles.header}>
           <Text style={styles.logoText}>FamFocus Hub</Text>
@@ -263,7 +260,7 @@ export default function LoginScreen({ navigation }) {
               ) : (
                 <>
                   <Ionicons name={getBiometricIcon()} size={24} color="#fff" />
-                  <Text style={styles.biometricButtonText}>Sign in with {biometricType}</Text>
+                  <Text style={styles.biometricButtonText}>Sign in with Face/Fingerprint</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -324,7 +321,7 @@ export default function LoginScreen({ navigation }) {
             Secure authentication powered by Google
           </Text>
         </View>
-      </ScrollView>
+      </View>
     </LinearGradient>
   );
 }
