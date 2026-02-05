@@ -269,11 +269,6 @@ class ApiService {
     return this.post(API_ENDPOINTS.LOCATION_UPDATE, { latitude, longitude });
   }
 
-  // Battery
-  async updateBattery(level, charging) {
-    return this.post(API_ENDPOINTS.BATTERY_UPDATE, { level, charging });
-  }
-
   async getBatteryStatus() {
     return this.get(API_ENDPOINTS.BATTERY_STATUS, 'battery_status');
   }
