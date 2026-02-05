@@ -26,6 +26,15 @@ db = client[os.environ['DB_NAME']]
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+# Health check endpoint for mobile app connectivity
+@api_router.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "service": "famfocus-api"
+    }
+
 # Helper function for getting session token
 def get_session_token(request: Request, authorization: Optional[str] = None) -> str:
     token = request.cookies.get('session_token')
