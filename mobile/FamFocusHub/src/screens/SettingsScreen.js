@@ -371,6 +371,13 @@ const styles = StyleSheet.create({
   menuIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   menuLabel: { flex: 1, color: '#fff', fontSize: 15 },
   
+  // Color Grid
+  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  colorOption: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'transparent' },
+  colorOptionActive: { borderColor: '#fff' },
+  resetBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 16, padding: 12 },
+  resetBtnText: { color: '#6b7280', fontSize: 13 },
+  
   // Logout
   logoutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 16, padding: 16, marginBottom: 16 },
   logoutText: { color: '#ef4444', fontSize: 16, fontWeight: '600' },
