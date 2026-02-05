@@ -236,13 +236,15 @@ export default function SettingsScreen({ navigation }) {
               </View>
               <Text style={styles.themeModeHint}>
                 {!theme.isCustomMode 
-              ? 'Standard mode uses default colors'
-              : 'Custom mode applies your selected theme colors across the app'}
-          </Text>
+                  ? 'Standard mode uses default colors'
+                  : 'Custom mode applies your selected theme colors across the app'}
+              </Text>
+            </>
+          )}
         </View>
 
         {/* Theme Colors Section - Only show when Custom mode is selected */}
-        {theme.isCustomMode && (
+        {theme.isCustomMode && !theme.autoMode && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Primary Color</Text>
             <View style={styles.colorGrid}>
