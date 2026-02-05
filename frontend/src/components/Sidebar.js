@@ -140,6 +140,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     { icon: LayoutDashboard, label: 'Wall', path: '/family-wall', color: 'text-rose-400' },
     { icon: ShoppingCart, label: 'Shopping', path: '/shopping', color: 'text-orange-400' },
     { icon: Trophy, label: 'Leaderboard', path: '/leaderboard', color: 'text-yellow-400' },
+    { icon: Medal, label: 'Achievements', path: '/achievements', color: 'text-fuchsia-400' },
     { icon: Award, label: 'Rewards', path: '/rewards', color: 'text-purple-400' },
     { icon: Book, label: 'Reading', path: '/reading', color: 'text-sky-400' },
     { icon: Settings, label: 'Settings', path: '/settings', color: 'text-slate-400' },
