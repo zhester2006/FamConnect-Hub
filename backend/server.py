@@ -843,11 +843,14 @@ async def vote_on_poll(post_id: str, request: Request, data: dict):
     post = await db.family_wall.find_one({"post_id": post_id}, {"_id": 0})
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
-    if post.get('post_type') != 'poll':
+    
+    # Check both 'type' and 'post_type' for backward compatibility
+    post_type = post.get('type') or post.get('post_type')
+    if post_type != 'poll':
         raise HTTPException(status_code=400, detail="Post is not a poll")
     
     poll_options = post.get('poll_options', [])
-    if option_index < 0 or option_index >= len(poll_options):
+    if option_index is None or option_index < 0 or option_index >= len(poll_options):
         raise HTTPException(status_code=400, detail="Invalid option index")
     
     # Check if user already voted
@@ -856,18 +859,21 @@ async def vote_on_poll(post_id: str, request: Request, data: dict):
             raise HTTPException(status_code=400, detail="Already voted")
     
     # Add vote with voter info
-    voter_info = {
-        "user_id": current_user['user_id'],
-        "name": current_user.get('nickname') or current_user['name'],
-    }
+    voter_name = current_user.get('nickname') or current_user['name']
     poll_options[option_index]['votes'] = poll_options[option_index].get('votes', []) + [current_user['user_id']]
-    poll_options[option_index]['voter_names'] = poll_options[option_index].get('voter_names', []) + [voter_info['name']]
+    poll_options[option_index]['voter_names'] = poll_options[option_index].get('voter_names', []) + [voter_name]
+    
+    # Determine which option the user voted for
+    user_voted_option = option_index
     
     await db.family_wall.update_one(
         {"post_id": post_id},
         {"$set": {"poll_options": poll_options}}
     )
-    return await db.family_wall.find_one({"post_id": post_id}, {"_id": 0})
+    
+    result = await db.family_wall.find_one({"post_id": post_id}, {"_id": 0})
+    result['user_voted_option'] = user_voted_option
+    return result
 
 # AI Daily Quote
 @api_router.get("/family-wall/daily-quote")
