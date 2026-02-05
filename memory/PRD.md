@@ -771,4 +771,51 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - Theme color application across all screens
 - Real-time location updates on device
 
+### Session 26 - Mobile App Critical Bug Fixes (Feb 2026) ✅
+
+**Bug Fixes Applied:**
+
+1. **Map Not Showing (LocationScreen.js):**
+   - Removed `provider={PROVIDER_GOOGLE}` from `<MapView>` component
+   - Changed import to `PROVIDER_DEFAULT` for Expo Go compatibility
+   - Map now uses native map provider on each platform
+
+2. **Theme Settings Unresponsive (SettingsScreen.js & ThemeContext.js):**
+   - Added `activeOpacity={0.7}` to theme selection TouchableOpacity components
+   - Added console logging for debugging theme mode changes
+   - Standard/Custom mode toggle now responds to taps
+
+3. **Polls Not Interactive (FamilyWallScreen.js):**
+   - Fixed `totalVotes` calculation - was using non-existent `post.poll_votes`, now calculates from `poll_options`
+   - Added `activeOpacity` to poll option buttons
+   - Backend: Fixed poll creation to convert string arrays to proper objects with `{text, votes, voter_names}` structure
+   - Backend: Added `user_voted_option` to GET response for existing vote tracking
+
+4. **Chat Issues (api.service.js & websocket.service.js):**
+   - Added `baseUrl` property to `ApiService` class for image/GIF uploads
+   - Added `votePoll` method to `ApiService`
+   - Improved WebSocket connection logging and error handling
+   - Fixed reconnection logic to not reconnect on normal closure
+
+**Key Files Modified:**
+- `/app/mobile/FamFocusHub/src/screens/LocationScreen.js` - Map provider fix
+- `/app/mobile/FamFocusHub/src/screens/SettingsScreen.js` - Theme button activeOpacity
+- `/app/mobile/FamFocusHub/src/context/ThemeContext.js` - Debug logging
+- `/app/mobile/FamFocusHub/src/screens/FamilyWallScreen.js` - Poll rendering fix
+- `/app/mobile/FamFocusHub/src/services/api.service.js` - baseUrl and votePoll added
+- `/app/mobile/FamFocusHub/src/services/websocket.service.js` - Connection improvements
+- `/app/backend/server.py` - Poll creation and vote endpoints fixed
+
+**Backend API Changes:**
+- `POST /api/family-wall` - Now accepts `type` field (was only `post_type`)
+- `POST /api/family-wall` - Converts string poll_options to objects
+- `POST /api/family-wall/{post_id}/vote` - Returns `user_voted_option` in response
+- `GET /api/family-wall` - Returns `user_voted_option` for each poll post
+
+**Testing Status:**
+- Backend poll creation tested via curl ✅
+- Backend poll voting tested via curl ✅
+- Map fix requires mobile build to verify
+- Theme fix requires mobile build to verify
+- Chat fix requires mobile build to verify
 
