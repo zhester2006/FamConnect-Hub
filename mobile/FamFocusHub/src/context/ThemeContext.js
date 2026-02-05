@@ -53,21 +53,34 @@ export function ThemeProvider({ children }) {
 
   // Listen for system color scheme changes
   useEffect(() => {
-    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-      if (autoMode) {
-        applyAutoTheme(colorScheme);
-      }
-    });
+    let subscription = null;
+    try {
+      subscription = Appearance.addChangeListener(({ colorScheme }) => {
+        if (autoMode) {
+          applyAutoTheme(colorScheme);
+        }
+      });
+    } catch (error) {
+      console.warn('Appearance listener not available:', error);
+    }
 
-    return () => subscription.remove();
-  }, [autoMode, theme]);
+    return () => {
+      if (subscription && subscription.remove) {
+        subscription.remove();
+      }
+    };
+  }, [autoMode]);
 
   // Apply theme based on system preference
   const applyAutoTheme = (colorScheme) => {
-    if (colorScheme === 'dark') {
-      setTheme(prev => ({ ...prev, ...DARK_THEME, mode: prev.mode }));
-    } else {
-      setTheme(prev => ({ ...prev, ...LIGHT_THEME, mode: prev.mode }));
+    try {
+      if (colorScheme === 'dark') {
+        setTheme(prev => ({ ...prev, ...DARK_THEME, mode: prev.mode }));
+      } else {
+        setTheme(prev => ({ ...prev, ...LIGHT_THEME, mode: prev.mode }));
+      }
+    } catch (error) {
+      console.warn('Failed to apply auto theme:', error);
     }
   };
 
