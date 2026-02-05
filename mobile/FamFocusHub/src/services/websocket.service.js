@@ -29,23 +29,33 @@ class WebSocketService {
 
   // Connect to WebSocket
   async connect() {
-    if (this.isConnecting || (this.ws && this.ws.readyState === WebSocket.OPEN)) {
+    if (this.isConnecting) {
+      console.log('WebSocket already connecting, skipping');
+      return;
+    }
+    
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      console.log('WebSocket already connected');
+      this.emit('connect', { connected: true });
       return;
     }
 
     if (!this.sessionToken) {
       console.error('No session token for WebSocket');
+      this.emit('error', { error: 'No session token' });
       return;
     }
 
     this.isConnecting = true;
+    console.log('Connecting to WebSocket...');
 
     try {
       const wsUrl = `${WS_URL}/ws/chat/${this.sessionToken}`;
+      console.log('WebSocket URL:', wsUrl);
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('WebSocket connected successfully');
         this.isConnecting = false;
         this.reconnectAttempts = 0;
         this.startPingInterval();
@@ -66,7 +76,11 @@ class WebSocketService {
         this.isConnecting = false;
         this.stopPingInterval();
         this.emit('disconnect', { code: event.code, reason: event.reason });
-        this.attemptReconnect();
+        
+        // Only reconnect if not a normal closure
+        if (event.code !== 1000) {
+          this.attemptReconnect();
+        }
       };
 
       this.ws.onerror = (error) => {
