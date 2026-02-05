@@ -13,7 +13,10 @@ class ApiService {
   async init() {
     try {
       this.sessionToken = await SecureStore.getItemAsync(SESSION_KEY);
-      await offlineService.init();
+      // Initialize offline service (non-blocking)
+      offlineService.init().catch(err => {
+        console.warn('Offline service init warning:', err);
+      });
     } catch (error) {
       console.error('Failed to init API service:', error);
     }
