@@ -211,6 +211,8 @@ export function ThemeProvider({ children }) {
     // Theme state
     isCustomMode,
     loading,
+    autoMode,
+    isDarkMode: theme.mode === 'dark' || (autoMode && Appearance.getColorScheme() === 'dark'),
     
     // Actions
     updateColor,
@@ -218,6 +220,7 @@ export function ThemeProvider({ children }) {
     enableCustomMode,
     enableStandardMode,
     resetToDefault,
+    toggleAutoMode,
     
     // Utility functions
     getButtonStyle,
