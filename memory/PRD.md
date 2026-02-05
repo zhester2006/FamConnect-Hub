@@ -723,4 +723,52 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - Chores/Events/Tasks endpoints return assignee info ✅
 - Mobile build needed (changes require EAS build)
 
+### Session 25 - Major Mobile Bug Fixes (Dec 2025)
+**Issues Fixed:**
+
+1. **ChoresScreen Complete Rewrite:**
+   - Matches web app layout with list, by-child, and calendar views
+   - Quick assign feature for common chore types
+   - AI scheduler with intuitive UI
+   - Proper assignee photos and medals on chore cards
+   - Status indicators (pending/completed/approved)
+   - Filter chips for easy filtering
+
+2. **ParentDashboard Complete Rewrite:**
+   - Matches web app dashboard layout
+   - Stats grid showing pending, completed, events, progress
+   - Children section with avatars, medals, and battery status
+   - Pending approvals section with quick approve/deny
+   - AI Scheduler modal with improved UX
+   - Quick actions for navigation
+
+3. **ThemeContext Fixed:**
+   - Simplified to Standard/Custom mode toggle
+   - Custom mode allows primary and accent color selection
+   - Colors persist across app restart via AsyncStorage
+   - Theme values accessible via useTheme() hook
+
+4. **Location Update Fixed:**
+   - Added missing `/api/location/update` endpoint
+   - Added `/api/location/family` endpoint for parents
+   - Location now properly saves to user profile
+
+5. **Chat Loading Fixed:**
+   - Added proper try/catch in initializeChat
+   - Loading state properly managed
+   - Messages fetch with error handling
+
+**Key Files Modified:**
+- `/app/mobile/FamFocusHub/src/screens/ParentDashboard.js` - Complete rewrite
+- `/app/mobile/FamFocusHub/src/screens/ChoresScreen.js` - Complete rewrite
+- `/app/mobile/FamFocusHub/src/screens/SettingsScreen.js` - Theme UI updated
+- `/app/mobile/FamFocusHub/src/context/ThemeContext.js` - Simplified theme system
+- `/app/mobile/FamFocusHub/src/screens/ChatScreen.js` - Loading fix
+- `/app/backend/server.py` - Added location endpoints
+
+**What Still Needs Testing:**
+- Weather display (API working, may need frontend verification)
+- Theme color application across all screens
+- Real-time location updates on device
+
 
