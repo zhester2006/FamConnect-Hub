@@ -192,8 +192,8 @@ export default function ParentDashboard({ navigation }) {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Dashboard</Text>
-            <Text style={styles.subGreeting}>Hello, {user?.name?.split(' ')[0]}! Here's what's happening today</Text>
+            <Text style={styles.greeting}>Hello, {user?.name?.split(' ')[0]}!</Text>
+            <Text style={styles.subGreeting}>Here's what's happening with your family today</Text>
           </View>
           <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.settingsBtn}>
             <Ionicons name="settings-outline" size={24} color="#fff" />
