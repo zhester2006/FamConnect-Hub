@@ -4077,7 +4077,7 @@ async def create_goal(request: Request, data: dict):
     }
     
     await db.personal_goals.insert_one(goal)
-    return goal
+    return await db.personal_goals.find_one({"goal_id": goal_id}, {"_id": 0})
 
 @api_router.put("/goals/{goal_id}")
 async def update_goal(goal_id: str, request: Request, data: dict):
