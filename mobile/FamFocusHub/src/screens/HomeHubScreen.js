@@ -323,13 +323,25 @@ export default function HomeHubScreen({ navigation }) {
         {/* Weather & Time Row */}
         <View style={styles.topRow}>
           <TouchableOpacity style={styles.weatherCard} onPress={fetchWeather}>
-            <WeatherIcon condition={weather.condition} />
-            <View>
-              <Text style={styles.temperature}>{Math.round(weather.temp || 72)}°F</Text>
-              {weather.location && (
-                <Text style={styles.weatherLocation}>{weather.location}</Text>
-              )}
-            </View>
+            <LinearGradient
+              colors={['rgba(59, 130, 246, 0.3)', 'rgba(147, 51, 234, 0.2)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.weatherGradient}
+            >
+              <View style={styles.weatherIconContainer}>
+                <WeatherIcon condition={weather.condition} size={36} />
+              </View>
+              <View style={styles.weatherInfo}>
+                <Text style={styles.temperature}>{Math.round(weather.temp || 72)}°F</Text>
+                {weather.location ? (
+                  <Text style={styles.weatherLocation}>{weather.location}</Text>
+                ) : (
+                  <Text style={styles.weatherCondition}>{weather.condition || 'Sunny'}</Text>
+                )}
+              </View>
+              <Ionicons name="refresh-outline" size={14} color="#a5b4fc" style={{ opacity: 0.6 }} />
+            </LinearGradient>
           </TouchableOpacity>
           <View style={styles.timeCard}>
             <Text style={styles.timeText}>
