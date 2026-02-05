@@ -819,3 +819,73 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - Theme fix requires mobile build to verify
 - Chat fix requires mobile build to verify
 
+### Session 27 - Feature Expansion: Achievements & Customizable Dashboards (Feb 2026) ✅
+
+**New Features Implemented:**
+
+#### 1. Achievement System Expansion
+- **Streak Badges:** 7-day, 14-day, 30-day badges for both chores and reading
+- **Milestone Badges:** First chore, 10/50/100/500 chores, 5/20/50 books, 100/500/1000 points
+- **Family Achievements:** 100/500/1000 family chores completed together
+- **Seasonal Challenges:** Summer Reading, Holiday Helper, Spring Cleaning (auto-detected by season)
+- **Custom Challenges:** Parents can create custom seasonal challenges
+
+**Backend Endpoints:**
+- `GET /api/achievements` - List all achievement definitions
+- `GET /api/achievements/user/{user_id}` - User's achievements with progress
+- `GET /api/achievements/family` - Family achievements
+- `POST /api/achievements/check` - Check and award new achievements
+- `POST /api/achievements/streak/update` - Update streak data
+- `GET /api/achievements/seasonal` - Get active seasonal challenges
+- `POST /api/achievements/seasonal` - Create custom challenge (parent only)
+
+**Frontend:**
+- New `/achievements` page with Personal/Family/Seasonal tabs
+- Stats cards showing streaks, badges earned, total points
+- Progress bars for each achievement
+- Celebration modal when achievement is unlocked
+- Achievement preview widget on Child Dashboard
+
+#### 2. Customizable Child Dashboards
+- **Section Reordering:** Drag-and-drop dashboard sections (stored in DB)
+- **Section Visibility:** Hide/show dashboard sections
+- **Personal Goals:** Children can create custom goals with progress tracking
+- **Quick Shortcuts:** Customizable shortcuts to favorite features (max 6)
+- **Theme Personalization:** Per-child theme separate from family theme
+
+**Backend Endpoints:**
+- `GET /api/dashboard/config` - Get dashboard configuration
+- `PUT /api/dashboard/config` - Update configuration
+- `PUT /api/dashboard/sections/reorder` - Reorder sections
+- `PUT /api/dashboard/sections/{id}/visibility` - Toggle section visibility
+- `GET /api/goals` - Get personal goals
+- `POST /api/goals` - Create personal goal
+- `PUT /api/goals/{goal_id}` - Update goal
+- `DELETE /api/goals/{goal_id}` - Delete goal
+- `POST /api/goals/{goal_id}/increment` - Increment goal progress
+- `GET /api/shortcuts` - Get active shortcuts
+- `PUT /api/shortcuts` - Update shortcuts
+
+**New MongoDB Collections:**
+- `user_achievements` - Tracks earned achievements per user
+- `family_achievements` - Tracks family-wide achievements
+- `user_streaks` - Tracks daily streaks
+- `seasonal_challenges` - Custom seasonal challenges
+- `dashboard_configs` - User dashboard configurations
+- `personal_goals` - User personal goals
+
+**Key Files Created/Modified:**
+- `/app/backend/server.py` - Added 15+ new endpoints
+- `/app/frontend/src/pages/Achievements.js` - New achievements page
+- `/app/frontend/src/components/DashboardWidgets.js` - New reusable widgets
+- `/app/frontend/src/components/Sidebar.js` - Added Achievements link
+- `/app/frontend/src/pages/ChildSpace.js` - Integrated new widgets
+- `/app/frontend/src/App.js` - Added /achievements route
+
+**Testing Status:**
+- Backend endpoints tested via curl ✅
+- Achievements page renders correctly ✅
+- Child dashboard widgets display properly ✅
+- Personal goals creation and tracking working ✅
+- Quick shortcuts customization working ✅
+
