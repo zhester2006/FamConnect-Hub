@@ -90,17 +90,21 @@ export function ThemeProvider({ children }) {
 
   // Switch to custom mode
   const enableCustomMode = () => {
+    console.log('enableCustomMode called');
     setIsCustomMode(true);
     const customTheme = { ...theme, mode: 'custom' };
     setTheme(customTheme);
     saveTheme(customTheme);
+    console.log('Custom mode enabled, theme:', customTheme);
   };
 
   // Switch to standard mode
   const enableStandardMode = () => {
+    console.log('enableStandardMode called');
     setIsCustomMode(false);
     setTheme(STANDARD_THEME);
     AsyncStorage.setItem('themeMode', 'standard');
+    console.log('Standard mode enabled');
   };
 
   // Reset to default colors (only in custom mode)
