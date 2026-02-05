@@ -205,24 +205,25 @@ export default function HomeHubScreen({ navigation }) {
 
   const fetchData = useCallback(async () => {
     try {
+      // Fetch all data with individual error handling
       const [membersData, eventsData, quoteData, shoppingData, choresData] = await Promise.all([
-        apiService.getFamilyMembers().catch(() => ({ members: [] })),
-        apiService.getEvents().catch(() => ({ events: [] })),
-        apiService.getDailyQuote().catch(() => ({ quote: 'Family is not an important thing. It\'s everything.' })),
-        apiService.getShoppingList().catch(() => ({ items: [] })),
-        apiService.getChores().catch(() => ({ chores: [] })),
+        apiService.getFamilyMembers().catch((e) => { console.log('Family members fetch failed:', e); return { members: [] }; }),
+        apiService.getEvents().catch((e) => { console.log('Events fetch failed:', e); return { events: [] }; }),
+        apiService.getDailyQuote().catch((e) => { console.log('Quote fetch failed:', e); return { quote: 'Family is not an important thing. It\'s everything.' }; }),
+        apiService.getShoppingList().catch((e) => { console.log('Shopping fetch failed:', e); return { items: [] }; }),
+        apiService.getChores().catch((e) => { console.log('Chores fetch failed:', e); return { chores: [] }; }),
       ]);
 
-      // Fetch weather separately
-      await fetchWeather();
+      // Fetch weather separately (non-blocking)
+      fetchWeather().catch(e => console.log('Weather fetch failed:', e));
 
-      setFamilyMembers(membersData.members || []);
-      setEvents(eventsData.events || []);
-      setQuote(quoteData.quote || 'Family is everything.');
-      setShoppingItems(shoppingData.items || []);
+      setFamilyMembers(membersData?.members || []);
+      setEvents(eventsData?.events || []);
+      setQuote(quoteData?.quote || 'Family is everything.');
+      setShoppingItems(shoppingData?.items || []);
       
       const today = new Date().toISOString().split('T')[0];
-      setTodayChores((choresData.chores || []).filter(c => c.scheduled_date === today));
+      setTodayChores((choresData?.chores || []).filter(c => c.scheduled_date === today));
     } catch (error) {
       console.error('Failed to fetch hub data:', error);
     } finally {
