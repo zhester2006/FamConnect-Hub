@@ -950,3 +950,64 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - `/app/mobile/FamFocusHub/src/screens/HomeHubScreen.js` - UPDATED (weather UI)
 - `/app/mobile/FamFocusHub/src/navigation/AppNavigator.js` - UPDATED (Achievements screen)
 
+
+### Session 29 - Mobile App Bug Fixes & UI Consistency (Dec 2025) 🔧
+
+**Mobile App Stability Improvements:**
+
+1. **App.js - Robustified Service Initialization:**
+   - Wrapped all service imports in try-catch blocks
+   - Made service failures non-blocking (app still loads)
+   - Added `servicesReady` state for tracking initialization
+   - Protected AppState listener setup with error handling
+
+2. **LoginScreen.js - Fixed UI Issues:**
+   - Changed biometric prompt from "Enable Face ID" to "Enable Face/Fingerprint Sign In"
+   - Removed ScrollView for non-scrollable login layout
+   - Fixed biometric button text to generic "Sign in with Face/Fingerprint"
+
+3. **ParentDashboard.js - Layout Consistency:**
+   - Changed header to match web app: "Hello, {name}!"
+   - Updated subGreeting: "Here's what's happening with your family today"
+
+4. **ChoresScreen.js - Added "Available Chores" Section:**
+   - New horizontal scrolling section for quick chore templates
+   - Shows chore type icon, name, and points
+   - Tapping auto-fills the create chore form
+
+5. **ChatScreen.js - Image Display Fix:**
+   - Added support for multiple image URL fields (image_url, media_url, attachment_url)
+   - Fixed isImage detection to check for presence of any image URL
+   - Added gifUrl fallback for GIF rendering
+
+6. **HomeHubScreen.js - Improved Error Handling:**
+   - Added console logging for debugging fetch failures
+   - Made weather fetch non-blocking
+   - Defensive handling for empty/undefined data
+
+7. **WebSocket Service - Enhanced Presence:**
+   - Added `reaction` and `presence` event listeners
+   - Added `members_online` event for full member list
+   - Added `onlineMembers` Set tracking
+   - Added `getOnlineMembers()` method for retrieving list
+
+**Key Files Modified:**
+- `/app/mobile/FamFocusHub/App.js` - Service init robustness
+- `/app/mobile/FamFocusHub/src/screens/LoginScreen.js` - UI/UX fixes
+- `/app/mobile/FamFocusHub/src/screens/ParentDashboard.js` - Header consistency
+- `/app/mobile/FamFocusHub/src/screens/ChoresScreen.js` - Available Chores section
+- `/app/mobile/FamFocusHub/src/screens/ChatScreen.js` - Image rendering fix
+- `/app/mobile/FamFocusHub/src/screens/HomeHubScreen.js` - Error handling
+- `/app/mobile/FamFocusHub/src/services/websocket.service.js` - Presence features
+
+**Testing Status:**
+- Web app verified working via screenshot ✅
+- Mobile changes require new build to verify on device
+- No EAS build triggered (per user request)
+
+**Pending Actions:**
+- [ ] User to trigger EAS build when ready
+- [ ] Verify mobile app opens without crashing
+- [ ] Test all UI fixes on device
+- [ ] Test chat presence features
+
