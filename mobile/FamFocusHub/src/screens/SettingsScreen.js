@@ -7,13 +7,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Notifications from 'expo-notifications';
 import { useAuth } from '../context/AuthContext';
-import { useTheme, THEMES, THEME_MODES } from '../context/ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 import AnimatedBackground from '../components/AnimatedBackground';
 import apiService from '../services/api.service';
 
 export default function SettingsScreen({ navigation }) {
   const { user, logout } = useAuth();
-  const { currentTheme, themeMode, changeTheme, changeThemeMode } = useTheme();
+  const theme = useTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
 
