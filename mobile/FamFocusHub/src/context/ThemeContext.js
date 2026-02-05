@@ -67,11 +67,16 @@ export function ThemeProvider({ children }) {
 
   // Update a single color
   const updateColor = (colorKey, value) => {
-    if (!isCustomMode) return; // Can only update in custom mode
+    console.log('updateColor called:', colorKey, value, 'isCustomMode:', isCustomMode);
+    if (!isCustomMode) {
+      console.log('Cannot update color in standard mode');
+      return;
+    }
     
     const newTheme = { ...theme, [colorKey]: value, mode: 'custom' };
     setTheme(newTheme);
     saveTheme(newTheme);
+    console.log('Theme updated:', newTheme);
   };
 
   // Update multiple colors at once
