@@ -459,10 +459,14 @@ export default function ChatScreen({ navigation }) {
     const isOnline = onlineUsers.includes(item.user_id);
     const isRead = item.read_by?.length > 1;
     const isVoice = item.type === 'voice';
-    const isImage = item.type === 'image';
-    const isGif = item.type === 'gif';
+    const isImage = item.type === 'image' || item.image_url || item.media_url;
+    const isGif = item.type === 'gif' || item.gif_url;
     const reactions = item.reactions || {};
     const userRank = getUserRank(item.user_id);
+    
+    // Get the actual image URL from various possible fields
+    const imageUrl = item.image_url || item.media_url || item.attachment_url;
+    const gifUrl = item.gif_url || item.media_url;
     
     return (
       <TouchableOpacity
@@ -488,18 +492,18 @@ export default function ChatScreen({ navigation }) {
             {!isOwn && <Text style={styles.senderName}>{item.user_name}</Text>}
             
             {/* Image message */}
-            {isImage && item.image_url && (
+            {isImage && imageUrl && !isGif && (
               <Image 
-                source={{ uri: item.image_url }} 
+                source={{ uri: imageUrl }} 
                 style={styles.chatImage} 
                 resizeMode="cover"
               />
             )}
             
             {/* GIF message */}
-            {isGif && item.gif_url && (
+            {isGif && gifUrl && (
               <Image 
-                source={{ uri: item.gif_url }} 
+                source={{ uri: gifUrl }} 
                 style={styles.chatGif} 
                 resizeMode="cover"
               />
