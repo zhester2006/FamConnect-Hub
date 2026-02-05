@@ -67,26 +67,31 @@ export default function ChatScreen({ navigation }) {
   }, []);
 
   const initializeChat = async () => {
-    // Initialize E2E encryption
-    const familyId = user?.parent_id || user?.user_id;
-    if (familyId) {
-      const encryptionReady = await encryptionService.initialize(familyId);
-      setEncryptionEnabled(encryptionReady);
+    setLoading(true);
+    try {
+      // Initialize E2E encryption
+      const familyId = user?.parent_id || user?.user_id;
+      if (familyId) {
+        const encryptionReady = await encryptionService.initialize(familyId);
+        setEncryptionEnabled(encryptionReady);
+      }
+      
+      await fetchMessages();
+      
+      // Get token from API service (which stores it after login)
+      const token = apiService.sessionToken;
+      if (token) {
+        webSocketService.setSessionToken(token);
+        setupWebSocketListeners();
+        webSocketService.connect();
+      } else {
+        console.log('No session token available for WebSocket');
+      }
+    } catch (error) {
+      console.error('Chat initialization error:', error);
+    } finally {
+      setLoading(false);
     }
-    
-    await fetchMessages();
-    
-    // Get token from API service (which stores it after login)
-    const token = apiService.sessionToken;
-    if (token) {
-      webSocketService.setSessionToken(token);
-      setupWebSocketListeners();
-      webSocketService.connect();
-    } else {
-      console.log('No session token available for WebSocket');
-    }
-    
-    setLoading(false);
   };
 
   const setupWebSocketListeners = () => {
