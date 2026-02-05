@@ -796,8 +796,18 @@ async def update_shopping_item(item_id: str, request: Request, data: dict):
 # Family Wall
 @api_router.get("/family-wall")
 async def get_family_wall(request: Request):
-    await get_current_user(request)
+    current_user = await get_current_user(request)
     posts = await db.family_wall.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    # Add user_voted_option for each poll post
+    for post in posts:
+        if post.get('type') == 'poll' or post.get('post_type') == 'poll':
+            poll_options = post.get('poll_options', [])
+            for idx, opt in enumerate(poll_options):
+                if current_user['user_id'] in opt.get('votes', []):
+                    post['user_voted_option'] = idx
+                    break
+    
     return {"posts": posts}
 
 @api_router.post("/family-wall")
