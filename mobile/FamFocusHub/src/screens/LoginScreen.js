@@ -189,8 +189,8 @@ export default function LoginScreen({ navigation }) {
 
   const promptEnableBiometric = (token) => {
     Alert.alert(
-      `Enable ${biometricType}?`,
-      `Would you like to use ${biometricType} for faster login next time?`,
+      `Enable Face/Fingerprint Sign In?`,
+      `Would you like to use Face/Fingerprint for faster login next time?`,
       [
         { text: 'Not Now', style: 'cancel' },
         { 
@@ -198,7 +198,7 @@ export default function LoginScreen({ navigation }) {
           onPress: async () => {
             const result = await biometricService.enableBiometricLogin(token);
             if (result.success) {
-              Alert.alert('Success', `${biometricType} login enabled!`);
+              Alert.alert('Success', `Face/Fingerprint login enabled!`);
               setBiometricEnabled(true);
             }
           }
