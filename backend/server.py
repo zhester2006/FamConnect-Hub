@@ -3925,7 +3925,7 @@ async def create_seasonal_challenge(request: Request, data: dict):
     }
     
     await db.seasonal_challenges.insert_one(challenge)
-    return challenge
+    return await db.seasonal_challenges.find_one({"challenge_id": challenge_id}, {"_id": 0})
 
 # ============================================
 # CUSTOMIZABLE CHILD DASHBOARD
