@@ -321,6 +321,34 @@ export default function ChildSpace({ user }) {
               ))}
             </div>
           </div>
+
+          {/* Personal Goals */}
+          <PersonalGoals user={user} />
+
+          {/* Quick Shortcuts */}
+          <QuickShortcuts 
+            user={user} 
+            onNavigate={(shortcutId) => {
+              const routes = {
+                chat: '/chat',
+                rewards: '/rewards',
+                leaderboard: '/leaderboard',
+                calendar: '/calendar',
+                shopping: '/shopping',
+                reading: '/reading',
+                dinner: '/dinner',
+                family_wall: '/family-wall',
+                achievements: '/achievements',
+              };
+              if (routes[shortcutId]) navigate(routes[shortcutId]);
+            }}
+          />
+
+          {/* Achievements Preview */}
+          <AchievementPreview 
+            user={user} 
+            onViewAll={() => navigate('/achievements')}
+          />
         </div>
       </main>
 
