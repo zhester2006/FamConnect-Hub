@@ -7,7 +7,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import MapView, { Marker, Circle } from 'react-native-maps';
+import MapView, { Marker, Circle, PROVIDER_DEFAULT } from 'react-native-maps';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
 import locationService from '../services/location.service';
@@ -838,7 +838,6 @@ export default function LocationScreen({ navigation }) {
           <MapView
             ref={mapRef}
             style={styles.map}
-            provider={PROVIDER_GOOGLE}
             initialRegion={{
               latitude: selectedLocation?.latitude || currentLocation?.latitude || 37.78825,
               longitude: selectedLocation?.longitude || currentLocation?.longitude || -122.4324,
