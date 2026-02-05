@@ -931,6 +931,12 @@ export default function LocationScreen({ navigation }) {
               </React.Fragment>
             ))}
           </MapView>
+          ) : (
+            <View style={[styles.map, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#1e1b4b' }]}>
+              <ActivityIndicator size="large" color="#818cf8" />
+              <Text style={{ color: '#9ca3af', marginTop: 10 }}>Getting location...</Text>
+            </View>
+          )}
           
           {/* Bottom info panel */}
           <View style={styles.mapBottomPanel}>
