@@ -1,9 +1,27 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useColorScheme, Appearance } from 'react-native';
 
-// Default theme - Standard violet/purple palette
-const DEFAULT_THEME = {
-  mode: 'standard', // 'standard' or 'custom'
+// Light theme colors
+const LIGHT_THEME = {
+  mode: 'light',
+  primary: '#6366f1',
+  secondary: '#818cf8',
+  accent: '#a5b4fc',
+  background: '#f8fafc',
+  surface: '#ffffff',
+  text: '#1e293b',
+  textSecondary: '#64748b',
+  success: '#10b981',
+  warning: '#f59e0b',
+  error: '#ef4444',
+  gradientStart: '#f1f5f9',
+  gradientEnd: '#e2e8f0',
+};
+
+// Dark theme colors (default)
+const DARK_THEME = {
+  mode: 'dark',
   primary: '#6366f1',
   secondary: '#818cf8',
   accent: '#a5b4fc',
@@ -14,10 +32,12 @@ const DEFAULT_THEME = {
   success: '#10b981',
   warning: '#f59e0b',
   error: '#ef4444',
-  // Gradient colors
   gradientStart: '#1e1b4b',
   gradientEnd: '#0f0d1a',
 };
+
+// Default theme - Standard violet/purple palette
+const DEFAULT_THEME = DARK_THEME;
 
 // Standard theme (non-editable baseline)
 const STANDARD_THEME = { ...DEFAULT_THEME, mode: 'standard' };
@@ -25,9 +45,31 @@ const STANDARD_THEME = { ...DEFAULT_THEME, mode: 'standard' };
 const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
+  const systemColorScheme = useColorScheme();
   const [theme, setTheme] = useState(DEFAULT_THEME);
   const [isCustomMode, setIsCustomMode] = useState(false);
+  const [autoMode, setAutoMode] = useState(false); // Auto dark/light mode
   const [loading, setLoading] = useState(true);
+
+  // Listen for system color scheme changes
+  useEffect(() => {
+    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+      if (autoMode) {
+        applyAutoTheme(colorScheme);
+      }
+    });
+
+    return () => subscription.remove();
+  }, [autoMode, theme]);
+
+  // Apply theme based on system preference
+  const applyAutoTheme = (colorScheme) => {
+    if (colorScheme === 'dark') {
+      setTheme(prev => ({ ...prev, ...DARK_THEME, mode: prev.mode }));
+    } else {
+      setTheme(prev => ({ ...prev, ...LIGHT_THEME, mode: prev.mode }));
+    }
+  };
 
   // Load saved theme on mount
   useEffect(() => {
@@ -38,8 +80,16 @@ export function ThemeProvider({ children }) {
     try {
       const savedTheme = await AsyncStorage.getItem('familyTheme');
       const savedMode = await AsyncStorage.getItem('themeMode');
+      const savedAutoMode = await AsyncStorage.getItem('autoThemeMode');
       
-      if (savedMode === 'custom' && savedTheme) {
+      // Check if auto mode is enabled
+      if (savedAutoMode === 'true') {
+        setAutoMode(true);
+        const currentScheme = Appearance.getColorScheme();
+        const baseTheme = currentScheme === 'light' ? LIGHT_THEME : DARK_THEME;
+        setTheme({ ...baseTheme, mode: 'auto' });
+        setIsCustomMode(false);
+      } else if (savedMode === 'custom' && savedTheme) {
         const parsed = JSON.parse(savedTheme);
         setTheme({ ...DEFAULT_THEME, ...parsed, mode: 'custom' });
         setIsCustomMode(true);
@@ -62,6 +112,19 @@ export function ThemeProvider({ children }) {
       await AsyncStorage.setItem('themeMode', newTheme.mode || 'custom');
     } catch (error) {
       console.error('Failed to save theme:', error);
+    }
+  };
+
+  // Toggle auto dark/light mode
+  const toggleAutoMode = async (enabled) => {
+    setAutoMode(enabled);
+    await AsyncStorage.setItem('autoThemeMode', enabled ? 'true' : 'false');
+    
+    if (enabled) {
+      setIsCustomMode(false);
+      const currentScheme = Appearance.getColorScheme();
+      const baseTheme = currentScheme === 'light' ? LIGHT_THEME : DARK_THEME;
+      setTheme({ ...baseTheme, mode: 'auto' });
     }
   };
 
