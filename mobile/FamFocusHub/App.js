@@ -19,6 +19,7 @@ function NetworkIndicator({ isOnline }) {
 
 function AppContent() {
   const [isOnline, setIsOnline] = useState(true);
+  const [servicesReady, setServicesReady] = useState(false);
   const appState = useRef(AppState.currentState);
 
   useEffect(() => {
@@ -27,22 +28,38 @@ function AppContent() {
     
     const initServices = async () => {
       try {
-        // Lazy load services to avoid startup crashes
-        const apiService = require('./src/services/api.service').default;
-        await apiService.init();
+        // Initialize API service first (critical)
+        try {
+          const apiService = require('./src/services/api.service').default;
+          await apiService.init();
+        } catch (apiError) {
+          console.warn('API service init warning:', apiError);
+        }
         
-        // Initialize offline service
-        const offlineService = require('./src/services/offline.service').default;
-        await offlineService.init();
-        unsubscribeNetwork = offlineService.addNetworkListener(setIsOnline);
+        // Initialize offline service (non-blocking)
+        try {
+          const offlineService = require('./src/services/offline.service').default;
+          await offlineService.init();
+          unsubscribeNetwork = offlineService.addNetworkListener(setIsOnline);
+        } catch (offlineError) {
+          console.warn('Offline service init warning:', offlineError);
+        }
         
         // Initialize location service (non-blocking)
-        const locationService = require('./src/services/location.service').default;
-        locationService.init().catch(err => console.warn('Location init:', err));
+        try {
+          const locationService = require('./src/services/location.service').default;
+          locationService.init().catch(err => console.warn('Location init:', err));
+        } catch (locError) {
+          console.warn('Location service load error:', locError);
+        }
         
         // Initialize battery service (non-blocking)
-        const batteryService = require('./src/services/battery.service').default;
-        batteryService.init().catch(err => console.warn('Battery init:', err));
+        try {
+          const batteryService = require('./src/services/battery.service').default;
+          batteryService.init().catch(err => console.warn('Battery init:', err));
+        } catch (batError) {
+          console.warn('Battery service load error:', batError);
+        }
         
         // Initialize push notifications (non-blocking)
         initPushNotifications().catch(err => console.warn('Push init:', err));
@@ -50,17 +67,27 @@ function AppContent() {
         console.log('Services initialized');
       } catch (error) {
         console.error('Service initialization error:', error);
+      } finally {
+        setServicesReady(true);
       }
     };
     
     initServices();
     
     // Listen for app state changes
-    appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+    try {
+      appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+    } catch (e) {
+      console.warn('AppState listener error:', e);
+    }
     
     return () => {
-      if (unsubscribeNetwork) unsubscribeNetwork();
-      if (appStateSubscription) appStateSubscription.remove();
+      if (unsubscribeNetwork) {
+        try { unsubscribeNetwork(); } catch (e) {}
+      }
+      if (appStateSubscription?.remove) {
+        try { appStateSubscription.remove(); } catch (e) {}
+      }
     };
   }, []);
 
