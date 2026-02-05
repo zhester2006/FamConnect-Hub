@@ -233,13 +233,18 @@ export default function FamilyWallScreen({ navigation }) {
   };
 
   const renderPollOptions = (post) => {
-    const totalVotes = post.poll_votes?.reduce((sum, v) => sum + (v.count || 0), 0) || 0;
     const userVoted = post.user_voted_option !== undefined && post.user_voted_option !== null;
+    
+    // Calculate total votes from poll_options
+    const totalVotes = post.poll_options?.reduce((sum, opt) => {
+      const optionData = typeof opt === 'string' ? { votes: [] } : opt;
+      return sum + (optionData.votes?.length || 0);
+    }, 0) || 0;
 
     return (
       <View style={styles.pollContainer}>
         {post.poll_options?.map((option, index) => {
-          const optionData = typeof option === 'string' ? { text: option } : option;
+          const optionData = typeof option === 'string' ? { text: option, votes: [], voter_names: [] } : option;
           const optionText = optionData.text || option;
           const votes = optionData.votes || [];
           const voterNames = optionData.voter_names || [];
@@ -251,8 +256,14 @@ export default function FamilyWallScreen({ navigation }) {
             <TouchableOpacity
               key={index}
               style={[styles.pollOption, isUserVote && styles.pollOptionVoted]}
-              onPress={() => !userVoted && handleVote(post.post_id, index)}
+              onPress={() => {
+                console.log('Poll option pressed:', index, 'userVoted:', userVoted);
+                if (!userVoted) {
+                  handleVote(post.post_id, index);
+                }
+              }}
               disabled={userVoted}
+              activeOpacity={userVoted ? 1 : 0.7}
             >
               {userVoted && (
                 <View style={[styles.pollProgress, { width: `${percentage}%` }]} />
