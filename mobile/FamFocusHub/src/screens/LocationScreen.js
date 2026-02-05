@@ -55,19 +55,34 @@ export default function LocationScreen({ navigation }) {
     initServices();
     fetchData();
     
+    let subscription = null;
+    let locationListener = null;
+    
     // Listen for app state changes
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    try {
+      subscription = AppState.addEventListener('change', handleAppStateChange);
+    } catch (e) {
+      console.warn('AppState listener error:', e);
+    }
     
     // Listen for location service updates
-    const locationListener = locationService.addListener((type, data) => {
-      if (type === 'geofence') {
-        fetchData(); // Refresh alerts when geofence triggered
-      }
-    });
+    try {
+      locationListener = locationService.addListener((type, data) => {
+        if (type === 'geofence') {
+          fetchData(); // Refresh alerts when geofence triggered
+        }
+      });
+    } catch (e) {
+      console.warn('Location listener error:', e);
+    }
     
     return () => {
-      subscription.remove();
-      locationListener();
+      if (subscription?.remove) {
+        try { subscription.remove(); } catch (e) {}
+      }
+      if (locationListener) {
+        try { locationListener(); } catch (e) {}
+      }
     };
   }, []);
 
