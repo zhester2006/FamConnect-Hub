@@ -880,44 +880,46 @@ export default function LocationScreen({ navigation }) {
             </TouchableOpacity>
           </View>
           
-          <MapView
-            ref={mapRef}
-            style={styles.map}
-            initialRegion={{
-              latitude: selectedLocation?.latitude || currentLocation?.latitude || 37.78825,
-              longitude: selectedLocation?.longitude || currentLocation?.longitude || -122.4324,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            }}
-            onPress={handleMapPress}
-            showsUserLocation
-            showsMyLocationButton={false}
-          >
-            {selectedLocation && (
-              <>
-                <Marker
-                  coordinate={selectedLocation}
-                  pinColor="#818cf8"
-                  title={newGeofence.name || "New Safe Zone"}
-                />
-                <Circle
-                  center={selectedLocation}
-                  radius={newGeofence.radius * 0.3048} // Convert feet to meters
-                  strokeColor="rgba(129, 140, 248, 0.8)"
-                  fillColor="rgba(129, 140, 248, 0.2)"
-                  strokeWidth={2}
-                />
-              </>
-            )}
-            
-            {/* Show existing geofences on map */}
-            {geofences.map((fence) => (
-              <React.Fragment key={fence.geofence_id}>
-                <Marker
-                  coordinate={{ latitude: fence.latitude, longitude: fence.longitude }}
-                  pinColor="#10b981"
-                  title={fence.name}
-                  description={`${fence.radius_feet} ft radius`}
+          {(selectedLocation || currentLocation) ? (
+            <MapView
+              ref={mapRef}
+              style={styles.map}
+              provider={PROVIDER_DEFAULT}
+              initialRegion={{
+                latitude: selectedLocation?.latitude || currentLocation?.latitude || 37.78825,
+                longitude: selectedLocation?.longitude || currentLocation?.longitude || -122.4324,
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
+              }}
+              onPress={handleMapPress}
+              showsUserLocation
+              showsMyLocationButton={false}
+            >
+              {selectedLocation && (
+                <>
+                  <Marker
+                    coordinate={selectedLocation}
+                    pinColor="#818cf8"
+                    title={newGeofence.name || "New Safe Zone"}
+                  />
+                  <Circle
+                    center={selectedLocation}
+                    radius={newGeofence.radius * 0.3048}
+                    strokeColor="rgba(129, 140, 248, 0.8)"
+                    fillColor="rgba(129, 140, 248, 0.2)"
+                    strokeWidth={2}
+                  />
+                </>
+              )}
+              
+              {/* Show existing geofences on map */}
+              {geofences.map((fence) => (
+                <React.Fragment key={fence.geofence_id}>
+                  <Marker
+                    coordinate={{ latitude: fence.latitude, longitude: fence.longitude }}
+                    pinColor="#10b981"
+                    title={fence.name}
+                    description={`${fence.radius_feet} ft radius`}
                 />
                 <Circle
                   center={{ latitude: fence.latitude, longitude: fence.longitude }}
