@@ -189,6 +189,7 @@ export default function AppNavigator() {
                 <Stack.Screen name="ChildSpace" component={ChildSpace} />
                 <Stack.Screen name="Rewards" component={RewardsScreen} />
                 <Stack.Screen name="Achievements" component={AchievementsScreen} />
+                <Stack.Screen name="WidgetSettings" component={WidgetSettingsScreen} />
               </>
             ) : (
               <>
@@ -210,6 +211,7 @@ export default function AppNavigator() {
                 <Stack.Screen name="Calendar" component={CalendarScreen} />
                 <Stack.Screen name="DinnerPlanner" component={DinnerPlannerScreen} />
                 <Stack.Screen name="Achievements" component={AchievementsScreen} />
+                <Stack.Screen name="WidgetSettings" component={WidgetSettingsScreen} />
               </>
             )}
           </>
