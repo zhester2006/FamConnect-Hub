@@ -808,6 +808,16 @@ const styles = StyleSheet.create({
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 12 },
   actionBtnText: { fontSize: 13, fontWeight: '600' },
 
+  // Available Chores Section
+  availableChoresSection: { paddingHorizontal: 16, marginBottom: 12 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#fff' },
+  availableChoresScroll: { marginHorizontal: -4 },
+  availableChoreCard: { width: 100, backgroundColor: 'rgba(30, 27, 75, 0.6)', borderRadius: 12, padding: 12, marginHorizontal: 4, alignItems: 'center', borderWidth: 1 },
+  availableChoreIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  availableChoreTitle: { fontSize: 11, fontWeight: '600', color: '#fff', textAlign: 'center', marginBottom: 4 },
+  availableChorePoints: { fontSize: 10, color: '#f59e0b', fontWeight: '600' },
+
   filterRow: { paddingHorizontal: 16, marginBottom: 12 },
   filterChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: 'rgba(30, 27, 75, 0.6)', marginRight: 8 },
   filterText: { fontSize: 13, color: '#9ca3af', fontWeight: '500' },
