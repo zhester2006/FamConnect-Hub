@@ -20,6 +20,7 @@ import ReadingLogs from '@/pages/ReadingLogs';
 import CheckIns from '@/pages/CheckIns';
 import Analytics from '@/pages/Analytics';
 import ChoreScheduler from '@/pages/ChoreScheduler';
+import Achievements from '@/pages/Achievements';
 import WelcomeTutorial from '@/components/WelcomeTutorial';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { NotificationPanel } from '@/components/NotificationBell';
