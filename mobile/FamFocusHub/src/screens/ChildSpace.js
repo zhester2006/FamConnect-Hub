@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
 import MedalEmblem from '../components/MedalEmblem';
+import { PersonalGoalsWidget, QuickShortcutsWidget, AchievementPreviewWidget } from '../components/DashboardWidgets';
 
 export default function ChildSpace({ navigation, route }) {
   const { user } = useAuth();
