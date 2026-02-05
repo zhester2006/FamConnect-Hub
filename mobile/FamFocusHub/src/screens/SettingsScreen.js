@@ -226,7 +226,11 @@ export default function SettingsScreen({ navigation }) {
                     { backgroundColor: color },
                     theme.primary === color && styles.colorOptionActive
                   ]}
-                  onPress={() => theme.updateColor('primary', color)}
+                  onPress={() => {
+                    console.log('Primary color selected:', color);
+                    theme.updateColor('primary', color);
+                  }}
+                  activeOpacity={0.7}
                 >
                   {theme.primary === color && (
                     <Ionicons name="checkmark" size={18} color="#fff" />
@@ -245,7 +249,11 @@ export default function SettingsScreen({ navigation }) {
                     { backgroundColor: color },
                     theme.accent === color && styles.colorOptionActive
                   ]}
-                  onPress={() => theme.updateColor('accent', color)}
+                  onPress={() => {
+                    console.log('Accent color selected:', color);
+                    theme.updateColor('accent', color);
+                  }}
+                  activeOpacity={0.7}
                 >
                   {theme.accent === color && (
                     <Ionicons name="checkmark" size={18} color="#fff" />
@@ -254,7 +262,14 @@ export default function SettingsScreen({ navigation }) {
               ))}
             </View>
             
-            <TouchableOpacity style={styles.resetBtn} onPress={() => theme.resetToDefault()}>
+            <TouchableOpacity 
+              style={styles.resetBtn} 
+              onPress={() => {
+                console.log('Reset theme pressed');
+                theme.resetToDefault();
+              }}
+              activeOpacity={0.7}
+            >
               <Ionicons name="refresh" size={16} color="#6b7280" />
               <Text style={styles.resetBtnText}>Reset to Default</Text>
             </TouchableOpacity>
