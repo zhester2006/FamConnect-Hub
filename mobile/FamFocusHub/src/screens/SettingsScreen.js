@@ -159,60 +159,97 @@ export default function SettingsScreen({ navigation }) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Theme Mode</Text>
           <View style={styles.themeModeRow}>
-            {Object.values(THEME_MODES).map((mode) => (
-              <TouchableOpacity
-                key={mode.id}
-                style={[
-                  styles.themeModeOption,
-                  themeMode.id === mode.id && styles.themeModeOptionActive
-                ]}
-                onPress={() => changeThemeMode(mode.id)}
-              >
-                <Ionicons 
-                  name={mode.icon} 
-                  size={24} 
-                  color={themeMode.id === mode.id ? '#fff' : '#6b7280'} 
-                />
-                <Text style={[
-                  styles.themeModeText,
-                  themeMode.id === mode.id && styles.themeModeTextActive
-                ]}>
-                  {mode.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            <TouchableOpacity
+              style={[
+                styles.themeModeOption,
+                !theme.isCustomMode && styles.themeModeOptionActive
+              ]}
+              onPress={() => theme.enableStandardMode()}
+            >
+              <Ionicons 
+                name="color-palette-outline" 
+                size={24} 
+                color={!theme.isCustomMode ? '#fff' : '#6b7280'} 
+              />
+              <Text style={[
+                styles.themeModeText,
+                !theme.isCustomMode && styles.themeModeTextActive
+              ]}>
+                Standard
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.themeModeOption,
+                theme.isCustomMode && styles.themeModeOptionActive
+              ]}
+              onPress={() => theme.enableCustomMode()}
+            >
+              <Ionicons 
+                name="brush" 
+                size={24} 
+                color={theme.isCustomMode ? '#fff' : '#6b7280'} 
+              />
+              <Text style={[
+                styles.themeModeText,
+                theme.isCustomMode && styles.themeModeTextActive
+              ]}>
+                Custom
+              </Text>
+            </TouchableOpacity>
           </View>
           <Text style={styles.themeModeHint}>
-            {themeMode.id === 'standard' 
+            {!theme.isCustomMode 
               ? 'Standard mode uses default colors'
               : 'Custom mode applies your selected theme colors across the app'}
           </Text>
         </View>
 
         {/* Theme Colors Section - Only show when Custom mode is selected */}
-        {themeMode.id === 'custom' && (
+        {theme.isCustomMode && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Choose Your Colors</Text>
-            <View style={styles.themesGrid}>
-              {Object.values(THEMES).map((theme) => (
+            <Text style={styles.sectionTitle}>Primary Color</Text>
+            <View style={styles.colorGrid}>
+              {theme.availableColors?.primary?.map((color) => (
                 <TouchableOpacity
-                  key={theme.id}
+                  key={color}
                   style={[
-                    styles.themeOption,
-                    currentTheme.id === theme.id && styles.themeOptionActive
+                    styles.colorOption,
+                    { backgroundColor: color },
+                    theme.primary === color && styles.colorOptionActive
                   ]}
-                  onPress={() => changeTheme(theme.id)}
+                  onPress={() => theme.updateColor('primary', color)}
                 >
-                  <LinearGradient colors={theme.colors} style={styles.themePreview} />
-                  <Text style={styles.themeName}>{theme.name}</Text>
-                  {currentTheme.id === theme.id && (
-                    <View style={styles.themeCheck}>
-                      <Ionicons name="checkmark-circle" size={18} color="#10b981" />
-                    </View>
+                  {theme.primary === color && (
+                    <Ionicons name="checkmark" size={18} color="#fff" />
                   )}
                 </TouchableOpacity>
               ))}
             </View>
+            
+            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Accent Color</Text>
+            <View style={styles.colorGrid}>
+              {theme.availableColors?.accent?.map((color) => (
+                <TouchableOpacity
+                  key={color}
+                  style={[
+                    styles.colorOption,
+                    { backgroundColor: color },
+                    theme.accent === color && styles.colorOptionActive
+                  ]}
+                  onPress={() => theme.updateColor('accent', color)}
+                >
+                  {theme.accent === color && (
+                    <Ionicons name="checkmark" size={18} color="#fff" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            <TouchableOpacity style={styles.resetBtn} onPress={() => theme.resetToDefault()}>
+              <Ionicons name="refresh" size={16} color="#6b7280" />
+              <Text style={styles.resetBtnText}>Reset to Default</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -222,7 +259,7 @@ export default function SettingsScreen({ navigation }) {
           <View style={styles.settingRow}>
             <View style={styles.settingInfo}>
               <View style={[styles.settingIcon, { backgroundColor: 'rgba(99, 102, 241, 0.2)' }]}>
-                <Ionicons name="notifications" size={20} color="#6366f1" />
+                <Ionicons name="notifications" size={20} color={theme.primary} />
               </View>
               <View>
                 <Text style={styles.settingLabel}>Push Notifications</Text>
@@ -232,7 +269,7 @@ export default function SettingsScreen({ navigation }) {
             <Switch
               value={notificationsEnabled}
               onValueChange={handleToggleNotifications}
-              trackColor={{ false: '#4b5563', true: '#6366f1' }}
+              trackColor={{ false: '#4b5563', true: theme.primary }}
               thumbColor={notificationsEnabled ? '#fff' : '#9ca3af'}
             />
           </View>
