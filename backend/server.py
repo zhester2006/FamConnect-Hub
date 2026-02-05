@@ -1596,6 +1596,63 @@ async def get_location_alerts(request: Request):
     
     return {"alerts": alerts}
 
+# Update User Location
+@api_router.post("/location/update")
+async def update_location(request: Request, data: dict):
+    """Update user's current location"""
+    current_user = await get_current_user(request)
+    
+    latitude = data.get('latitude')
+    longitude = data.get('longitude')
+    
+    if latitude is None or longitude is None:
+        raise HTTPException(status_code=400, detail="Latitude and longitude required")
+    
+    # Update user's last known location
+    await db.users.update_one(
+        {"user_id": current_user['user_id']},
+        {
+            "$set": {
+                "last_location": {
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        }
+    )
+    
+    return {"success": True, "message": "Location updated"}
+
+# Get Family Member Locations (for parents)
+@api_router.get("/location/family")
+async def get_family_locations(request: Request):
+    """Get location of all family members who share location"""
+    current_user = await get_current_user(request)
+    
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can view family locations")
+    
+    # Get all family members with location info
+    members = await db.users.find(
+        {"parent_id": current_user['user_id']},
+        {"_id": 0, "user_id": 1, "name": 1, "nickname": 1, "picture": 1, "last_location": 1, "permissions": 1, "online_status": 1}
+    ).to_list(100)
+    
+    # Filter to only those sharing location
+    members_with_location = []
+    for member in members:
+        if member.get('permissions', {}).get('share_location', False):
+            members_with_location.append({
+                "user_id": member['user_id'],
+                "name": member.get('nickname') or member['name'],
+                "picture": member.get('picture'),
+                "last_location": member.get('last_location'),
+                "online_status": member.get('online_status', False)
+            })
+    
+    return {"members": members_with_location}
+
 # Get Family Battery Status (for parents)
 @api_router.get("/battery/family-status")
 async def get_family_battery_status(request: Request):
