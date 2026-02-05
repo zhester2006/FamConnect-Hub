@@ -249,6 +249,11 @@ class WebSocketService {
     return this.ws && this.ws.readyState === WebSocket.OPEN;
   }
 
+  // Get list of online members
+  getOnlineMembers() {
+    return Array.from(this.onlineMembers);
+  }
+
   // Disconnect
   disconnect() {
     this.stopPingInterval();
