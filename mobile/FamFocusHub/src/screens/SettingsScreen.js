@@ -164,7 +164,11 @@ export default function SettingsScreen({ navigation }) {
                 styles.themeModeOption,
                 !theme.isCustomMode && styles.themeModeOptionActive
               ]}
-              onPress={() => theme.enableStandardMode()}
+              onPress={() => {
+                console.log('Standard mode pressed');
+                theme.enableStandardMode();
+              }}
+              activeOpacity={0.7}
             >
               <Ionicons 
                 name="color-palette-outline" 
@@ -183,7 +187,11 @@ export default function SettingsScreen({ navigation }) {
                 styles.themeModeOption,
                 theme.isCustomMode && styles.themeModeOptionActive
               ]}
-              onPress={() => theme.enableCustomMode()}
+              onPress={() => {
+                console.log('Custom mode pressed');
+                theme.enableCustomMode();
+              }}
+              activeOpacity={0.7}
             >
               <Ionicons 
                 name="brush" 
