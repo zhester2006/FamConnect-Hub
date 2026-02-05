@@ -306,6 +306,10 @@ class ApiService {
     return this.post(`/family-wall/${postId}/like`, {});
   }
 
+  async votePoll(postId, optionIndex) {
+    return this.post(`/family-wall/${postId}/vote`, { option_index: optionIndex });
+  }
+
   async searchGifs(query) {
     const response = await this.get(`/gifs/search?q=${encodeURIComponent(query)}`);
     return { results: response.gifs || [] };
