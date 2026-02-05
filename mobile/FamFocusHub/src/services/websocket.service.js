@@ -17,9 +17,13 @@ class WebSocketService {
       connect: [],
       disconnect: [],
       error: [],
+      reaction: [],
+      presence: [],
+      members_online: [],
     };
     this.pingInterval = null;
     this.isConnecting = false;
+    this.onlineMembers = new Set();
   }
 
   // Set session token for authentication
