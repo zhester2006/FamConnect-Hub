@@ -1,6 +1,5 @@
 // Offline-First Cache Service for React Native
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import NetInfo from '@react-native-community/netinfo';
 
 const CACHE_PREFIX = '@famfocus_cache_';
 const QUEUE_KEY = '@famfocus_action_queue';
@@ -11,24 +10,53 @@ class OfflineCacheService {
     this.isOnline = true;
     this.listeners = [];
     this.actionQueue = [];
-    this.initNetworkListener();
-    this.loadActionQueue();
+    this.initialized = false;
+    this.netInfoUnsubscribe = null;
   }
 
-  // Initialize network state listener
-  initNetworkListener() {
-    NetInfo.addEventListener(state => {
-      const wasOffline = !this.isOnline;
+  // Lazy initialization - call this after app is mounted
+  async init() {
+    if (this.initialized) return;
+    
+    try {
+      // Dynamically import NetInfo to avoid issues during module initialization
+      const NetInfo = require('@react-native-community/netinfo').default;
+      
+      // Get initial network state
+      const state = await NetInfo.fetch();
       this.isOnline = state.isConnected && state.isInternetReachable;
       
-      // Notify listeners of connectivity change
-      this.listeners.forEach(listener => listener(this.isOnline));
+      // Subscribe to network changes
+      this.netInfoUnsubscribe = NetInfo.addEventListener(state => {
+        const wasOffline = !this.isOnline;
+        this.isOnline = state.isConnected && state.isInternetReachable;
+        
+        // Notify listeners of connectivity change
+        this.listeners.forEach(listener => listener(this.isOnline));
+        
+        // Process queued actions when coming back online
+        if (wasOffline && this.isOnline) {
+          this.processQueue();
+        }
+      });
       
-      // Process queued actions when coming back online
-      if (wasOffline && this.isOnline) {
-        this.processQueue();
-      }
-    });
+      // Load queued actions
+      await this.loadActionQueue();
+      this.initialized = true;
+      console.log('Offline service initialized, online:', this.isOnline);
+    } catch (error) {
+      console.error('Failed to initialize offline service:', error);
+      // Continue without network monitoring
+      this.initialized = true;
+    }
+  }
+
+  // Cleanup
+  destroy() {
+    if (this.netInfoUnsubscribe) {
+      this.netInfoUnsubscribe();
+      this.netInfoUnsubscribe = null;
+    }
   }
 
   // Subscribe to connectivity changes
