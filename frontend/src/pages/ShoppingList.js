@@ -186,8 +186,6 @@ export default function ShoppingList({ user }) {
           </div>
         </div>
       )}
-      
-      <BottomNav userRole={user?.role} />
     </div>
   );
 }
