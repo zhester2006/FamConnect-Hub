@@ -805,16 +805,31 @@ async def create_post(request: Request, data: dict):
     current_user = await get_current_user(request)
     post_id = f"post_{uuid.uuid4().hex[:12]}"
     
+    # Accept both 'type' and 'post_type' for backward compatibility
+    post_type = data.get('type') or data.get('post_type', 'text')
+    
+    # Process poll_options - convert string array to objects if needed
+    poll_options = data.get('poll_options')
+    if poll_options and isinstance(poll_options, list):
+        poll_options = [
+            {"text": opt, "votes": [], "voter_names": []} if isinstance(opt, str) else opt
+            for opt in poll_options
+        ]
+    
     post_doc = {
         "post_id": post_id,
         "family_id": current_user.get('parent_id', current_user['user_id']),
-        "user_id": current_user['user_id'],
-        "user_name": current_user['name'],
-        "user_picture": current_user.get('picture'),
-        "content": data['content'],
-        "media_url": data.get('media_url'),
-        "post_type": data.get('post_type', 'text'),
-        "poll_options": data.get('poll_options'),
+        "author_id": current_user['user_id'],
+        "author_name": current_user.get('nickname') or current_user['name'],
+        "author_picture": current_user.get('picture'),
+        "content": data.get('content', ''),
+        "gif_url": data.get('gif_url'),
+        "image_url": data.get('image_url'),
+        "type": post_type,
+        "poll_options": poll_options,
+        "likes_count": 0,
+        "liked_by": [],
+        "comments_count": 0,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.family_wall.insert_one(post_doc)
