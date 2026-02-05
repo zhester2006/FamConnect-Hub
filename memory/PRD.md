@@ -889,3 +889,64 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - Personal goals creation and tracking working ✅
 - Quick shortcuts customization working ✅
 
+### Session 28 - Mobile App Features & Technical Improvements (Feb 2026) ✅
+
+**Mobile App Additions:**
+
+1. **AchievementsScreen.js** - Full achievements page for mobile
+   - Stats cards (streak, badges, points)
+   - Personal/Family/Seasonal tabs
+   - Progress bars for each achievement
+   - Celebration modal for unlocking achievements
+
+2. **DashboardWidgets.js (Mobile)** - Reusable widgets
+   - `PersonalGoalsWidget` - Create/track/delete personal goals
+   - `QuickShortcutsWidget` - Customizable shortcuts with editing mode
+   - `AchievementPreviewWidget` - Achievement summary with View All
+
+3. **ChildSpace.js Updates** - Integrated all new widgets
+
+**Technical Improvements:**
+
+1. **Backend Modular Structure** - Created `/app/backend/routers/` directory
+   - `__init__.py` - Router exports
+   - `achievements.py` - Achievement router (ready for migration)
+   - `goals.py` - Goals router (ready for migration)
+   - `auth.py`, `chores.py`, `family.py` - Placeholder routers
+
+2. **Offline-First Architecture** - `/app/mobile/FamFocusHub/src/services/offline.service.js`
+   - Network state listener with connectivity change callbacks
+   - Local data caching with configurable expiry (24 hours)
+   - Action queue for offline operations
+   - Auto-process queue when coming back online
+   - `fetchWithCache()` - Falls back to cache when offline
+
+3. **Dark Mode Sync** - Updated `/app/mobile/FamFocusHub/src/context/ThemeContext.js`
+   - Added light theme colors
+   - `useColorScheme` integration for system preference
+   - `autoMode` - Automatically follows system dark/light setting
+   - `toggleAutoMode()` - Enable/disable auto dark mode
+   - Persists auto mode preference in AsyncStorage
+
+4. **Weather UI Improvements** - Updated HomeHubScreen.js
+   - Gradient background for weather card
+   - Dedicated icon container
+   - Weather condition text display
+   - Refresh indicator
+
+**Testing Status:**
+- Full regression test completed by testing agent
+- Backend: 100% (25/25 tests passed)
+- Frontend: 100% (all UI components working)
+- Test report: `/app/test_reports/iteration_12.json`
+
+**Mobile Files Created/Modified:**
+- `/app/mobile/FamFocusHub/src/screens/AchievementsScreen.js` - NEW
+- `/app/mobile/FamFocusHub/src/components/DashboardWidgets.js` - NEW
+- `/app/mobile/FamFocusHub/src/services/offline.service.js` - UPDATED
+- `/app/mobile/FamFocusHub/src/context/ThemeContext.js` - UPDATED (dark mode sync)
+- `/app/mobile/FamFocusHub/src/screens/SettingsScreen.js` - UPDATED (auto dark mode toggle)
+- `/app/mobile/FamFocusHub/src/screens/ChildSpace.js` - UPDATED (new widgets)
+- `/app/mobile/FamFocusHub/src/screens/HomeHubScreen.js` - UPDATED (weather UI)
+- `/app/mobile/FamFocusHub/src/navigation/AppNavigator.js` - UPDATED (Achievements screen)
+
