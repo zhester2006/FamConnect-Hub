@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Trophy, Star, Award, TrendingUp, CheckCircle, Clock, Book, Sparkles, Send } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
+import { PersonalGoals, QuickShortcuts, AchievementPreview } from '@/components/DashboardWidgets';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
