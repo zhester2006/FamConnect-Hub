@@ -2338,6 +2338,10 @@ async def websocket_chat(websocket: WebSocket, session_token: str):
                         {"message_id": msg_id},
                         {"$addToSet": {"read_by": user_id}}
                     )
+            
+            elif data.get("type") == "ping":
+                # Respond to ping with pong to keep connection alive
+                await websocket.send_json({"type": "pong", "timestamp": datetime.now(timezone.utc).isoformat()})
     
     except WebSocketDisconnect:
         manager.disconnect(websocket, user_id, family_id)
