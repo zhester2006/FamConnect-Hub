@@ -412,11 +412,16 @@ const styles = StyleSheet.create({
   themeCheck: { position: 'absolute', top: 4, right: 4 },
   
   // Setting Row
-  settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   settingInfo: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   settingIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   settingLabel: { color: '#fff', fontSize: 15, fontWeight: '500' },
   settingDesc: { color: '#6b7280', fontSize: 12, marginTop: 2 },
+  settingHint: { color: '#6b7280', fontSize: 11, marginTop: 2 },
+  
+  // Toggle Switch
+  toggleSwitch: { width: 50, height: 30, borderRadius: 15, backgroundColor: '#374151', justifyContent: 'center', paddingHorizontal: 3 },
+  toggleKnob: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 2 },
   
   // Menu Items
   menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
