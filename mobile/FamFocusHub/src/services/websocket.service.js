@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-const BACKEND_URL = 'https://famconnect-hub.preview.emergentagent.com';
+const BACKEND_URL = 'https://famfocus-hub.preview.emergentagent.com';
 const WS_URL = BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://');
 
 class WebSocketService {
