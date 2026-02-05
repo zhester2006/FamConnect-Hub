@@ -135,14 +135,23 @@ export function ThemeProvider({ children }) {
 
   // Toggle auto dark/light mode
   const toggleAutoMode = async (enabled) => {
-    setAutoMode(enabled);
-    await AsyncStorage.setItem('autoThemeMode', enabled ? 'true' : 'false');
-    
-    if (enabled) {
-      setIsCustomMode(false);
-      const currentScheme = Appearance.getColorScheme();
-      const baseTheme = currentScheme === 'light' ? LIGHT_THEME : DARK_THEME;
-      setTheme({ ...baseTheme, mode: 'auto' });
+    try {
+      setAutoMode(enabled);
+      await AsyncStorage.setItem('autoThemeMode', enabled ? 'true' : 'false');
+      
+      if (enabled) {
+        setIsCustomMode(false);
+        let currentScheme = 'dark';
+        try {
+          currentScheme = Appearance.getColorScheme() || 'dark';
+        } catch (e) {
+          console.warn('Could not get color scheme:', e);
+        }
+        const baseTheme = currentScheme === 'light' ? LIGHT_THEME : DARK_THEME;
+        setTheme({ ...baseTheme, mode: 'auto' });
+      }
+    } catch (error) {
+      console.error('Failed to toggle auto mode:', error);
     }
   };
 
