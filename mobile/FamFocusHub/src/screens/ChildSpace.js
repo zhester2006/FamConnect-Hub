@@ -301,6 +301,24 @@ export default function ChildSpace({ navigation, route }) {
           </TouchableOpacity>
         </View>
 
+        {/* Personal Goals Widget */}
+        <View style={{ marginTop: 16 }}>
+          <PersonalGoalsWidget user={targetChild} />
+        </View>
+
+        {/* Quick Shortcuts Widget */}
+        <View style={{ marginTop: 16 }}>
+          <QuickShortcutsWidget user={targetChild} navigation={navigation} />
+        </View>
+
+        {/* Achievement Preview Widget */}
+        <View style={{ marginTop: 16 }}>
+          <AchievementPreviewWidget 
+            user={targetChild} 
+            onViewAll={() => navigation.navigate('Achievements', { user: targetChild })}
+          />
+        </View>
+
         <View style={{ height: 100 }} />
       </ScrollView>
     </View>
