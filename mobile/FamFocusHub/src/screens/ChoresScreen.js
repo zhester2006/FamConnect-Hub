@@ -351,6 +351,34 @@ export default function ChoresScreen({ navigation }) {
         </View>
       )}
 
+      {/* Available Chores Section (Parents only) */}
+      {isParent && (
+        <View style={styles.availableChoresSection}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="sparkles" size={18} color="#f59e0b" />
+            <Text style={styles.sectionTitle}>Available Chores</Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.availableChoresScroll}>
+            {CHORE_TYPES.map((type) => (
+              <TouchableOpacity
+                key={type.name}
+                style={[styles.availableChoreCard, { borderColor: type.color + '40' }]}
+                onPress={() => {
+                  setChoreForm({ ...choreForm, title: type.name, points: String(type.points) });
+                  setShowCreateModal(true);
+                }}
+              >
+                <View style={[styles.availableChoreIcon, { backgroundColor: type.color + '20' }]}>
+                  <Ionicons name={type.icon} size={20} color={type.color} />
+                </View>
+                <Text style={styles.availableChoreTitle}>{type.name}</Text>
+                <Text style={styles.availableChorePoints}>{type.points} pts</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       {/* Filters */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
         {['all', 'pending', 'completed', 'approved'].map((f) => (
