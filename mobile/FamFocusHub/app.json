@@ -99,7 +99,8 @@
         {
           "microphonePermission": "FamFocus needs microphone access for voice messages in family chat."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "eas": {
