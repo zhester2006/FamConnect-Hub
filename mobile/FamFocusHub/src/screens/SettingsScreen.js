@@ -126,6 +126,12 @@ export default function SettingsScreen({ navigation }) {
         { icon: 'location', label: 'Location', screen: 'Location', color: '#ef4444' },
       ],
     },
+    {
+      title: 'App Settings',
+      items: [
+        { icon: 'grid', label: 'Home Screen Widgets', screen: 'WidgetSettings', color: '#8b5cf6' },
+      ],
+    },
   ];
 
   return (
