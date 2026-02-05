@@ -158,56 +158,84 @@ export default function SettingsScreen({ navigation }) {
         {/* Theme Mode Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Theme Mode</Text>
-          <View style={styles.themeModeRow}>
-            <TouchableOpacity
-              style={[
-                styles.themeModeOption,
-                !theme.isCustomMode && styles.themeModeOptionActive
-              ]}
-              onPress={() => {
-                console.log('Standard mode pressed');
-                theme.enableStandardMode();
-              }}
-              activeOpacity={0.7}
-            >
-              <Ionicons 
-                name="color-palette-outline" 
-                size={24} 
-                color={!theme.isCustomMode ? '#fff' : '#6b7280'} 
-              />
-              <Text style={[
-                styles.themeModeText,
-                !theme.isCustomMode && styles.themeModeTextActive
-              ]}>
-                Standard
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.themeModeOption,
-                theme.isCustomMode && styles.themeModeOptionActive
-              ]}
-              onPress={() => {
-                console.log('Custom mode pressed');
-                theme.enableCustomMode();
-              }}
-              activeOpacity={0.7}
-            >
-              <Ionicons 
-                name="brush" 
-                size={24} 
-                color={theme.isCustomMode ? '#fff' : '#6b7280'} 
-              />
-              <Text style={[
-                styles.themeModeText,
-                theme.isCustomMode && styles.themeModeTextActive
-              ]}>
-                Custom
-              </Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.themeModeHint}>
-            {!theme.isCustomMode 
+          
+          {/* Auto Dark Mode Toggle */}
+          <TouchableOpacity 
+            style={styles.settingRow}
+            onPress={() => theme.toggleAutoMode && theme.toggleAutoMode(!theme.autoMode)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingInfo}>
+              <Ionicons name="moon" size={20} color={theme.autoMode ? theme.primary : '#6b7280'} />
+              <View style={{ marginLeft: 12 }}>
+                <Text style={styles.settingLabel}>Auto Dark Mode</Text>
+                <Text style={styles.settingHint}>Follow system settings</Text>
+              </View>
+            </View>
+            <View style={[
+              styles.toggleSwitch, 
+              theme.autoMode && { backgroundColor: theme.primary }
+            ]}>
+              <View style={[
+                styles.toggleKnob,
+                theme.autoMode && { transform: [{ translateX: 20 }] }
+              ]} />
+            </View>
+          </TouchableOpacity>
+          
+          {/* Manual Theme Selection */}
+          {!theme.autoMode && (
+            <>
+              <View style={styles.themeModeRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.themeModeOption,
+                    !theme.isCustomMode && styles.themeModeOptionActive
+                  ]}
+                  onPress={() => {
+                    console.log('Standard mode pressed');
+                    theme.enableStandardMode();
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons 
+                    name="color-palette-outline" 
+                    size={24} 
+                    color={!theme.isCustomMode ? '#fff' : '#6b7280'} 
+                  />
+                  <Text style={[
+                    styles.themeModeText,
+                    !theme.isCustomMode && styles.themeModeTextActive
+                  ]}>
+                    Standard
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.themeModeOption,
+                    theme.isCustomMode && styles.themeModeOptionActive
+                  ]}
+                  onPress={() => {
+                    console.log('Custom mode pressed');
+                    theme.enableCustomMode();
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons 
+                    name="brush" 
+                    size={24} 
+                    color={theme.isCustomMode ? '#fff' : '#6b7280'} 
+                  />
+                  <Text style={[
+                    styles.themeModeText,
+                    theme.isCustomMode && styles.themeModeTextActive
+                  ]}>
+                    Custom
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.themeModeHint}>
+                {!theme.isCustomMode 
               ? 'Standard mode uses default colors'
               : 'Custom mode applies your selected theme colors across the app'}
           </Text>
