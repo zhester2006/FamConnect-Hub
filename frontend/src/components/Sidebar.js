@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, Calendar, MessageCircle, Users, ShoppingCart, Award, 
   Settings, LogOut, Utensils, Trophy, Book, MapPin, Menu, X,
-  LayoutDashboard, Sparkles, ChevronLeft, ChevronRight, GripVertical, BarChart3, Bell
+  LayoutDashboard, Sparkles, ChevronLeft, ChevronRight, GripVertical, BarChart3, Bell, Medal
 } from 'lucide-react';
 
 import NotificationContext from '../context/NotificationContext';
