@@ -82,30 +82,60 @@ export default function LocationScreen({ navigation }) {
 
   const initServices = async () => {
     try {
-      // Initialize services
-      await locationService.init();
-      await batteryService.init();
+      // Initialize services with error handling
+      try {
+        await locationService.init();
+      } catch (locErr) {
+        console.warn('Location service init warning:', locErr);
+      }
+      
+      try {
+        await batteryService.init();
+      } catch (batErr) {
+        console.warn('Battery service init warning:', batErr);
+      }
       
       // Check permissions
-      const perms = await locationService.checkPermissions();
-      setPermissions(perms);
+      try {
+        const perms = await locationService.checkPermissions();
+        setPermissions(perms);
+      } catch (permErr) {
+        console.warn('Permission check warning:', permErr);
+        setPermissions({ foreground: false, background: false });
+      }
       
       // Check if background tracking is active
-      const bgEnabled = await locationService.isBackgroundTrackingEnabled();
-      setBackgroundTracking(bgEnabled);
+      try {
+        const bgEnabled = await locationService.isBackgroundTrackingEnabled();
+        setBackgroundTracking(bgEnabled);
+      } catch (bgErr) {
+        console.warn('Background tracking check warning:', bgErr);
+      }
       
       // Check battery sharing status
-      const batteryEnabled = batteryService.isSharingEnabled();
-      setBatterySharing(batteryEnabled);
+      try {
+        const batteryEnabled = batteryService.isSharingEnabled();
+        setBatterySharing(batteryEnabled);
+      } catch (batShareErr) {
+        console.warn('Battery sharing check warning:', batShareErr);
+      }
       
       // Get current location
-      const location = await locationService.getCurrentLocation();
-      if (location) {
-        setCurrentLocation(location);
+      try {
+        const location = await locationService.getCurrentLocation();
+        if (location) {
+          setCurrentLocation(location);
+        }
+      } catch (currLocErr) {
+        console.warn('Current location warning:', currLocErr);
       }
       
       // Get battery info
-      await updateBatteryInfo();
+      try {
+        await updateBatteryInfo();
+      } catch (batInfoErr) {
+        console.warn('Battery info warning:', batInfoErr);
+      }
     } catch (error) {
       console.error('Service init error:', error);
     } finally {
