@@ -98,6 +98,14 @@ export const AuthProvider = ({ children }) => {
       // Store userId for other services (like theme context)
       await AsyncStorage.setItem('userId', user.user_id);
       
+      // Load user's saved theme preference
+      if (user.settings?.theme) {
+        await AsyncStorage.setItem('themeMode', user.settings.theme);
+        if (user.settings.custom_theme) {
+          await AsyncStorage.setItem('familyTheme', JSON.stringify(user.settings.custom_theme));
+        }
+      }
+      
       // Initialize WebSocket
       webSocketService.setSessionToken(sessionToken);
       webSocketService.connect();
