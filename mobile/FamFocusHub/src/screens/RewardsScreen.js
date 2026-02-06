@@ -409,8 +409,8 @@ export default function RewardsScreen({ navigation }) {
                 navigation.goBack();
               }}
             >
-              <Ionicons name="arrow-forward-circle" size={24} color="#a855f7" />
-              <Text style={styles.choreLinkText}>Go to Chores for more ways to earn</Text>
+              <Ionicons name="arrow-back-circle" size={24} color="#a855f7" />
+              <Text style={styles.choreLinkText}>Back to Dashboard for Chores</Text>
             </TouchableOpacity>
           </>
         )}
