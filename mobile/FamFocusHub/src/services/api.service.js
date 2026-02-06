@@ -401,7 +401,7 @@ class ApiService {
 
   async getFamilyMembers(familyId) {
     if (familyId) {
-      return this.get(`/family/${familyId}/members`);
+      return this.get(`/families/${familyId}/members`);
     }
     return this.get('/family/members', 'family_members');
   }
