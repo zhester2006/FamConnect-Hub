@@ -185,6 +185,30 @@ export default function FamilyWallScreen({ navigation }) {
     
     setPosting(true);
     try {
+      // Try Firebase first if connected
+      if (firebaseConnected) {
+        let result = null;
+        
+        if (postType === 'message') {
+          result = await firebaseFamilyWallService.createTextPost(newPost);
+        } else if (postType === 'photo' && selectedImage) {
+          // Upload image first
+          const imageUrl = await uploadImage(selectedImage.uri);
+          result = await firebaseFamilyWallService.createPhotoPost(newPost, imageUrl);
+        } else if (postType === 'gif' && selectedGif) {
+          result = await firebaseFamilyWallService.createGifPost(newPost, selectedGif.url);
+        } else if (postType === 'poll') {
+          const validOptions = pollOptions.filter(o => o.trim());
+          result = await firebaseFamilyWallService.createPollPost(newPost, validOptions);
+        }
+
+        if (result) {
+          resetPostForm();
+          return; // Firebase will update posts via real-time listener
+        }
+      }
+
+      // Fallback to REST API
       let imageUrl = null;
       if (selectedImage) {
         imageUrl = await uploadImage(selectedImage.uri);
