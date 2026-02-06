@@ -100,7 +100,7 @@ export default function ProfileScreen({ navigation }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await apiService.post('/users/update', {
+      await apiService.updateProfile(user.user_id, {
         name: formData.name,
         nickname: formData.nickname,
         bio: formData.bio,
