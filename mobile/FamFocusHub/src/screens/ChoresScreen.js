@@ -468,6 +468,24 @@ export default function ChoresScreen({ navigation }) {
                   
                   {/* Actions */}
                   <View style={styles.choreActions}>
+                    {/* Child: Claim unassigned chore */}
+                    {!isParent && chore.status === 'pending' && !chore.assigned_to && (
+                      <TouchableOpacity
+                        style={[styles.actionButton, { backgroundColor: '#6366f1' }]}
+                        onPress={() => handleClaimChore(chore)}
+                        disabled={processing === chore.chore_id}
+                      >
+                        {processing === chore.chore_id ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <>
+                            <Ionicons name="hand-left" size={16} color="#fff" />
+                            <Text style={styles.actionButtonText}>Claim</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    )}
+                    
                     {/* Child: Mark Complete */}
                     {!isParent && chore.status === 'pending' && chore.assigned_to === user?.user_id && (
                       <TouchableOpacity
@@ -504,6 +522,16 @@ export default function ChoresScreen({ navigation }) {
                           <Ionicons name="close" size={18} color="#fff" />
                         </TouchableOpacity>
                       </View>
+                    )}
+                    
+                    {/* Parent: Edit */}
+                    {isParent && chore.status === 'pending' && (
+                      <TouchableOpacity
+                        style={styles.editBtn}
+                        onPress={() => handleEditChore(chore)}
+                      >
+                        <Ionicons name="pencil" size={18} color="#6b7280" />
+                      </TouchableOpacity>
                     )}
                     
                     {/* Parent: Delete */}
