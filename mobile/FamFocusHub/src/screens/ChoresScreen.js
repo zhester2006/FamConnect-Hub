@@ -192,6 +192,59 @@ export default function ChoresScreen({ navigation }) {
     }
   };
 
+  const handleClaimChore = async (chore) => {
+    setProcessing(chore.chore_id);
+    try {
+      await apiService.claimChore(chore.chore_id);
+      Alert.alert('Claimed!', `"${chore.title}" is now assigned to you. Complete it to earn ${chore.points || 10} points!`);
+      fetchData();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to claim chore');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleEditChore = (chore) => {
+    setEditingChore(chore);
+    setChoreForm({
+      title: chore.title || '',
+      description: chore.description || '',
+      points: String(chore.points || 10),
+      assignedTo: chore.assigned_to || '',
+      scheduledDate: chore.scheduled_date || new Date().toISOString().split('T')[0],
+      isRepeat: chore.recurring || false,
+    });
+    setShowCreateModal(true);
+  };
+
+  const handleUpdateChore = async () => {
+    if (!choreForm.title.trim()) {
+      Alert.alert('Error', 'Please enter a chore name');
+      return;
+    }
+
+    setProcessing('update');
+    try {
+      await apiService.updateChore(editingChore.chore_id, {
+        title: choreForm.title,
+        description: choreForm.description,
+        points: parseInt(choreForm.points) || 10,
+        assigned_to: choreForm.assignedTo || null,
+        scheduled_date: choreForm.scheduledDate,
+        recurring: choreForm.isRepeat,
+      });
+      setShowCreateModal(false);
+      resetForm();
+      fetchData();
+      Alert.alert('Success', 'Chore updated!');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update chore');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
   const handleDeleteChore = (chore) => {
     Alert.alert(
       'Delete Chore',
