@@ -35,7 +35,45 @@ export default function FamilyWallScreen({ navigation }) {
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [posting, setPosting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [firebaseConnected, setFirebaseConnected] = useState(false);
   const flatListRef = useRef(null);
+
+  // Initialize Firebase Family Wall
+  useEffect(() => {
+    initializeFirebase();
+    return () => {
+      firebaseFamilyWallService.disconnect();
+    };
+  }, [user]);
+
+  const initializeFirebase = async () => {
+    try {
+      const initialized = await firebaseFamilyWallService.initialize();
+      if (initialized && user) {
+        const familyId = user.current_family_id || user.parent_id || 'family_default';
+        firebaseFamilyWallService.setUser(
+          user.user_id,
+          user.name,
+          user.picture,
+          familyId
+        );
+
+        // Connect and listen for real-time post updates
+        const connected = firebaseFamilyWallService.connect((firebasePosts) => {
+          if (firebasePosts && firebasePosts.length > 0) {
+            setPosts(firebasePosts);
+          }
+        });
+
+        if (connected) {
+          setFirebaseConnected(true);
+          console.log('Firebase Family Wall connected');
+        }
+      }
+    } catch (error) {
+      console.error('Firebase Family Wall init error:', error);
+    }
+  };
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -44,7 +82,11 @@ export default function FamilyWallScreen({ navigation }) {
         apiService.getDailyQuote().catch(() => ({ quote: '' })),
         apiService.getLeaderboard().catch(() => ({ leaderboard: [] })),
       ]);
-      setPosts(postsData.posts || []);
+      
+      // Only use REST API posts if Firebase isn't connected or has no posts
+      if (!firebaseConnected || posts.length === 0) {
+        setPosts(postsData.posts || []);
+      }
       setDailyQuote(quoteData.quote || '');
       setLeaderboard(leaderboardData.leaderboard || []);
     } catch (error) {
@@ -52,7 +94,7 @@ export default function FamilyWallScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [firebaseConnected, posts.length]);
 
   // Get user's rank from leaderboard
   const getUserRank = (userId) => {
