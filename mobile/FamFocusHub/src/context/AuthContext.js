@@ -115,9 +115,16 @@ export const AuthProvider = ({ children }) => {
         }
       }
       
-      // Initialize WebSocket
+      // Initialize Firebase services with user info
+      const familyId = user.current_family_id || user.parent_id || `family_${user.user_id}`;
+      firebaseService.setUser(user.user_id, user.name, user.picture, familyId);
+      
+      // Register push token with backend
+      firebaseService.notifications.registerTokenWithBackend(user.user_id);
+      
+      // Initialize WebSocket as fallback (Firebase is primary now)
       webSocketService.setSessionToken(sessionToken);
-      webSocketService.connect();
+      // webSocketService.connect(); // Disabled - using Firebase Chat instead
       
       // Request all permissions after login
       setTimeout(() => requestAllPermissions(), 500);
