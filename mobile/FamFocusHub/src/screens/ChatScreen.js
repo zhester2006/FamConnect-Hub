@@ -177,27 +177,71 @@ export default function ChatScreen({ navigation }) {
     setNewMessage('');
     setSending(true);
 
-    // Encrypt the message if encryption is enabled
-    let messagePayload = { content };
-    if (encryptionEnabled) {
-      const encryptedData = encryptionService.encrypt(content);
-      if (encryptedData.encrypted) {
-        messagePayload = {
-          content: '[Encrypted Message]', // Placeholder for non-encrypted clients
-          encrypted_content: encryptedData
-        };
-      }
+    try {
+      // Send via Firebase
+      await firebaseChatService.sendMessage(content);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      Alert.alert('Error', 'Failed to send message. It will be sent when you\'re back online.');
+    } finally {
+      setSending(false);
     }
+  };
 
-    // Try WebSocket first if connected
-    if (connected && webSocketService.ws?.readyState === WebSocket.OPEN) {
-      if (webSocketService.sendMessage(messagePayload.encrypted_content || content)) {
-        setSending(false);
-        return;
-      }
+  const handleTyping = () => {
+    firebaseChatService.setTyping(true);
+    
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
     }
+    
+    // Set new timeout to stop typing indicator
+    typingTimeoutRef.current = setTimeout(() => {
+      firebaseChatService.setTyping(false);
+    }, 2000);
+  };
 
-    // Fallback to REST API
+  const handleReaction = async (messageId, emoji) => {
+    try {
+      await firebaseChatService.addReaction(messageId, emoji);
+      setShowReactionModal(false);
+      setSelectedMessage(null);
+    } catch (error) {
+      console.error('Failed to add reaction:', error);
+    }
+  };
+
+  const handleSendGif = async (gifUrl) => {
+    try {
+      await firebaseChatService.sendGif(gifUrl);
+      setShowGifModal(false);
+    } catch (error) {
+      console.error('Failed to send GIF:', error);
+    }
+  };
+
+  const handleSendImage = async (imageUri) => {
+    try {
+      // Upload image first, then send
+      const formData = new FormData();
+      formData.append('image', {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: 'chat_image.jpg',
+      });
+      
+      const uploadResult = await apiService.post('/upload/image', formData);
+      if (uploadResult?.url) {
+        await firebaseChatService.sendImage(uploadResult.url);
+      }
+      setSelectedImage(null);
+      setShowAttachmentMenu(false);
+    } catch (error) {
+      console.error('Failed to send image:', error);
+      Alert.alert('Error', 'Failed to upload image');
+    }
+  };
     try {
       await apiService.sendMessage(content, messagePayload.encrypted_content);
       await fetchMessages();
