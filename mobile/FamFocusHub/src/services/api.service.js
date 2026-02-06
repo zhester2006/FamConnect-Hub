@@ -265,8 +265,12 @@ class ApiService {
   }
 
   // Weather (short cache)
-  async getWeather() {
-    return this.get(API_ENDPOINTS.WEATHER, 'weather');
+  async getWeather(lat = null, lon = null) {
+    let url = API_ENDPOINTS.WEATHER;
+    if (lat !== null && lon !== null) {
+      url += `?lat=${lat}&lon=${lon}`;
+    }
+    return this.get(url, 'weather');
   }
 
   // Shopping (with caching and offline support)
