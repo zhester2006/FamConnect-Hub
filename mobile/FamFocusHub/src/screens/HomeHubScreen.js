@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
 import { formatDate, formatTime } from '../utils/dateUtils';
