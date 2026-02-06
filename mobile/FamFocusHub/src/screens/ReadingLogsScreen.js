@@ -95,7 +95,7 @@ export default function ReadingLogsScreen({ navigation }) {
 
   const handleApprove = async (logId) => {
     try {
-      await apiService.post(`/reading-logs/${logId}/approve`);
+      await apiService.put(`/reading-logs/${logId}/approve`, { approved: true });
       Alert.alert('Success', 'Reading log approved!');
       fetchLogs();
     } catch (error) {
@@ -114,7 +114,7 @@ export default function ReadingLogsScreen({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             try {
-              await apiService.post(`/reading-logs/${logId}/reject`);
+              await apiService.put(`/reading-logs/${logId}/approve`, { approved: false });
               fetchLogs();
             } catch (error) {
               Alert.alert('Error', 'Failed to reject reading log');
