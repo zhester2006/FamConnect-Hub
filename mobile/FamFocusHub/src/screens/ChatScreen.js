@@ -242,22 +242,13 @@ export default function ChatScreen({ navigation }) {
       Alert.alert('Error', 'Failed to upload image');
     }
   };
-    try {
-      await apiService.sendMessage(content, messagePayload.encrypted_content);
-      await fetchMessages();
-    } catch (error) {
-      console.error('Failed to send message:', error);
-      setNewMessage(content);
-      Alert.alert('Error', 'Failed to send message. Please try again.');
-    } finally {
-      setSending(false);
+
+  const handleInputChange = (text) => {
+    setNewMessage(text);
+    if (text.length > 0) {
+      handleTyping();
     }
   };
-
-  const handleTyping = (text) => {
-    setNewMessage(text);
-    
-    if (connected) {
       webSocketService.sendTyping(true);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
