@@ -405,12 +405,12 @@ export default function RewardsScreen({ navigation }) {
             <TouchableOpacity 
               style={styles.choreLink}
               onPress={() => {
-                // Go back to main tabs and then navigate to Chores
-                navigation.goBack();
+                // Navigate to Chores tab within the current tabs navigator
+                navigation.navigate('Chores');
               }}
             >
-              <Ionicons name="arrow-back-circle" size={24} color="#a855f7" />
-              <Text style={styles.choreLinkText}>Back to Dashboard for Chores</Text>
+              <Ionicons name="checkbox" size={24} color="#a855f7" />
+              <Text style={styles.choreLinkText}>Go to Chores</Text>
             </TouchableOpacity>
           </>
         )}
