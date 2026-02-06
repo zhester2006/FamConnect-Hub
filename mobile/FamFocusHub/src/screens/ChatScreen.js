@@ -8,8 +8,7 @@ import { Audio } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
-import webSocketService from '../services/websocket.service';
-import encryptionService from '../services/encryption.service';
+import firebaseChatService from '../services/firebase.chat.service';
 import AnimatedBackground from '../components/AnimatedBackground';
 import MedalEmblem from '../components/MedalEmblem';
 import { formatTime } from '../utils/dateUtils';
@@ -46,9 +45,6 @@ export default function ChatScreen({ navigation }) {
   const [showGifModal, setShowGifModal] = useState(false);
   const [gifs, setGifs] = useState([]);
   const [gifSearch, setGifSearch] = useState('');
-  
-  // Encryption state
-  const [encryptionEnabled, setEncryptionEnabled] = useState(false);
 
   // Connection status animation
   useEffect(() => {
@@ -60,74 +56,73 @@ export default function ChatScreen({ navigation }) {
     ).start();
   }, []);
 
-  // Initialize chat
+  // Initialize Firebase chat
   useEffect(() => {
-    initializeChat();
+    initializeFirebaseChat();
     return () => cleanupChat();
   }, []);
 
-  const initializeChat = async () => {
+  const initializeFirebaseChat = async () => {
     setLoading(true);
     try {
-      // Initialize E2E encryption
-      const familyId = user?.parent_id || user?.user_id;
-      if (familyId) {
-        const encryptionReady = await encryptionService.initialize(familyId);
-        setEncryptionEnabled(encryptionReady);
+      // Initialize Firebase
+      const initialized = await firebaseChatService.initialize();
+      if (!initialized) {
+        console.error('Failed to initialize Firebase');
+        setLoading(false);
+        return;
       }
-      
-      await fetchMessages();
-      
-      // Get token from API service (which stores it after login)
-      const token = apiService.sessionToken;
-      if (token) {
-        webSocketService.setSessionToken(token);
-        setupWebSocketListeners();
-        webSocketService.connect();
-      } else {
-        console.log('No session token available for WebSocket');
+
+      // Set user info
+      const familyId = user?.current_family_id || user?.parent_id || 'family_default';
+      firebaseChatService.setUser(
+        user?.user_id,
+        user?.name,
+        user?.picture,
+        familyId
+      );
+
+      // Connect and listen for messages
+      const isConnected = firebaseChatService.connect(
+        (newMessages) => {
+          setMessages(newMessages);
+          setConnected(true);
+          setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+        },
+        (typing) => {
+          setTypingUsers(typing);
+        }
+      );
+
+      if (isConnected) {
+        setConnected(true);
+        // Sync any offline messages
+        await firebaseChatService.syncOfflineMessages();
       }
+
+      // Load leaderboard
+      await fetchLeaderboard();
     } catch (error) {
-      console.error('Chat initialization error:', error);
+      console.error('Firebase chat initialization error:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const setupWebSocketListeners = () => {
-    webSocketService.on('connect', () => setConnected(true));
-    webSocketService.on('disconnect', () => setConnected(false));
+  const cleanupChat = () => {
+    firebaseChatService.disconnect();
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    if (recordingTimer.current) clearInterval(recordingTimer.current);
+  };
 
-    webSocketService.on('message', (message) => {
-      // Decrypt message if encrypted
-      const decryptedMessage = { ...message };
-      if (message.encrypted_content) {
-        decryptedMessage.content = encryptionService.decrypt(message.encrypted_content);
-      }
-      
-      setMessages(prev => {
-        if (prev.find(m => m.message_id === decryptedMessage.message_id)) return prev;
-        return [...prev, decryptedMessage];
-      });
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
-    });
-
-    webSocketService.on('typing', (data) => {
-      if (data.user_id === user?.user_id) return;
-      if (data.is_typing) {
-        setTypingUsers(prev => {
-          if (prev.find(u => u.user_id === data.user_id)) return prev;
-          return [...prev, data];
-        });
-      } else {
-        setTypingUsers(prev => prev.filter(u => u.user_id !== data.user_id));
-      }
-    });
-
-    webSocketService.on('status', (data) => {
-      if (data.status === 'online') {
-        setOnlineUsers(prev => [...new Set([...prev, data.user_id])]);
-      } else {
+  const fetchLeaderboard = async () => {
+    try {
+      const data = await apiService.get('/leaderboard');
+      setLeaderboard(data?.rankings || []);
+    } catch (error) {
+      console.log('Leaderboard fetch error:', error);
+    }
+  };
         setOnlineUsers(prev => prev.filter(id => id !== data.user_id));
       }
     });
