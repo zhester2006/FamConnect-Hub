@@ -644,12 +644,12 @@ export default function ChoresScreen({ navigation }) {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Create Chore Modal */}
+      {/* Create/Edit Chore Modal */}
       <Modal visible={showCreateModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Create Chore</Text>
+              <Text style={styles.modalTitle}>{editingChore ? 'Edit Chore' : 'Create Chore'}</Text>
               <TouchableOpacity onPress={() => { setShowCreateModal(false); resetForm(); }}>
                 <Ionicons name="close" size={24} color="#9ca3af" />
               </TouchableOpacity>
@@ -663,6 +663,15 @@ export default function ChoresScreen({ navigation }) {
                 placeholderTextColor="#6b7280"
                 value={choreForm.title}
                 onChangeText={(text) => setChoreForm({ ...choreForm, title: text })}
+              />
+
+              <Text style={styles.inputLabel}>Scheduled Date</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor="#6b7280"
+                value={choreForm.scheduledDate}
+                onChangeText={(text) => setChoreForm({ ...choreForm, scheduledDate: text })}
               />
 
               <Text style={styles.inputLabel}>Points</Text>
