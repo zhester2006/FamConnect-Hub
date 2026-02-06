@@ -169,6 +169,24 @@ class ApiService {
     return this.post(API_ENDPOINTS.CHORES, choreData);
   }
 
+  async updateChore(choreId, choreData) {
+    return this.put(`/chores/${choreId}`, choreData);
+  }
+
+  async deleteChore(choreId) {
+    return this.delete(`/chores/${choreId}`);
+  }
+
+  async claimChore(choreId) {
+    return this.put(`/chores/${choreId}/claim`, {});
+  }
+
+  async approveChore(choreId, approved, points = null) {
+    const data = { approved };
+    if (points !== null) data.points = points;
+    return this.put(`/chores/${choreId}/approve`, data);
+  }
+
   // Tasks (with offline support)
   async getTasks() {
     return this.get(API_ENDPOINTS.TASKS, 'tasks');
