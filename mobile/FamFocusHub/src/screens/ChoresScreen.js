@@ -717,15 +717,15 @@ export default function ChoresScreen({ navigation }) {
 
               <TouchableOpacity
                 style={[styles.createButton, { backgroundColor: primaryColor }]}
-                onPress={handleCreateChore}
-                disabled={processing === 'create'}
+                onPress={editingChore ? handleUpdateChore : handleCreateChore}
+                disabled={processing === 'create' || processing === 'update'}
               >
-                {processing === 'create' ? (
+                {(processing === 'create' || processing === 'update') ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <>
-                    <Ionicons name="add-circle" size={20} color="#fff" />
-                    <Text style={styles.createButtonText}>Create Chore</Text>
+                    <Ionicons name={editingChore ? "checkmark-circle" : "add-circle"} size={20} color="#fff" />
+                    <Text style={styles.createButtonText}>{editingChore ? 'Update Chore' : 'Create Chore'}</Text>
                   </>
                 )}
               </TouchableOpacity>
