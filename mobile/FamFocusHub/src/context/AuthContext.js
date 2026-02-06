@@ -100,6 +100,9 @@ export const AuthProvider = ({ children }) => {
       webSocketService.setSessionToken(sessionToken);
       webSocketService.connect();
       
+      // Request all permissions after login
+      setTimeout(() => requestAllPermissions(), 500);
+      
       return user;
     } catch (error) {
       await apiService.clearSession();
