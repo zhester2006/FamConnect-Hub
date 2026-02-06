@@ -405,14 +405,8 @@ export default function RewardsScreen({ navigation }) {
             <TouchableOpacity 
               style={styles.choreLink}
               onPress={() => {
-                // Navigate back to main tabs first, then to Chores tab
-                if (navigation.canGoBack()) {
-                  navigation.goBack();
-                }
-                // Small delay to let navigation complete, then switch tab
-                setTimeout(() => {
-                  navigation.navigate('Chores');
-                }, 100);
+                // Go back to main tabs and then navigate to Chores
+                navigation.goBack();
               }}
             >
               <Ionicons name="arrow-forward-circle" size={24} color="#a855f7" />
