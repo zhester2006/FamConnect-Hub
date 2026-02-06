@@ -1024,4 +1024,5 @@ const styles = StyleSheet.create({
   regenerateBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
   applyBtn: { flex: 1, paddingVertical: 14, borderRadius: 20, alignItems: 'center' },
   applyBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  choreDescription: { fontSize: 12, color: '#9ca3af', marginTop: 4, marginBottom: 4 },
 });
