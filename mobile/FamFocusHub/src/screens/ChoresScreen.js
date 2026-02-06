@@ -483,6 +483,9 @@ export default function ChoresScreen({ navigation }) {
                       <Text style={[styles.choreTitle, chore.status === 'approved' && styles.choreTitleDone]}>
                         {chore.title}
                       </Text>
+                      {chore.description && (
+                        <Text style={styles.choreDescription} numberOfLines={2}>{chore.description}</Text>
+                      )}
                       <View style={styles.choreMetaRow}>
                         {chore.assignee_name && (
                           <View style={styles.assigneeBadge}>
@@ -493,7 +496,9 @@ export default function ChoresScreen({ navigation }) {
                                 <Text style={styles.assigneeAvatarText}>{chore.assignee_name?.charAt(0)}</Text>
                               </View>
                             )}
-                            <Text style={styles.assigneeName}>{chore.assignee_name}</Text>
+                            <Text style={styles.assigneeName}>
+                              {chore.claimed_by_child ? `Secured by ${chore.assignee_name}` : chore.assignee_name}
+                            </Text>
                           </View>
                         )}
                         <Text style={styles.choreDate}>{formatDate(chore.scheduled_date)}</Text>
