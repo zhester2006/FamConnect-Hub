@@ -719,7 +719,7 @@ export default function ChatScreen({ navigation }) {
             <TextInput
               style={styles.input}
               value={newMessage}
-              onChangeText={handleTyping}
+              onChangeText={handleInputChange}
               placeholder="Type a message..."
               placeholderTextColor="#6b7280"
               multiline
