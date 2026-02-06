@@ -2,8 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
-import * as MediaLibrary from 'expo-media-library';
-import { Camera } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import apiService from '../services/api.service';
 import biometricService from '../services/biometric.service';
 import webSocketService from '../services/websocket.service';
@@ -29,12 +28,11 @@ const requestAllPermissions = async () => {
     const { status: notificationStatus } = await Notifications.requestPermissionsAsync();
     console.log('Notification permission:', notificationStatus);
 
-    // Request camera permission
-    const { status: cameraStatus } = await Camera.requestCameraPermissionsAsync();
+    // Request camera and media permission via ImagePicker
+    const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
     console.log('Camera permission:', cameraStatus);
-
-    // Request media library permission
-    const { status: mediaStatus } = await MediaLibrary.requestPermissionsAsync();
+    
+    const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     console.log('Media library permission:', mediaStatus);
 
   } catch (error) {
