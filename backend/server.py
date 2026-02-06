@@ -1249,14 +1249,19 @@ async def create_reading_log(request: Request, data: dict):
     current_user = await get_current_user(request)
     log_id = f"log_{uuid.uuid4().hex[:12]}"
     
+    # Accept either book_name or book_title from frontend
+    book_title = data.get('book_name') or data.get('book_title', 'Untitled')
+    
     log_doc = {
         "log_id": log_id,
         "user_id": current_user['user_id'],
         "user_name": current_user['name'],
         "family_id": current_user.get('parent_id', current_user['user_id']),
-        "book_name": data['book_name'],
+        "book_name": book_title,
+        "book_title": book_title,  # Store both for compatibility
         "pages_read": data.get('pages_read', 0),
-        "summary": data['summary'],
+        "reading_time": data.get('reading_time', 0),  # Accept reading_time from frontend
+        "summary": data.get('summary', ''),
         "date": data.get('date', datetime.now(timezone.utc).date().isoformat()),
         "status": "pending",
         "created_at": datetime.now(timezone.utc).isoformat()
