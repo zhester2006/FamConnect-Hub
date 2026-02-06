@@ -122,6 +122,9 @@ export const AuthProvider = ({ children }) => {
       // Clear biometric session
       await biometricService.clearOnLogout();
       
+      // Clear userId
+      await AsyncStorage.removeItem('userId');
+      
       // Logout from API
       await apiService.logout();
     } catch (error) {
