@@ -141,6 +141,9 @@ export const AuthProvider = ({ children }) => {
       // Disconnect WebSocket
       webSocketService.reset();
       
+      // Cleanup Firebase services
+      firebaseService.cleanup();
+      
       // Clear biometric session
       await biometricService.clearOnLogout();
       
