@@ -249,13 +249,6 @@ export default function ChatScreen({ navigation }) {
       handleTyping();
     }
   };
-      webSocketService.sendTyping(true);
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = setTimeout(() => {
-        webSocketService.sendTyping(false);
-      }, 2000);
-    }
-  };
 
   // Voice recording functions
   const startRecording = async () => {
