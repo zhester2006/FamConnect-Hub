@@ -398,13 +398,13 @@ class ApiService {
     return this.post(`/reading-logs/${logId}/approve`, { approved });
   }
 
-  // Themes
-  async updateUserTheme(theme) {
-    return this.put('/users/theme', { theme });
+  // Themes & Profile
+  async updateUserTheme(userId, theme) {
+    return this.put(`/users/${userId}`, { settings: { theme } });
   }
 
-  async updateProfile(data) {
-    return this.put('/users/profile', data);
+  async updateProfile(userId, data) {
+    return this.put(`/users/${userId}`, data);
   }
 
   // Battery Monitoring
