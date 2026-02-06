@@ -628,7 +628,11 @@ async def claim_chore(chore_id: str, request: Request):
     
     await db.chores.update_one(
         {"chore_id": chore_id},
-        {"$set": {"assigned_to": current_user['user_id']}}
+        {"$set": {
+            "assigned_to": current_user['user_id'],
+            "claimed_by_child": True,
+            "claimed_at": datetime.now(timezone.utc).isoformat()
+        }}
     )
     return await db.chores.find_one({"chore_id": chore_id}, {"_id": 0})
 
