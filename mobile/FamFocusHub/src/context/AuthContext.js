@@ -1,9 +1,45 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
+import * as MediaLibrary from 'expo-media-library';
+import { Camera } from 'expo-camera';
 import apiService from '../services/api.service';
 import biometricService from '../services/biometric.service';
 import webSocketService from '../services/websocket.service';
 
 const AuthContext = createContext(null);
+
+// Request all necessary permissions
+const requestAllPermissions = async () => {
+  try {
+    // Request location permission
+    const { status: locationStatus } = await Location.requestForegroundPermissionsAsync();
+    console.log('Location permission:', locationStatus);
+
+    // Request background location (optional, don't block on failure)
+    try {
+      const { status: bgLocationStatus } = await Location.requestBackgroundPermissionsAsync();
+      console.log('Background location permission:', bgLocationStatus);
+    } catch (e) {
+      console.log('Background location permission not available');
+    }
+
+    // Request notification permission
+    const { status: notificationStatus } = await Notifications.requestPermissionsAsync();
+    console.log('Notification permission:', notificationStatus);
+
+    // Request camera permission
+    const { status: cameraStatus } = await Camera.requestCameraPermissionsAsync();
+    console.log('Camera permission:', cameraStatus);
+
+    // Request media library permission
+    const { status: mediaStatus } = await MediaLibrary.requestPermissionsAsync();
+    console.log('Media library permission:', mediaStatus);
+
+  } catch (error) {
+    console.error('Permission request error:', error);
+  }
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
