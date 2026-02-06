@@ -968,6 +968,9 @@ const styles = StyleSheet.create({
   aiIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   aiSubtitle: { fontSize: 12, color: '#9ca3af' },
 
+  deleteBtn: { padding: 8 },
+  editBtn: { padding: 8, marginRight: 4 },
+
   inputLabel: { fontSize: 13, color: '#9ca3af', marginBottom: 8, marginTop: 12 },
   input: { backgroundColor: 'rgba(15, 13, 26, 0.8)', borderRadius: 12, padding: 14, color: '#fff', fontSize: 15, borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.3)' },
   pointsSelector: { flexDirection: 'row', gap: 8 },
