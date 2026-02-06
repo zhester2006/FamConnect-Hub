@@ -582,6 +582,58 @@ async def update_chore_points(chore_id: str, request: Request, data: dict):
     await db.chores.update_one({"chore_id": chore_id}, {"$set": {"points": new_points}})
     return await db.chores.find_one({"chore_id": chore_id}, {"_id": 0})
 
+# Child claims an unassigned chore
+@api_router.put("/chores/{chore_id}/claim")
+async def claim_chore(chore_id: str, request: Request):
+    current_user = await get_current_user(request)
+    
+    chore = await db.chores.find_one({"chore_id": chore_id}, {"_id": 0})
+    if not chore:
+        raise HTTPException(status_code=404, detail="Chore not found")
+    
+    # Only allow claiming unassigned chores
+    if chore.get('assigned_to'):
+        raise HTTPException(status_code=400, detail="Chore is already assigned")
+    
+    await db.chores.update_one(
+        {"chore_id": chore_id},
+        {"$set": {"assigned_to": current_user['user_id']}}
+    )
+    return await db.chores.find_one({"chore_id": chore_id}, {"_id": 0})
+
+# Update chore (parent only - for editing dates, assignees, etc.)
+@api_router.put("/chores/{chore_id}")
+async def update_chore(chore_id: str, request: Request, data: dict):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can edit chores")
+    
+    chore = await db.chores.find_one({"chore_id": chore_id}, {"_id": 0})
+    if not chore:
+        raise HTTPException(status_code=404, detail="Chore not found")
+    
+    # Allow updating these fields
+    allowed_fields = ['title', 'description', 'points', 'assigned_to', 'scheduled_date', 'recurring', 'status']
+    update_data = {k: v for k, v in data.items() if k in allowed_fields}
+    
+    if update_data:
+        await db.chores.update_one({"chore_id": chore_id}, {"$set": update_data})
+    
+    return await db.chores.find_one({"chore_id": chore_id}, {"_id": 0})
+
+# Delete chore (parent only)
+@api_router.delete("/chores/{chore_id}")
+async def delete_chore(chore_id: str, request: Request):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can delete chores")
+    
+    result = await db.chores.delete_one({"chore_id": chore_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Chore not found")
+    
+    return {"message": "Chore deleted"}
+
 # Get all available chore types
 @api_router.get("/chores/types")
 async def get_chore_types(request: Request):
