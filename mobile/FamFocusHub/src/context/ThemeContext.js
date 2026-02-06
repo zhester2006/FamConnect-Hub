@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme, Appearance } from 'react-native';
+import apiService from '../services/api.service';
 
 // Light theme colors
 const LIGHT_THEME = {
