@@ -472,6 +472,37 @@ async def update_user(user_id: str, request: Request, data: dict):
     await db.users.update_one({"user_id": user_id}, {"$set": data})
     return await db.users.find_one({"user_id": user_id}, {"_id": 0})
 
+# Parent can add or remove points from a child
+@api_router.post("/users/{user_id}/points")
+async def modify_child_points(user_id: str, request: Request, data: dict):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can modify points")
+    
+    child = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+    
+    amount = data.get('amount', 0)  # Positive to add, negative to remove
+    reason = data.get('reason', '')
+    
+    # Update points (don't go below 0)
+    new_points = max(0, (child.get('points', 0) + amount))
+    await db.users.update_one({"user_id": user_id}, {"$set": {"points": new_points}})
+    
+    # Log the points change
+    await db.points_history.insert_one({
+        "log_id": f"points_{uuid.uuid4().hex[:12]}",
+        "user_id": user_id,
+        "changed_by": current_user['user_id'],
+        "amount": amount,
+        "reason": reason,
+        "new_total": new_points,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"user_id": user_id, "points": new_points, "change": amount}
+
 # Chore endpoints
 @api_router.get("/chores")
 async def get_chores(request: Request, date: Optional[str] = None):
