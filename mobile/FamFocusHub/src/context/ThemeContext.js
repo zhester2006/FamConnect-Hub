@@ -124,11 +124,23 @@ export function ThemeProvider({ children }) {
     }
   };
 
-  // Save theme changes
+  // Save theme changes (local and server)
   const saveTheme = async (newTheme) => {
     try {
+      // Save locally first
       await AsyncStorage.setItem('familyTheme', JSON.stringify(newTheme));
       await AsyncStorage.setItem('themeMode', newTheme.mode || 'custom');
+      
+      // Try to save to server (non-blocking)
+      const userId = await AsyncStorage.getItem('userId');
+      if (userId) {
+        apiService.updateProfile(userId, {
+          settings: {
+            theme: newTheme.mode === 'custom' ? 'custom' : newTheme.mode,
+            custom_theme: newTheme.mode === 'custom' ? newTheme : undefined,
+          }
+        }).catch(err => console.log('Theme save to server failed:', err));
+      }
     } catch (error) {
       console.error('Failed to save theme:', error);
     }
