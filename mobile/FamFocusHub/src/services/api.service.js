@@ -442,6 +442,11 @@ class ApiService {
     return this.get('/battery/family-status', 'family_battery');
   }
 
+  // Points Management
+  async modifyChildPoints(userId, amount, reason = '') {
+    return this.post(`/users/${userId}/points`, { amount, reason });
+  }
+
   // Check pending sync actions
   async getPendingSyncCount() {
     const pending = await offlineService.getPendingActions();
