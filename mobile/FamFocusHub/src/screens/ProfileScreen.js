@@ -45,7 +45,7 @@ export default function ProfileScreen({ navigation }) {
       setSelectedTheme(user.settings?.theme || 'cosmic_explorer');
       setNotificationsEnabled(user.settings?.notifications_enabled !== false);
       setProfilePicture(user.picture || null);
-      setBackgroundPicture(user.background_picture || null);
+      setBackgroundPicture(user.profile_background || user.background_picture || null);
     }
   }, [user]);
 
