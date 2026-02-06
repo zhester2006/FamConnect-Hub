@@ -96,6 +96,9 @@ export const AuthProvider = ({ children }) => {
       setUser(user);
       setIsAuthenticated(true);
       
+      // Store userId for other services (like theme context)
+      await AsyncStorage.setItem('userId', user.user_id);
+      
       // Initialize WebSocket
       webSocketService.setSessionToken(sessionToken);
       webSocketService.connect();
