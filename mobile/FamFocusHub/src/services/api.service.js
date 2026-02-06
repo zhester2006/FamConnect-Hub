@@ -158,7 +158,7 @@ class ApiService {
   }
 
   async completeChore(choreId) {
-    return this.post(
+    return this.put(
       API_ENDPOINTS.CHORE_COMPLETE(choreId), 
       {},
       { type: 'COMPLETE_CHORE', choreId }
