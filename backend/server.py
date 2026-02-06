@@ -854,6 +854,14 @@ async def update_shopping_item(item_id: str, request: Request, data: dict):
     await db.shopping_items.update_one({"item_id": item_id}, {"$set": data})
     return await db.shopping_items.find_one({"item_id": item_id}, {"_id": 0})
 
+@api_router.delete("/shopping/{item_id}")
+async def delete_shopping_item(item_id: str, request: Request):
+    current_user = await get_current_user(request)
+    result = await db.shopping_items.delete_one({"item_id": item_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"message": "Item deleted"}
+
 # Family Wall
 @api_router.get("/family-wall")
 async def get_family_wall(request: Request):
