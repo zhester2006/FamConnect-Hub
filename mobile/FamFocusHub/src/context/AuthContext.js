@@ -6,6 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import apiService from '../services/api.service';
 import biometricService from '../services/biometric.service';
 import webSocketService from '../services/websocket.service';
+import firebaseService from '../services/firebase.service';
 
 const AuthContext = createContext(null);
 
@@ -44,6 +45,14 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Initialize Firebase on app start
+  useEffect(() => {
+    const initFirebase = async () => {
+      await firebaseService.initialize();
+    };
+    initFirebase();
+  }, []);
 
   useEffect(() => {
     initAuth();
