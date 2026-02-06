@@ -665,6 +665,17 @@ export default function ChoresScreen({ navigation }) {
                 onChangeText={(text) => setChoreForm({ ...choreForm, title: text })}
               />
 
+              <Text style={styles.inputLabel}>Description (optional)</Text>
+              <TextInput
+                style={[styles.input, { height: 70, textAlignVertical: 'top' }]}
+                placeholder="Add details about how to complete this chore..."
+                placeholderTextColor="#6b7280"
+                value={choreForm.description}
+                onChangeText={(text) => setChoreForm({ ...choreForm, description: text })}
+                multiline
+                numberOfLines={3}
+              />
+
               <Text style={styles.inputLabel}>Scheduled Date</Text>
               <TextInput
                 style={styles.input}
