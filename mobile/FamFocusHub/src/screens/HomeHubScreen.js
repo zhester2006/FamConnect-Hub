@@ -189,7 +189,20 @@ export default function HomeHubScreen({ navigation }) {
 
   const fetchWeather = async () => {
     try {
-      const weatherData = await apiService.getWeather();
+      // Try to get current location for accurate weather
+      let lat = null, lon = null;
+      try {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          lat = location.coords.latitude;
+          lon = location.coords.longitude;
+        }
+      } catch (locError) {
+        console.log('Location not available for weather:', locError);
+      }
+      
+      const weatherData = await apiService.getWeather(lat, lon);
       if (weatherData) {
         setWeather({
           temp: weatherData.temp || weatherData.temperature || 72,
