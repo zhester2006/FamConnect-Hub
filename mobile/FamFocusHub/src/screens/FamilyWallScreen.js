@@ -243,6 +243,12 @@ export default function FamilyWallScreen({ navigation }) {
 
   const handleLike = async (postId) => {
     try {
+      // Try Firebase first
+      if (firebaseConnected) {
+        const success = await firebaseFamilyWallService.likePost(postId);
+        if (success) return; // Firebase will update via real-time listener
+      }
+      // Fallback to REST API
       await apiService.likePost(postId);
       fetchPosts();
     } catch (error) {
@@ -252,6 +258,12 @@ export default function FamilyWallScreen({ navigation }) {
 
   const handleVote = async (postId, optionIndex) => {
     try {
+      // Try Firebase first
+      if (firebaseConnected) {
+        const success = await firebaseFamilyWallService.voteOnPoll(postId, optionIndex);
+        if (success) return; // Firebase will update via real-time listener
+      }
+      // Fallback to REST API
       await apiService.votePoll(postId, optionIndex);
       fetchPosts();
     } catch (error) {
