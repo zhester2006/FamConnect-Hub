@@ -100,7 +100,7 @@ export default function ChatScreen({ navigation }) {
         await firebaseChatService.syncOfflineMessages();
       }
 
-      // Load leaderboard
+      // Load leaderboard for medals
       await fetchLeaderboard();
     } catch (error) {
       console.error('Firebase chat initialization error:', error);
@@ -118,49 +118,9 @@ export default function ChatScreen({ navigation }) {
   const fetchLeaderboard = async () => {
     try {
       const data = await apiService.get('/leaderboard');
-      setLeaderboard(data?.rankings || []);
+      setLeaderboard(data?.rankings || data?.leaderboard || []);
     } catch (error) {
       console.log('Leaderboard fetch error:', error);
-    }
-  };
-        setOnlineUsers(prev => prev.filter(id => id !== data.user_id));
-      }
-    });
-
-    webSocketService.on('reaction', (data) => {
-      setMessages(prev => prev.map(m => {
-        if (m.message_id === data.message_id) {
-          return { ...m, reactions: data.reactions };
-        }
-        return m;
-      }));
-    });
-  };
-
-  const cleanupChat = () => {
-    webSocketService.disconnect();
-    if (recordingTimer.current) clearInterval(recordingTimer.current);
-  };
-
-  const fetchMessages = async () => {
-    try {
-      const [messagesData, leaderboardData] = await Promise.all([
-        apiService.getMessages(),
-        apiService.getLeaderboard().catch(() => ({ leaderboard: [] })),
-      ]);
-      
-      // Decrypt messages if they have encrypted content
-      const decryptedMessages = (messagesData.messages || []).map(msg => {
-        if (msg.encrypted_content) {
-          return { ...msg, content: encryptionService.decrypt(msg.encrypted_content) };
-        }
-        return msg;
-      });
-      
-      setMessages(decryptedMessages);
-      setLeaderboard(leaderboardData.leaderboard || []);
-    } catch (error) {
-      console.error('Failed to fetch messages:', error);
     }
   };
 
@@ -202,52 +162,31 @@ export default function ChatScreen({ navigation }) {
     }, 2000);
   };
 
-  const handleReaction = async (messageId, emoji) => {
-    try {
-      await firebaseChatService.addReaction(messageId, emoji);
-      setShowReactionModal(false);
-      setSelectedMessage(null);
-    } catch (error) {
-      console.error('Failed to add reaction:', error);
-    }
-  };
-
-  const handleSendGif = async (gifUrl) => {
-    try {
-      await firebaseChatService.sendGif(gifUrl);
-      setShowGifModal(false);
-    } catch (error) {
-      console.error('Failed to send GIF:', error);
-    }
-  };
-
-  const handleSendImage = async (imageUri) => {
-    try {
-      // Upload image first, then send
-      const formData = new FormData();
-      formData.append('image', {
-        uri: imageUri,
-        type: 'image/jpeg',
-        name: 'chat_image.jpg',
-      });
-      
-      const uploadResult = await apiService.post('/upload/image', formData);
-      if (uploadResult?.url) {
-        await firebaseChatService.sendImage(uploadResult.url);
-      }
-      setSelectedImage(null);
-      setShowAttachmentMenu(false);
-    } catch (error) {
-      console.error('Failed to send image:', error);
-      Alert.alert('Error', 'Failed to upload image');
-    }
-  };
-
   const handleInputChange = (text) => {
     setNewMessage(text);
     if (text.length > 0) {
       handleTyping();
     }
+  };
+
+  // Handle long press for reactions
+  const handleLongPress = (message) => {
+    setSelectedMessage(message);
+    setShowReactionModal(true);
+  };
+
+  const handleReaction = async (emoji) => {
+    if (!selectedMessage) return;
+    
+    setShowReactionModal(false);
+    
+    try {
+      await firebaseChatService.addReaction(selectedMessage.message_id, emoji);
+    } catch (error) {
+      console.error('Failed to add reaction:', error);
+    }
+    
+    setSelectedMessage(null);
   };
 
   // Voice recording functions
@@ -290,7 +229,7 @@ export default function ChatScreen({ navigation }) {
       const uri = recording.getURI();
       setRecording(null);
       
-      // Send voice message
+      // Send voice message via API (Firebase Storage isn't set up for audio yet)
       await sendVoiceMessage(uri);
     } catch (err) {
       console.error('Failed to stop recording:', err);
@@ -300,7 +239,6 @@ export default function ChatScreen({ navigation }) {
   const sendVoiceMessage = async (uri) => {
     setSending(true);
     try {
-      // Read file as base64
       const response = await fetch(uri);
       const blob = await response.blob();
       
@@ -313,7 +251,9 @@ export default function ChatScreen({ navigation }) {
             audio_data: base64data,
             duration: recordingDuration,
           });
-          await fetchMessages();
+          // Refresh messages
+          const history = await firebaseChatService.getMessageHistory();
+          setMessages(history);
         } catch (error) {
           console.error('Failed to send voice message:', error);
           Alert.alert('Error', 'Failed to send voice message');
@@ -339,41 +279,6 @@ export default function ChatScreen({ navigation }) {
       clearInterval(recordingTimer.current);
       recordingTimer.current = null;
     }
-  };
-
-  // Reaction functions
-  const handleLongPress = (message) => {
-    setSelectedMessage(message);
-    setShowReactionModal(true);
-  };
-
-  const handleReaction = async (emoji) => {
-    if (!selectedMessage) return;
-    
-    setShowReactionModal(false);
-    
-    try {
-      await apiService.post(`/messages/${selectedMessage.message_id}/react`, { emoji });
-      // Optimistically update
-      setMessages(prev => prev.map(m => {
-        if (m.message_id === selectedMessage.message_id) {
-          const reactions = { ...(m.reactions || {}) };
-          const userId = user.user_id;
-          if (reactions[emoji]?.includes(userId)) {
-            reactions[emoji] = reactions[emoji].filter(id => id !== userId);
-            if (reactions[emoji].length === 0) delete reactions[emoji];
-          } else {
-            reactions[emoji] = [...(reactions[emoji] || []), userId];
-          }
-          return { ...m, reactions };
-        }
-        return m;
-      }));
-    } catch (error) {
-      console.error('Failed to add reaction:', error);
-    }
-    
-    setSelectedMessage(null);
   };
 
   const formatDuration = (seconds) => {
@@ -412,6 +317,7 @@ export default function ChatScreen({ navigation }) {
     setSending(true);
     
     try {
+      // Upload image via API
       const formData = new FormData();
       formData.append('file', {
         uri: selectedImage.uri,
@@ -431,15 +337,11 @@ export default function ChatScreen({ navigation }) {
         imageUrl = uploadData.url || selectedImage.uri;
       }
 
-      await apiService.post('/messages', {
-        content: newMessage || '📷 Image',
-        type: 'image',
-        image_url: imageUrl,
-      });
+      // Send via Firebase
+      await firebaseChatService.sendImage(imageUrl);
 
       setSelectedImage(null);
       setNewMessage('');
-      fetchMessages();
     } catch (error) {
       Alert.alert('Error', 'Failed to send image');
     } finally {
@@ -464,12 +366,7 @@ export default function ChatScreen({ navigation }) {
     setSending(true);
     
     try {
-      await apiService.post('/messages', {
-        content: '📷 GIF',
-        type: 'gif',
-        gif_url: gif.url,
-      });
-      fetchMessages();
+      await firebaseChatService.sendGif(gif.url || gif.preview);
     } catch (error) {
       Alert.alert('Error', 'Failed to send GIF');
     } finally {
@@ -478,18 +375,18 @@ export default function ChatScreen({ navigation }) {
   };
 
   const renderMessage = ({ item }) => {
-    const isOwn = item.user_id === user?.user_id;
-    const isOnline = onlineUsers.includes(item.user_id);
-    const isRead = item.read_by?.length > 1;
+    const isOwn = item.sender_id === user?.user_id || item.user_id === user?.user_id;
+    const isRead = item.read_by && Object.keys(item.read_by).length > 1;
     const isVoice = item.type === 'voice';
-    const isImage = item.type === 'image' || item.image_url || item.media_url;
-    const isGif = item.type === 'gif' || item.gif_url;
+    const isImage = item.type === 'image' || item.media_url;
+    const isGif = item.type === 'gif';
     const reactions = item.reactions || {};
-    const userRank = getUserRank(item.user_id);
+    const senderName = item.sender_name || item.user_name;
+    const userRank = getUserRank(item.sender_id || item.user_id);
     
     // Get the actual image URL from various possible fields
-    const imageUrl = item.image_url || item.media_url || item.attachment_url;
-    const gifUrl = item.gif_url || item.media_url;
+    const imageUrl = item.media_url || item.image_url || item.attachment_url;
+    const gifUrl = item.media_url || item.gif_url;
     
     return (
       <TouchableOpacity
@@ -501,9 +398,8 @@ export default function ChatScreen({ navigation }) {
           {!isOwn && (
             <View style={styles.avatarContainer}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{item.user_name?.charAt(0)}</Text>
+                <Text style={styles.avatarText}>{senderName?.charAt(0)}</Text>
               </View>
-              {isOnline && <View style={styles.onlineDot} />}
               {userRank && userRank <= 3 && (
                 <View style={styles.medalPosition}>
                   <MedalEmblem rank={userRank} size="tiny" />
@@ -512,7 +408,7 @@ export default function ChatScreen({ navigation }) {
             </View>
           )}
           <View style={[styles.messageBubble, isOwn ? styles.ownBubble : styles.otherBubble]}>
-            {!isOwn && <Text style={styles.senderName}>{item.user_name}</Text>}
+            {!isOwn && <Text style={styles.senderName}>{senderName}</Text>}
             
             {/* Image message */}
             {isImage && imageUrl && !isGif && (
@@ -552,7 +448,7 @@ export default function ChatScreen({ navigation }) {
                   {formatDuration(item.duration || 0)}
                 </Text>
               </View>
-            ) : !isImage && !isGif ? (
+            ) : !isImage && !isGif && item.content ? (
               <Text style={[styles.messageText, isOwn && styles.ownMessageText]}>
                 {item.content}
               </Text>
@@ -560,7 +456,7 @@ export default function ChatScreen({ navigation }) {
             
             <View style={styles.messageFooter}>
               <Text style={[styles.timestamp, isOwn && styles.ownTimestamp]}>
-                {formatTime(item.created_at) || 'Now'}
+                {item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}
               </Text>
               {isOwn && (
                 <View style={styles.readReceipt}>
@@ -576,10 +472,9 @@ export default function ChatScreen({ navigation }) {
             {/* Reactions */}
             {Object.keys(reactions).length > 0 && (
               <View style={styles.reactionsContainer}>
-                {Object.entries(reactions).map(([emoji, users]) => (
+                {Object.entries(reactions).map(([emoji, userId]) => (
                   <View key={emoji} style={styles.reactionBadge}>
                     <Text style={styles.reactionEmoji}>{emoji}</Text>
-                    <Text style={styles.reactionCount}>{users.length}</Text>
                   </View>
                 ))}
               </View>
@@ -592,7 +487,7 @@ export default function ChatScreen({ navigation }) {
 
   const renderTypingIndicator = () => {
     if (typingUsers.length === 0) return null;
-    const names = typingUsers.map(u => u.user_name).join(', ');
+    const names = typingUsers.join(', ');
     
     return (
       <View style={styles.typingContainer}>
@@ -637,12 +532,10 @@ export default function ChatScreen({ navigation }) {
             <Text style={[styles.connectionText, { color: connected ? '#10b981' : '#f59e0b' }]}>
               {connected ? 'Live' : 'Connecting...'}
             </Text>
-            {encryptionEnabled && (
-              <View style={styles.encryptionBadge}>
-                <Ionicons name="lock-closed" size={10} color="#10b981" />
-                <Text style={styles.encryptionText}>E2E</Text>
-              </View>
-            )}
+            <View style={styles.encryptionBadge}>
+              <Ionicons name="shield-checkmark" size={10} color="#10b981" />
+              <Text style={styles.encryptionText}>Firebase</Text>
+            </View>
           </View>
         </View>
         <View style={{ width: 40 }} />
@@ -658,7 +551,7 @@ export default function ChatScreen({ navigation }) {
           ref={flatListRef}
           data={messages}
           renderItem={renderMessage}
-          keyExtractor={(item) => item.message_id}
+          keyExtractor={(item) => item.message_id || Math.random().toString()}
           contentContainerStyle={styles.messagesList}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
           ListEmptyComponent={
@@ -871,17 +764,6 @@ const styles = StyleSheet.create({
     alignItems: 'center' 
   },
   avatarText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
-  onlineDot: { 
-    position: 'absolute', 
-    bottom: 0, 
-    right: 0, 
-    width: 10, 
-    height: 10, 
-    borderRadius: 5, 
-    backgroundColor: '#10b981', 
-    borderWidth: 2, 
-    borderColor: '#0f0d1a' 
-  },
   medalPosition: {
     position: 'absolute',
     bottom: -2,
