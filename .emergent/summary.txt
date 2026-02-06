@@ -6,203 +6,422 @@ The user wants to create a comprehensive, family-oriented, mobile-friendly app c
 -   **Dashboards:** Child-specific dashboards and a Parent dashboard for management. A main Home Hub for large screens.
 -   **Core Features:**
     -   **Calendar:** Shared family calendar with event popups and categories.
-    -   **Chores:** AI-assisted chore scheduling with parent override, assignments, and approval. Profile photos and names for each assigned child should be visible on all tasks, events, and chores across the app.
-    -   **Live Chat:** Real-time messenger with WebSockets, reactions, and media sharing (photos/GIFs), secured with end-to-end encryption.
-    -   **Family Wall:** A shared social space for posts, photos, interactive polls, and GIFs.
+    -   **Chores:** AI-assisted chore scheduling with parent override, assignments, and approval. Profile photos and names for each assigned child should be visible on all tasks, events, and chores across the app. Add ability to choose/edit dates and add descriptions.
+    -   **Live Chat:** Real-time messenger. The user requested a migration to a more reliable system like Firebase Realtime Database.
+    -   **Family Wall:** A shared social space for posts, photos, interactive polls, and GIFs. To be migrated to Firebase.
     -   **Shopping List:** Collaborative list with parent approval.
-    -   **Points & Rewards:** Gamified system with parent approval and custom tasks.
+    -   **Points & Rewards:** Gamified system with parent approval and custom tasks. Parents should be able to add/deduct points.
     -   **Reading Log:** Children submit book summaries for parent approval.
     -   **Dinner Planner:** AI-suggested weekly meals with an intuitive UI.
     -   **Leaderboard:** Ranking based on points, with medal emblems displayed on profiles throughout the app.
-    -   **Location:** Safe zones with Google Maps integration; location updates should work correctly.
+    -   **Location:** Safe zones with Google Maps integration; location updates should work correctly and sync weather.
 -   **Technical & UX Requirements:**
-    -   **Authentication:** Dev login for testing.
-    -   **UI:** Vibrant, mobile-friendly, animated UI. The mobile app should mirror the web app's functionality and layout.
-    -   **Themes:** A default (Standard) theme and a user-customizable theme that applies app-wide and works correctly.
-    -   **Onboarding:** A tutorial for first-time users.
+    -   **Authentication:** Dev login for testing. User requested Firebase Authentication integration.
+    -   **UI:** Vibrant, mobile-friendly, animated UI. Profile pictures should show as icons throughout the app.
+    -   **Themes:** A user-customizable theme that applies app-wide, persists across sessions for all users, and reflects on the child's space.
+    -   **Onboarding:** A tutorial for first-time users, including a prompt for all necessary mobile permissions after login.
+    -   **Offline Support:** User requested the app be less dependent on servers, implying a need for better offline caching and functionality.
+    -   **Notifications:** User requested integration of Firebase Cloud Messaging for notifications.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The project is a full-stack application (React, FastAPI, React Native). The agent addressed a list of critical bugs (Map, Theme, Polls, Chat) and then implemented significant new features: an **Achievement System** and **Customizable Child Dashboards** for both web and mobile. The agent also began refactoring the monolithic  by creating a router structure, though the code has not been moved yet.
+The agent addressed a massive number of bugs and feature requests. The session started with diagnosing mobile app connectivity issues, which were traced back to a restrictive backend CORS policy and a recurring  serialization error in . Both were fixed.
 
-However, a series of attempted mobile builds (APKs) have failed to open on the user's device. The agent made several fixes related to service initialization (, ) and rewrote  to prevent startup crashes, but the issue persists. The user has just provided a new, extensive list of bugs and UI inconsistencies for the mobile app, which is now the top priority.
+The agent then worked through a long list of user-reported bugs and features, including:
+-   Fixing numerous API endpoint mismatches (e.g.,  vs ,  vs ).
+-   Adding new backend endpoints for parents to adjust child points, and for children to claim/edit chores.
+-   Implementing UI for chore descriptions, chore claiming by children, and chore editing.
+-   Fixing location-based weather fetching.
+-   Adding a permission request flow after login.
+-   Attempting to fix theme persistence.
+
+Finally, upon user request, the agent began a large-scale migration of core functionality (Chat, Auth, Storage, Notifications, Family Wall) to Firebase. It has created multiple new Firebase service files and started refactoring the application, but this work is incomplete.
 
 **Last working item**:
-    - Last item agent was working: Acknowledging a new, large list of mobile app bugs reported by the user after the previous fixes for the startup crash were unsuccessful. The agent had just removed the bottom navigation from the web app's shopping list page before receiving this new list.
-    - Status: NOT STARTED
+    - Last item agent was working: A major migration from the existing WebSocket/REST architecture to a Firebase-centric one for both mobile and web. The agent created several new service files (, , , , ) and was refactoring the  to initialize and manage these services upon user login/logout.
+    - Status: IN PROGRESS
     - Agent Testing Done: N
-    - Which testing method agent to use? A combination of methods will be needed. Use the  tool for UI fixes (login screen, dashboard layouts). Use  to test backend changes for chat. After implementing all fixes, a new EAS build will be required for user verification.
-    - User Testing Done: Y (User tested the latest broken builds and provided the current bug list).
+    - Which testing method agent to use? both. The Firebase integration is a massive change affecting both frontend and backend logic (implicitly). A full test by the  is required once the integration is complete to ensure all features (Auth, Chat, Family Wall, Notifications, Storage) work correctly and there are no regressions.
+    - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1:  (P0) Critical Mobile App Bugs & UI Mismatches
-  - Issue 2:  (P1) Mobile App Fails to Open
+  - Issue 1:  (P0) Complete Firebase Integration
+  - Issue 2:  (P0) Mobile App Session & Connectivity Instability
+  - Issue 3:  (P1) Unhandled Navigation Error for Chores Screen
+  - Issue 4:  (P1) Reading Logs Fail to Submit
+  - Issue 5:  (P1) Theme settings do not persist correctly
+  - Issue 6:  (P2) Unhandled Native Module and Device Storage Errors
+  - Issue 7:  (P2) Location image doesn't show on map
+  - Issue 8:  (P2)  button on Rewards tab doesnt work
   
   Issues Detail:
   - Issue 1: 
-     - Attempted fixes: None for this new list.
+     - Attempted fixes: The agent has laid the groundwork by creating multiple Firebase service files and modifying  and . However, the UI for Family Wall, user profiles (storage for images), and the logic for notifications have not been migrated yet.
      - Next debug checklist: 
-        1.  **Login Screen:** In , change the enable face id prompt to enable face/fingerprint sign in and adjust the layout to be non-scrollable.
-        2.  **Parent Dashboard:** In , change the title from Home to Dashboard and update the component layout to match the web app.
-        3.  **Chores Screen:** In , add the missing Available Chores section to match the web app's layout.
-        4.  **Home Hub:** In , investigate why the screen is not loading. Check data fetching logic and for silent errors.
-        5.  **Chat Images:** In , fix the message rendering logic to display the actual uploaded image instead of a placeholder icon.
-        6.  **Chat Connection & Presence:** In  and , debug the recurring connection issue. Implement a new presence system (online/offline status, member list), which will require backend modifications in  to track connected clients.
-     - Why fix this issue and what will be achieved with the fix? These issues make the app feel broken and inconsistent. Fixing them is critical to delivering a usable mobile experience.
-     - Status:  NOT STARTED
-     - Is recurring issue? Y (Chat connection, layout inconsistencies).
+        1. Refactor  to use .
+        2. Refactor  image upload to use .
+        3. Integrate  to handle push notifications.
+        4. Refactor  and  to use  for authentication.
+        5. Ensure all changes are applied to both web and mobile versions of the app.
+     - Why fix this issue and what will be achieved with the fix? This is a user-mandated architectural change to improve reliability of chat and other real-time features. Completing it is a prerequisite for fixing many other reported bugs.
+     - Status:  IN PROGRESS
+     - Is recurring issue? N
      - Should Test frontend/backend/both after fix? Both.
-     - Blocked on other issue: Issue 2. The app must open before these bugs can be verified.
+     - Blocked on other issue: None.
   - Issue 2: 
-     - Attempted fixes: Rewrote  to lazy-load services, modified  to have a non-blocking  method, and added defensive checks to . Multiple builds based on these fixes have failed.
+     - Attempted fixes: Agent fixed CORS, ObjectId errors, and API endpoint mismatches. Despite these fixes, user logs consistently show  and  (indicating server error pages are being returned).
      - Next debug checklist: 
-        1.  Before the next build, run  in  to resolve potential dependency mismatches ( was previously flagged).
-        2.  Simplify  further, removing all non-essential service initializations to get a baseline running app.
-        3.  Re-introduce services one-by-one to isolate the one causing the crash.
-     - Why fix this issue and what will be achieved with the fix? The app is completely unusable if it cannot open. This is a total blocker.
+        1. Investigate why sessions are becoming invalid so frequently. Check session token expiry logic in .
+        2. Examine the   method to see how it handles token refreshes or 401/403 errors.
+        3. The Firebase Auth migration (Issue #1) should ultimately resolve this, but an interim fix might be needed.
+     - Why fix this issue and what will be achieved with the fix? This is a critical blocker rendering the mobile app almost unusable. Data cannot be fetched or sent reliably.
      - Status:  IN PROGRESS
      - Is recurring issue? Y
-     - Should Test frontend/backend/both after fix? Frontend (specifically the mobile build).
+     - Should Test frontend/backend/both after fix? Both.
+     - Blocked on other issue: None.
+  - Issue 3: 
+     - Attempted fixes: Agent correctly identified this as a nested navigator problem and changed  to . However, user logs show the error persists.
+     - Next debug checklist: 
+        1. Re-examine  and .
+        2. The path from the Rewards screen back to the main tabs might be more complex. Use  or a more specific  from .
+        3. Verify the  prop for the  navigator.
+     - Why fix this issue and what will be achieved with the fix? Fixes broken navigation, improving user experience.
+     - Status:  IN PROGRESS
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix? Frontend.
+     - Blocked on other issue: None.
+  - Issue 4: 
+     - Attempted fixes: Agent fixed a  vs  mismatch for the approve endpoint. However, user logs show the error persists, indicating another underlying problem.
+     - Next debug checklist: 
+        1. Check the   function. Is it correctly sending all required data (, )?
+        2. Check the backend  endpoint in  for any validation logic that might be failing silently.
+        3. The  issue might be the root cause.
+     - Why fix this issue and what will be achieved with the fix? Core feature is broken.
+     - Status:  IN PROGRESS
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix? Both.
+     - Blocked on other issue: Issue 2: Mobile App Session & Connectivity Instability
+  - Issue 5: 
+     - Attempted fixes: Agent updated  to call the backend to save theme settings. It also updated  to load the theme from user settings on login.
+     - Next debug checklist: 
+        1. Verify in  that the  is available when  is called. It might be a race condition.
+        2. Check the  endpoint in  to ensure it correctly saves the  object inside the  field of the user document.
+        3. Ensure the theme is applied to child profile pages as requested.
+     - Why fix this issue and what will be achieved with the fix? Fulfills user requirement for persistent, customizable themes.
+     - Status:  IN PROGRESS
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix? Both.
+     - Blocked on other issue: None.
+  - Issue 6: 
+     - Attempted fixes: None. These errors appeared in recent logs.
+     - Next debug checklist: 
+        1. ****: This often points to an issue with  or a missing native dependency. This might be resolved by using a development build or ensuring all crypto dependencies are correct. The Firebase migration may also affect this.
+        2. ****: This is a critical error from the device itself, likely related to AsyncStorage or another local database reaching its limit. Investigate offline caching logic in  to see if it can be cleared or optimized.
+     - Why fix this issue and what will be achieved with the fix? These are critical native errors that can cause the app to crash or lose data.
+     - Status:  NOT STARTED
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix? Frontend.
+     - Blocked on other issue: None.
+  - Issue 7: 
+     - Attempted fixes: None.
+     - Next debug checklist: 
+        1. Review the location selection UI.
+        2. Implement a modal with  that allows the user to pick a location, or open the native Google Maps app with an intent.
+     - Why fix this issue and what will be achieved with the fix? Improves the usability of the location features.
+     - Status:  NOT STARTED
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? Frontend.
+     - Blocked on other issue: None.
+  - Issue 8: 
+     - Attempted fixes: The agent has tried to resolve this by adding navigation logic in , but it is still not working.
+     - Next debug checklist: 
+        1. Investigate the navigation flow from the Rewards screen.
+        2. Ensure the correct navigator and screen names are being used.
+     - Why fix this issue and what will be achieved with the fix? This will fix a broken link and improve navigation.
+     - Status:  IN PROGRESS
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix? Frontend.
      - Blocked on other issue: None.
 
 **In progress Task List**:
-  - Task 1:  (P1) Refactor Backend 
- 
+  - Task 1:  (P0) Firebase Integration
  Task Detail:
   - Task 1: 
-     - Where to resume: The agent created the directory structure under  and created empty files (, , etc.). The next step is to move the corresponding endpoint logic from  into these files and include the routers in the main FastAPI app.
-     - What will be achieved with this? A maintainable, scalable, and organized backend codebase, reducing technical debt.
+     - Where to resume: The agent has created the service files and started integrating them into  and . The next step is to complete the integration for Family Wall, Storage (profile pictures), Notifications, and Authentication itself, then remove the old WebSocket and related API logic.
+     - What will be achieved with this? A more reliable real-time architecture for chat, notifications, and the family wall, plus robust authentication and file storage.
      - Status:  IN PROGRESS
-     - Should Test frontend/backend/both after fix? Backend
-     - Blocked on something: None, but priority is lower than fixing the critical mobile app issues.
+     - Should Test frontend/backend/both after fix? Both.
+     - Blocked on something: None.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   (P0) Resolve the mobile app startup crash (Issue #2).
-    -   (P0) Implement all fixes from the user's latest bug list (Issue #1).
-    -   (P1) Trigger a new, stable EAS build for user verification.
-    -   (P2) Conduct a full regression test of the web application.
+    -   (P1) Implement UI for parents to deduct points from a child (backend endpoint exists).
+    -   (P1) Ensure profile pictures are used as icons throughout the app (family wall, chat, chore assignments).
+    -   (P1) Fix Quick meal ideas feature.
+    -   (P1) Fix adding items to the shopping list.
+    -   (P1) Fix posting on the family wall (will be part of Firebase migration).
 -   **Future Tasks:**
-    -   (P2) Complete the backend  refactoring.
-    -   (P2) Refactor complex mobile screens to use custom hooks.
-    -   (P3) Implement Widget Support for iOS/Android home screens.
+    -   (P2) Complete the Widget Support implementation.
+    -   (P2) Refactor mobile screens to use custom hooks.
+    -   (P2) Complete the backend  refactoring into a  directory structure.
+    -   (P3) Trigger a new, stable EAS build for user verification (when the quota resets).
+    -   (P3) Conduct a full regression test of the web application.
 
 **Completed work in this session**
--   Fixed initial critical mobile bugs (Map provider, Theme settings, Poll voting).
--   Fixed chat image uploads and improved WebSocket reconnection logic.
--   Implemented a full **Achievement System** (backend, web, mobile) with streaks, badges, and progress tracking.
--   Implemented **Customizable Child Dashboards** (backend, web, mobile) with personal goals and quick access shortcuts.
--   Added mobile app features: an improved Weather UI, Auto Dark Mode sync, and an offline-first service structure (which later caused crashes).
--   Started backend refactoring by creating the  directory structure.
--   Removed bottom navigation tabs from the web app's  page.
--   Made multiple attempts to fix a persistent mobile app startup crash by modifying service initialization logic.
+-   **Backend Fixes:**
+    -   Resolved a critical  serialization error in .
+    -   Fixed restrictive CORS policy by updating .
+    -   Added a  endpoint for monitoring.
+    -   Implemented ping/pong handling in the WebSocket endpoint to improve connection stability.
+    -   Added a  endpoint for children to claim tasks.
+    -   Added a  endpoint for editing chores.
+    -   Added a  endpoint for parents to adjust child points.
+    -   Added a missing  endpoint.
+-   **Mobile App Fixes:**
+    -   Fixed numerous API calls with incorrect HTTP methods ( vs ).
+    -   Corrected a wrong API URL for fetching family members ( to ).
+    -   Updated the weather feature to use the device's current location.
+    -   Implemented UI for chore editing, including adding a  field.
+    -   Implemented UI for children to Claim unassigned chores.
+    -   Added a comprehensive permission request flow that runs after login in .
+    -   Fixed a navigation bug preventing navigation from the Rewards screen to the Chores screen.
+    -   Adjusted the height of filter tabs on the Chores screen for better UI consistency.
+    -   Fixed a bug with saving the profile background picture due to a key mismatch.
+-   **Architectural Changes:**
+    -   Initiated a major migration to Firebase, creating service files for Realtime Database (Chat, Family Wall), Auth, Storage, and Notifications.
+    -   Refactored  to use the new Firebase chat service.
 
 **Earlier issues found/mentioned but not fixed**
-- All earlier issues are superseded by the user's most recent bug list, which is captured in the All Pending/In progress Issue list.
+   - Issue 1: Quick meal ideas functionality is broken.
+   - Issue 2: Users cannot add items to the shopping list.
+   - Issue 3: GPS/Location map does not show an image or allow selection via a map popup.
+   - Issue 4: Parents cannot take points from a child (UI is missing, though the backend endpoint now exists).
+   - Issue 5: Profile pictures are not used consistently as icons throughout the app.
 
 **Known issue recurrence from previous fork**
--   **Mobile App Stability:** The app is consistently failing to open after being built, a major regression and recurring blocker.
--   **Chat/WebSockets:** The user continues to report connection problems, indicating previous fixes were insufficient.
--   **UI/UX Mismatches:** The user frequently reports that mobile layouts do not match the web app's design, requiring repeated layout adjustments.
+  - Issue recurrence in previous fork: Mobile App Stability and Chat/WebSocket Instability.
+  - Recurrence count: High
+  - Status: IN PROGRESS. The root causes (backend errors, session invalidation) are being addressed, and the WebSocket is being replaced with Firebase to permanently solve chat instability.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Frontend (Web):** React, TailwindCSS.
--   **Frontend (Mobile):** React Native, Expo, EAS.
+-   **Frontend (Mobile):** React Native, Expo, React Navigation.
 -   **Backend:** FastAPI (Python).
 -   **Database:** MongoDB.
--   **Real-time:** WebSockets for Chat.
--   **Security:**  for AES E2E encryption.
--   **Maps:** .
--   **Offline:**  for caching.
--   **Device Features:** React Native  API for dark mode.
+-   **New Integration:** Firebase (Realtime Database, Auth, Storage, Cloud Messaging).
+-   **Local Build Toolchain:** Continued reliance on user's local Android build environment ().
 
 **key DB schema**
--   **New Collections:**
-    -   : Stores definitions of all possible achievements.
-    -   : Tracks progress and earned status for each user.
-    -   : Stores timed family-wide challenges.
-    -   : Stores custom goals created by children.
-    -   : Stores personalized layout/shortcut settings for users.
+  - **chores**: Added an optional  field (string, stores ) and  field.
+  - **users**: The  object now includes a  object.
 
 **changes in tech stack**
--   : Added for offline caching.
--   : Added for network status detection.
--   A dependency on  was identified as missing by  and may need to be explicitly added.
+  - **Firebase SDK**: Added  package to the mobile app for integration with Firebase services.
+  - **Deprecation:** The custom WebSocket implementation is being deprecated in favor of Firebase Realtime Database.
 
 **All files of reference**
--   **Mobile Crash Hotspots:** , , .
--   **New Mobile Bug Locations:** , , , , .
--   **Backend Refactor:** , .
--   **New Features (Web):** , .
--   **New Features (Mobile):** , .
+-   **Firebase Migration (New Files):**  (all new files).
+-   **Firebase Migration (Modified):** , .
+-   **Bug Fixes & Features (Mobile):**
+    -   
+    -   
+    -   
+    -   
+    -   
+    -   
+    -   
+    -   
+-   **Bug Fixes & Features (Backend):** .
 
 **Areas that need refactoring**:
--   **:** This remains the top refactoring priority. The task was started but is less than 1% complete. The file is now over 4300 lines.
--   **:** The file has been rewritten multiple times to patch startup crashes. It needs a stable, clean implementation of service initializations once the root cause of the crash is identified.
+-   The Firebase integration is half-done. All screens that should use Firebase (Family Wall, Profile for storage) must be refactored.
+-    remains a large monolith despite many changes. The planned refactoring into the  directory has not started.
 
 **key api endpoints**
--   **New Achievement & Dashboard Endpoints:**
-    -   , , 
-    -   
-    -   , , 
-    -   
+-   **Added:**
+    -   : To edit a chore.
+    -   : For a child to claim a chore.
+    -   : For a parent to add/remove points.
+    -   : To delete a shopping item.
+    -   : New health check endpoint.
+-   **Modified:**
+    -   : Changed from  to .
+    -   : Changed from  to .
+    -   : Now accepts  and  query parameters.
 
 **Critical Info for New Agent**
--   **The Mobile App is Critically Broken.** The user has reported that the last several builds fail to open. This is the highest priority blocker (P0). Do not attempt to fix other bugs before ensuring the app can start. Investigate dependencies with  and simplify  to isolate the problem.
--   Once the app opens, there is a long list of P0 bugs and UI mismatches provided by the user that must be addressed before the next build.
--   **DO NOT trigger a new build** until you have high confidence that both the startup crash and the user's new list of bugs are fixed. Each failed build erodes user trust.
--   The backend refactoring task is in its infancy.  is still a monolith containing all application logic.
+-   **Firebase Migration is P0:** You are in the middle of a major, incomplete migration to Firebase. The app is in a broken state. Your immediate priority is to complete this migration for Auth, Chat, Family Wall, Storage, and Notifications. Do not start other tasks until this is done.
+-   **User has Local Changes:** The user has manually edited files on their machine. Be prepared for usage: git [-v | --version] [-h | --help] [-C <path>] [-c <name>=<value>]
+           [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]
+           [-p | --paginate | -P | --no-pager] [--no-replace-objects] [--bare]
+           [--git-dir=<path>] [--work-tree=<path>] [--namespace=<name>]
+           [--super-prefix=<path>] [--config-env=<name>=<envvar>]
+           <command> [<args>]
+
+These are common Git commands used in various situations:
+
+start a working area (see also: git help tutorial)
+   clone     Clone a repository into a new directory
+   init      Create an empty Git repository or reinitialize an existing one
+
+work on the current change (see also: git help everyday)
+   add       Add file contents to the index
+   mv        Move or rename a file, a directory, or a symlink
+   restore   Restore working tree files
+   rm        Remove files from the working tree and from the index
+
+examine the history and state (see also: git help revisions)
+   bisect    Use binary search to find the commit that introduced a bug
+   diff      Show changes between commits, commit and working tree, etc
+   grep      Print lines matching a pattern
+   log       Show commit logs
+   show      Show various types of objects
+   status    Show the working tree status
+
+grow, mark and tweak your common history
+   branch    List, create, or delete branches
+   commit    Record changes to the repository
+   merge     Join two or more development histories together
+   rebase    Reapply commits on top of another base tip
+   reset     Reset current HEAD to the specified state
+   switch    Switch branches
+   tag       Create, list, delete or verify a tag object signed with GPG
+
+collaborate (see also: git help workflows)
+   fetch     Download objects and refs from another repository
+   pull      Fetch from and integrate with another repository or a local branch
+   push      Update remote refs along with associated objects
+
+'git help -a' and 'git help -g' list available subcommands and some
+concept guides. See 'git help <command>' or 'git help <concept>'
+to read about a specific subcommand or concept.
+See 'git help git' for an overview of the system. conflicts. Guide the user to  changes if conflicts occur.
+-   **Mobile Testing is Manual:** All mobile testing is done by the user on their physical device via . Expo Go will not work due to native dependencies ().
+-   **Recurring Errors:** Pay close attention to , , and  errors in the user's logs. The Firebase Auth migration should help with session issues, but the others point to deeper problems in the mobile environment.
+-   **Massive Backlog:** The user has provided a very long list of bugs and features. After the Firebase migration, you must present a prioritized plan to the user to tackle this backlog.
 
 **documents and test reports created in this job**
--   
--    (Note: This report is outdated as it was generated before the latest features were fully integrated and the app started crashing).
+- None.
 
-**Last 10 User Messages and any pending HUMAN messages**
-10. **User:** Asks to trigger a build. (COMPLETED)
-9.  **User:** Reports the mobile app won't open. (IN PROGRESS)
-8.  **User:** Agent provides fixes for the startup crash. (COMPLETED)
-7.  **User:** Asks to trigger another build. (COMPLETED)
-6.  **User:** Reports the mobile app still won't open. (IN PROGRESS)
-5.  **User:** Agent provides more fixes and simplifies . (COMPLETED)
-4.  **User:** Asks to trigger a final build. (COMPLETED)
-3.  **User:** Agent provides the new build link. (COMPLETED)
-2.  **User:** Asks to remove tabs from the web app's shopping screen. (COMPLETED)
-1.  **User:** **(PENDING)** Reports a new, extensive list of mobile app bugs: login prompt text, non-scrolling login screen, dashboard title/layout, chore screen layout, Home Hub not loading, chat images not showing, chat connection issues, and missing chat presence features (online status/member list).
+**Last 10 User Messages and any pending HUMAN messages** 
+10. **User:** (Provides a huge list of bugs/features) reading logs won't submit, permissions need to pop up, themes don't work, provides new error logs showing  and navigation errors. (IN PROGRESS)
+9.  **User:** Reports git conflicts when trying to pull, then asks to stash changes. (RESOLVED, though user provided new bugs instead of stashing).
+8.  **User:** (Provides a summary of fixes and asks user to pull changes from GitHub).
+7.  **User:** Asks to continue with the next 7 fixes and then wants to know what's needed for Firebase Realtime Database. (IN PROGRESS)
+6.  **User:** (Provides a huge list of bugs/features) chores issues, rewards navigation, chat issues, theme issues, notifications, weather location, etc. and new error logs. (IN PROGRESS)
+5.  **User:** Asks agent to proceed with a plan to fix a large batch of issues. (COMPLETED)
+4.  **User:** Provides Firebase credentials. (COMPLETED)
+3.  **User:** asks for Firebase capabilities. Chooses to implement features 1, 2, 3, 5, 7 and asks to implement them across the entire app (web and mobile). (IN PROGRESS)
+2.  **User:** Confirms installation of Firebase SDK. Asks what features can be added through Firebase. (COMPLETED)
+1.  **User:** (PENDING) Asks for Firebase capabilities and chooses which ones to implement. States that the changes should be for both mobile and web and be implemented throughout the app.
 
 **Project Health Check:**
 -   **Broken:**
-    -   **Mobile App Startup:** Fails to open, causing a total application blockage.
-    -   **Mobile Login Screen:** Incorrect prompt text and unwanted scrolling behavior.
-    -   **Mobile Dashboards (Parent/Home Hub):** Incorrect titles, layouts do not match web, and some fail to load.
-    -   **Mobile Chores Screen:** Missing Available Chores section.
-    -   **Mobile Chat:** Images do not render, connection is unstable, and presence features are missing.
+    -   **Core App Functionality:** The app is in a highly unstable state due to the half-finished Firebase migration.
+    -   **Session Management:**  errors are rampant, blocking most API calls.
+    -   **Chat:** Currently broken during the migration from WebSockets to Firebase.
+    -   **Data Persistence:** Many features like Reading Logs, Themes, and Shopping List are not working correctly due to API or session errors.
+    -   **Device Errors:** Critical errors like  and  are present.
 -   **Mocked:**
-    -   Authentication still relies on a Dev Login flow.
+    -   Authentication still primarily relies on a Dev Login flow, though Firebase Auth integration has begun.
 
 **3rd Party Integrations**
 -   OpenWeatherMap (User API Key)
--   Google Maps API (User API Key, used in )
+-   Google Maps API (User API Key)
 -   Tenor (Free-tier API Key)
--   Emergent LLM Key (For AI features)
--    (for E2E chat encryption)
--   
--   
--   **Expo (React Native):** , , , EAS, .
+-   Expo (React Native, EAS)
+-   **Firebase (In Progress):**
+    -   Realtime Database (for Chat, Family Wall) — requires User credentials
+    -   Authentication — requires User credentials
+    -   Storage (for images) — requires User credentials
+    -   Cloud Messaging (for notifications) — requires User credentials
 
 **Testing status**
-  - Testing agent used after significant changes: YES, but the report is now outdated due to new features and critical regressions.
+  - Testing agent used after significant changes: NO
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None
-  - Known regressions: A major, persistent startup crash on the mobile app.
+  - Known regressions: Many core features are currently broken due to the ongoing, incomplete Firebase migration.
 
 **Credentials to test flow:**
 -   **Web & Mobile:** Use the Dev: Parent Login or Dev: Child Login buttons on the login screen.
+-   **Firebase:** Credentials have been provided by the user and are used in .
 
 **What agent forgot to execute**
-- The agent failed to definitively resolve the mobile app's startup crash, instead applying layered patches that did not fix the root cause.
-- The agent did not run  to fix underlying dependency issues flagged earlier, which is a likely contributor to the startup crash.
-- The backend refactoring was started structurally but no actual code was migrated from the monolithic  into the new router files.</analysis>
+- The agent started a massive Firebase migration without breaking it down into smaller, testable chunks. This has left the application in a fragile, partially-migrated state.
+- The agent did not install the  dependency via a tool call (yarn add v1.22.22
+[1/4] Resolving packages...
+[2/4] Fetching packages...
+[3/4] Linking dependencies...
+[4/4] Building fresh packages...
+success Saved lockfile.
+success Saved 62 new dependencies.
+info Direct dependencies
+└─ firebase@12.9.0
+info All dependencies
+├─ @firebase/ai@2.8.0
+├─ @firebase/analytics-compat@0.2.25
+├─ @firebase/analytics-types@0.8.3
+├─ @firebase/app-check-compat@0.4.0
+├─ @firebase/app-check-types@0.5.3
+├─ @firebase/app-compat@0.5.8
+├─ @firebase/auth-compat@0.6.2
+├─ @firebase/auth-types@0.13.0
+├─ @firebase/data-connect@0.3.12
+├─ @firebase/database-compat@2.1.0
+├─ @firebase/database-types@1.0.16
+├─ @firebase/firestore-compat@0.4.5
+├─ @firebase/firestore-types@3.0.3
+├─ @firebase/functions-compat@0.4.1
+├─ @firebase/functions-types@0.6.3
+├─ @firebase/installations-compat@0.2.19
+├─ @firebase/installations-types@0.5.3
+├─ @firebase/messaging-compat@0.2.23
+├─ @firebase/performance-compat@0.2.22
+├─ @firebase/performance-types@0.2.3
+├─ @firebase/remote-config-compat@0.2.21
+├─ @firebase/remote-config-types@0.5.0
+├─ @firebase/storage-compat@0.4.0
+├─ @firebase/storage-types@0.8.3
+├─ @firebase/webchannel-wrapper@1.0.5
+├─ @grpc/grpc-js@1.9.15
+├─ @protobufjs/aspromise@1.1.2
+├─ @protobufjs/base64@1.1.2
+├─ @protobufjs/codegen@2.0.4
+├─ @protobufjs/eventemitter@1.1.0
+├─ @protobufjs/fetch@1.1.0
+├─ @protobufjs/float@1.0.2
+├─ @protobufjs/path@1.1.2
+├─ @protobufjs/pool@1.1.0
+├─ @protobufjs/utf8@1.1.0
+├─ @types/node@25.2.1
+├─ ansi-regex@5.0.1
+├─ ansi-styles@4.3.0
+├─ cliui@8.0.1
+├─ color-convert@2.0.1
+├─ color-name@1.1.4
+├─ emoji-regex@8.0.0
+├─ escalade@3.2.0
+├─ faye-websocket@0.11.4
+├─ firebase@12.9.0
+├─ get-caller-file@2.0.5
+├─ http-parser-js@0.5.10
+├─ is-fullwidth-code-point@3.0.0
+├─ lodash.camelcase@4.3.0
+├─ protobufjs@7.5.4
+├─ require-directory@2.1.1
+├─ safe-buffer@5.2.1
+├─ string-width@4.2.3
+├─ strip-ansi@6.0.1
+├─ undici-types@7.16.0
+├─ web-vitals@4.2.4
+├─ websocket-driver@0.7.4
+├─ websocket-extensions@0.1.4
+├─ wrap-ansi@7.0.0
+├─ y18n@5.0.8
+├─ yargs-parser@21.1.1
+└─ yargs@17.7.2
+Done in 11.76s.), instead instructing the user to do it, which is outside the normal workflow.
+- After implementing many backend changes, the agent didn't run a comprehensive test of all existing endpoints, leading to some bugs (like the chore completion / mismatch) being caught later by the user.</analysis>
