@@ -404,7 +404,16 @@ export default function RewardsScreen({ navigation }) {
             {/* Quick link to Chores */}
             <TouchableOpacity 
               style={styles.choreLink}
-              onPress={() => navigation.navigate('Chores')}
+              onPress={() => {
+                // Navigate back to main tabs first, then to Chores tab
+                if (navigation.canGoBack()) {
+                  navigation.goBack();
+                }
+                // Small delay to let navigation complete, then switch tab
+                setTimeout(() => {
+                  navigation.navigate('Chores');
+                }, 100);
+              }}
             >
               <Ionicons name="arrow-forward-circle" size={24} color="#a855f7" />
               <Text style={styles.choreLinkText}>Go to Chores for more ways to earn</Text>
