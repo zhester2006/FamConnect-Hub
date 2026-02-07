@@ -218,6 +218,9 @@ export default function AppNavigator() {
           </>
         )}
       </Stack.Navigator>
+      
+      {/* Pixie AI Assistant - appears on all authenticated screens */}
+      {isAuthenticated && <PixieAssistant />}
     </NavigationContainer>
   );
 }
