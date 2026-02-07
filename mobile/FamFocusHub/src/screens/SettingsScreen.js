@@ -130,9 +130,43 @@ export default function SettingsScreen({ navigation }) {
       title: 'App Settings',
       items: [
         { icon: 'grid', label: 'Home Screen Widgets', screen: 'WidgetSettings', color: '#8b5cf6' },
+        { icon: 'trash-bin', label: 'Clear Cache', action: 'clearCache', color: '#f59e0b' },
       ],
     },
   ];
+
+  const handleClearCache = async () => {
+    Alert.alert(
+      'Clear Cache',
+      'This will clear temporary data and cached files. Your login and settings will be preserved.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              const errorHandler = require('../utils/errorHandler').default;
+              await errorHandler.clearAppCache();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to clear cache');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleMenuAction = (item) => {
+    if (item.action === 'clearCache') {
+      handleClearCache();
+    } else if (item.screen) {
+      navigation.navigate(item.screen);
+    }
+  };
 
   return (
     <AnimatedBackground page="settings">
