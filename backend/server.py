@@ -1082,6 +1082,7 @@ async def get_family_wall(request: Request):
 async def create_post(request: Request, data: dict):
     current_user = await get_current_user(request)
     post_id = f"post_{uuid.uuid4().hex[:12]}"
+    family_id = current_user.get('parent_id', current_user['user_id'])
     
     # Accept both 'type' and 'post_type' for backward compatibility
     post_type = data.get('type') or data.get('post_type', 'text')
@@ -1096,10 +1097,10 @@ async def create_post(request: Request, data: dict):
     
     post_doc = {
         "post_id": post_id,
-        "family_id": current_user.get('parent_id', current_user['user_id']),
+        "family_id": family_id,
         "author_id": current_user['user_id'],
         "author_name": current_user.get('nickname') or current_user['name'],
-        "author_picture": current_user.get('picture'),
+        "author_picture": sanitize_picture(current_user.get('picture')),
         "content": data.get('content', ''),
         "gif_url": data.get('gif_url'),
         "image_url": data.get('image_url'),
@@ -1111,6 +1112,30 @@ async def create_post(request: Request, data: dict):
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.family_wall.insert_one(post_doc)
+    
+    # Notify other family members about new post
+    family_members = await db.users.find(
+        {"$or": [{"user_id": family_id}, {"parent_id": family_id}]},
+        {"_id": 0, "user_id": 1}
+    ).to_list(100)
+    
+    author_name = current_user.get('nickname') or current_user.get('name', 'Someone')
+    post_type_text = "created a poll" if post_type == "poll" else "shared a photo" if post_type == "photo" else "shared a GIF" if post_type == "gif" else "shared a post"
+    
+    for member in family_members:
+        if member['user_id'] != current_user['user_id']:
+            notification_doc = {
+                "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+                "user_id": member['user_id'],
+                "type": "family_wall",
+                "title": "New Family Wall Post",
+                "message": f"{author_name} {post_type_text}",
+                "data": {"post_id": post_id, "author_id": current_user['user_id'], "post_type": post_type},
+                "read": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.notifications.insert_one(notification_doc)
+    
     return await db.family_wall.find_one({"post_id": post_id}, {"_id": 0})
 
 @api_router.post("/family-wall/{post_id}/vote")
