@@ -506,6 +506,63 @@ class ApiService {
   async forceSync() {
     return offlineService.syncPendingActions();
   }
+
+  // Goals
+  async getGoals() {
+    return this.get('/goals', 'goals');
+  }
+
+  async createGoal(goalData) {
+    return this.post('/goals', goalData);
+  }
+
+  async updateGoal(goalId, data) {
+    return this.put(`/goals/${goalId}`, data);
+  }
+
+  async deleteGoal(goalId) {
+    return this.delete(`/goals/${goalId}`);
+  }
+
+  // Achievements
+  async getAchievements(userId = null) {
+    const endpoint = userId ? `/achievements?user_id=${userId}` : '/achievements';
+    return this.get(endpoint, 'achievements');
+  }
+
+  async getFamilyAchievements() {
+    return this.get('/achievements/family', 'family_achievements');
+  }
+
+  // Dashboard Config
+  async getDashboardConfig() {
+    return this.get('/dashboard/config', 'dashboard_config');
+  }
+
+  async updateDashboardConfig(config) {
+    return this.post('/dashboard/config', config);
+  }
+
+  // Rewards Extended
+  async createReward(rewardData) {
+    return this.post('/rewards', rewardData);
+  }
+
+  async updateReward(rewardId, data) {
+    return this.put(`/rewards/${rewardId}`, data);
+  }
+
+  async deleteReward(rewardId) {
+    return this.delete(`/rewards/${rewardId}`);
+  }
+
+  async getPendingRedemptions() {
+    return this.get('/rewards/pending', 'pending_redemptions');
+  }
+
+  async approveRedemption(redemptionId, approved) {
+    return this.put(`/rewards/redemptions/${redemptionId}`, { approved });
+  }
 }
 
 export const apiService = new ApiService();
