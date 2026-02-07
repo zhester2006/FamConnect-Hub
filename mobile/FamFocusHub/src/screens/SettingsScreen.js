@@ -48,10 +48,17 @@ export default function SettingsScreen({ navigation }) {
   const theme = useTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Bug Report state
   const [showBugReport, setShowBugReport] = useState(false);
   const [bugDescription, setBugDescription] = useState('');
   const [bugSteps, setBugSteps] = useState('');
   const [submittingBug, setSubmittingBug] = useState(false);
+  // Suggestion state
+  const [showSuggestion, setShowSuggestion] = useState(false);
+  const [suggestionTitle, setSuggestionTitle] = useState('');
+  const [suggestionDescription, setSuggestionDescription] = useState('');
+  const [suggestionCategory, setSuggestionCategory] = useState('feature');
+  const [submittingSuggestion, setSubmittingSuggestion] = useState(false);
 
   useEffect(() => {
     checkNotificationStatus();
