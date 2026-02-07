@@ -421,7 +421,11 @@ export default function LocationScreen({ navigation }) {
   const openNavigationToChild = (child) => {
     if (!child.last_location) return;
     
-    const { lat, lng } = child.last_location;
+    const lat = child.last_location.lat || child.last_location.latitude;
+    const lng = child.last_location.lng || child.last_location.longitude;
+    
+    if (!lat || !lng) return;
+    
     const scheme = Platform.OS === 'ios' ? 'maps:' : 'google.navigation:';
     const url = Platform.OS === 'ios'
       ? `${scheme}?daddr=${lat},${lng}&dirflg=d`
