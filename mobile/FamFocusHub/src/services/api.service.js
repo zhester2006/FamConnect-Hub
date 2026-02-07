@@ -51,7 +51,6 @@ class ApiService {
         ...this.getHeaders(),
         ...options.headers,
       },
-      credentials: 'include',
     };
 
     // For GET requests, try cache first if offline
@@ -66,11 +65,34 @@ class ApiService {
     }
 
     try {
-      const response = await fetch(url, config);
-      const data = await response.json();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+      
+      const response = await fetch(url, {
+        ...config,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      
+      // Get response text first to handle non-JSON responses
+      const text = await response.text();
+      
+      // Try to parse as JSON
+      let data;
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (parseError) {
+        console.error(`JSON parse error for ${endpoint}:`, text.substring(0, 100));
+        // If response is not JSON, create an error object
+        if (!response.ok) {
+          throw new Error(text || `HTTP ${response.status}`);
+        }
+        // For successful non-JSON responses, return the text
+        data = { message: text };
+      }
       
       if (!response.ok) {
-        throw new Error(data.detail || 'Request failed');
+        throw new Error(data.detail || data.message || `HTTP ${response.status}`);
       }
       
       // Cache successful GET responses
@@ -80,6 +102,11 @@ class ApiService {
       
       return data;
     } catch (error) {
+      // Handle abort/timeout
+      if (error.name === 'AbortError') {
+        error.message = 'Request timeout';
+      }
+      
       // For GET requests, fall back to cache on network error
       if ((options.method === 'GET' || !options.method) && cacheKey) {
         const cached = await offlineService.getCachedData(cacheKey);
