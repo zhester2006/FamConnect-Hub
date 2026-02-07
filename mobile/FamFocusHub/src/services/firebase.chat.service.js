@@ -1,9 +1,7 @@
 // Firebase Chat Service for FamFocus Hub
 // Uses Firebase Realtime Database for reliable messaging
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
-  getDatabase, 
   ref, 
   push, 
   set, 
@@ -14,12 +12,11 @@ import {
   limitToLast,
   serverTimestamp,
   onDisconnect,
-  update,
-  connectDatabaseEmulator
+  update
 } from 'firebase/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import firebaseConfig from './firebase.config';
+import { getFirebaseApp, getFirebaseDatabase, initializeFirebase } from './firebase.init';
 
 class FirebaseChatService {
   constructor() {
@@ -53,14 +50,16 @@ class FirebaseChatService {
         return true;
       }
 
-      // Initialize app
-      if (!getApps().length) {
-        this.app = initializeApp(firebaseConfig);
-      } else {
-        this.app = getApp();
+      // Use centralized Firebase initialization
+      initializeFirebase();
+      this.app = getFirebaseApp();
+      this.db = getFirebaseDatabase();
+      
+      if (!this.db) {
+        console.error('Firebase Database not available');
+        return false;
       }
       
-      this.db = getDatabase(this.app);
       this.isInitialized = true;
       
       // Setup network listener for auto-reconnect
