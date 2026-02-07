@@ -549,6 +549,31 @@ class ApiService {
     return this.post('/pantry/ai-shopping', { items: pantryItems });
   }
 
+  // Recipes
+  async getRecipes() {
+    return this.get('/recipes', 'recipes');
+  }
+
+  async createRecipe(recipeData) {
+    return this.post('/recipes', recipeData);
+  }
+
+  async updateRecipe(recipeId, data) {
+    return this.put(`/recipes/${recipeId}`, data);
+  }
+
+  async deleteRecipe(recipeId) {
+    return this.delete(`/recipes/${recipeId}`);
+  }
+
+  async markRecipeMade(recipeId) {
+    return this.post(`/recipes/${recipeId}/made`, {});
+  }
+
+  async getAiRecipeSuggestions(basedOn = 'history') {
+    return this.get(`/recipes/suggestions?based_on=${basedOn}`, null);
+  }
+
   // Achievements
   async getAchievements(userId = null) {
     const endpoint = userId ? `/achievements?user_id=${userId}` : '/achievements';
