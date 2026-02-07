@@ -75,7 +75,26 @@ def sanitize_picture(picture_data, max_len=500):
         return picture_data
     return None  # Skip large base64 images
 
+# Helper function to generate unique family code
+def generate_family_code():
+    """Generate a unique 8-character alphanumeric family code"""
+    import random
+    import string
+    chars = string.ascii_uppercase + string.digits
+    # Exclude confusing characters like 0, O, I, 1, L
+    chars = chars.replace('0', '').replace('O', '').replace('I', '').replace('1', '').replace('L', '')
+    return ''.join(random.choices(chars, k=8))
+
 # Models
+class Family(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    family_id: str
+    family_code: str  # Unique code for joining
+    family_name: str
+    created_by: str  # User ID of creator (first parent)
+    created_at: str
+    settings: Dict[str, Any] = {}
+
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
     user_id: str
@@ -89,9 +108,12 @@ class User(BaseModel):
     badges: List[str] = []
     settings: Dict[str, Any] = {}
     created_at: str
-    parent_id: Optional[str] = None
+    parent_id: Optional[str] = None  # Legacy - now use family_id
+    family_id: Optional[str] = None  # Family this user belongs to
     online_status: bool = False
     last_seen: Optional[str] = None
+    nickname: Optional[str] = None
+    bio: Optional[str] = None
 
 class Chore(BaseModel):
     model_config = ConfigDict(extra="ignore")
