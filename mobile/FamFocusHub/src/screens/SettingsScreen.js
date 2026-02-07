@@ -379,7 +379,7 @@ export default function SettingsScreen({ navigation }) {
                   styles.menuItem,
                   index === section.items.length - 1 && styles.menuItemLast
                 ]}
-                onPress={() => item.screen && navigation.navigate(item.screen)}
+                onPress={() => handleMenuAction(item)}
               >
                 <View style={[styles.menuIcon, { backgroundColor: `${item.color}20` }]}>
                   <Ionicons name={item.icon} size={20} color={item.color} />
