@@ -1,21 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, 
-  Alert, Image, Dimensions 
+  Alert, Image, Dimensions, TextInput, KeyboardAvoidingView,
+  Platform, ScrollView, Animated
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useAuth } from '../context/AuthContext';
 import biometricService from '../services/biometric.service';
+import firebaseAuthService from '../services/firebase.auth.service';
 
 const API_BASE = 'https://home-hub-25.preview.emergentagent.com';
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 WebBrowser.maybeCompleteAuthSession();
 
-// Pixie Greeting Component - Matches web app
+// Pixie Greeting Component
 const PixieGreeting = () => {
   const [greeting, setGreeting] = useState('');
   const greetings = [
@@ -34,7 +37,7 @@ const PixieGreeting = () => {
       <View style={styles.pixieGlow} />
       <View style={styles.pixieContent}>
         <View style={styles.pixieAvatar}>
-          <Ionicons name="sparkles" size={24} color="#fff" />
+          <Text style={{ fontSize: 20 }}>🧚‍♀️</Text>
         </View>
         <View style={styles.pixieTextContainer}>
           <Text style={styles.pixieLabel}>Pixie - Your AI Guide</Text>
@@ -48,7 +51,7 @@ const PixieGreeting = () => {
 // Feature Card Component
 const FeatureCard = ({ icon, text, color }) => (
   <View style={styles.featureCard}>
-    <Ionicons name={icon} size={24} color={color} />
+    <Ionicons name={icon} size={22} color={color} />
     <Text style={styles.featureText}>{text}</Text>
   </View>
 );
@@ -62,9 +65,21 @@ export default function LoginScreen({ navigation }) {
   const [biometricType, setBiometricType] = useState('Biometric');
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricLoading, setBiometricLoading] = useState(false);
+  
+  // Auth mode state
+  const [authMode, setAuthMode] = useState('main'); // 'main', 'login', 'signup', 'forgot'
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // Animation
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     checkBiometricSupport();
+    firebaseAuthService.initialize();
   }, []);
 
   const checkBiometricSupport = async () => {
@@ -81,6 +96,160 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
+  const switchMode = (mode) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Animated.sequence([
+      Animated.timing(fadeAnim, { toValue: 0.5, duration: 100, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
+    setAuthMode(mode);
+    setError(null);
+  };
+
+  // Email/Password Login via Firebase
+  const handleEmailLogin = async () => {
+    if (!email || !password) {
+      setError('Please enter email and password');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    try {
+      const result = await firebaseAuthService.signInWithEmail(email, password);
+      
+      if (result.success) {
+        // Get Firebase ID token and exchange for session
+        const idToken = await firebaseAuthService.getIdToken();
+        
+        // Call backend to create/sync user session
+        const response = await fetch(`${API_BASE}/api/auth/firebase-login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            idToken,
+            user: result.user 
+          }),
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          await login(data.session_token, data.user);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          
+          if (biometricAvailable && !biometricEnabled) {
+            setTimeout(() => promptEnableBiometric(data.session_token), 1000);
+          }
+        } else {
+          // Fall back to using Firebase user directly
+          await login(idToken, result.user);
+        }
+      } else {
+        setError(result.error);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    } catch (err) {
+      console.error('Email login error:', err);
+      setError(err.message || 'Login failed');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Email/Password Signup via Firebase
+  const handleEmailSignup = async () => {
+    if (!email || !password || !displayName) {
+      setError('Please fill in all fields');
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    try {
+      const result = await firebaseAuthService.signUpWithEmail(email, password, displayName);
+      
+      if (result.success) {
+        const idToken = await firebaseAuthService.getIdToken();
+        
+        // Call backend to create user
+        const response = await fetch(`${API_BASE}/api/auth/firebase-signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            idToken,
+            user: result.user,
+            displayName
+          }),
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          await login(data.session_token, data.user);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } else {
+          await login(idToken, result.user);
+        }
+        
+        Alert.alert('Welcome!', 'Your account has been created successfully.');
+      } else {
+        setError(result.error);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    } catch (err) {
+      console.error('Signup error:', err);
+      setError(err.message || 'Signup failed');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Forgot Password
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError('Please enter your email address');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await firebaseAuthService.sendPasswordReset(email);
+      
+      if (result.success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert(
+          'Check Your Email',
+          'We sent a password reset link to your email address.',
+          [{ text: 'OK', onPress: () => switchMode('login') }]
+        );
+      } else {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError('Failed to send reset email');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Google Login
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
@@ -110,21 +279,19 @@ export default function LoginScreen({ navigation }) {
         }
       }
     } catch (err) {
-      console.error('Login error:', err);
-      setError('Failed to sign in. Please try again.');
+      console.error('Google login error:', err);
+      setError('Failed to sign in with Google');
     } finally {
       setLoading(false);
     }
   };
 
-  // Dev Login - Uses the same endpoint as web app
+  // Dev Login
   const handleDevLogin = async (role = 'parent') => {
     setDevLoading(role);
     setError(null);
     
     try {
-      console.log(`Attempting dev login as ${role}...`);
-      
       const response = await fetch(`${API_BASE}/api/auth/dev-login`, {
         method: 'POST',
         headers: { 
@@ -134,19 +301,16 @@ export default function LoginScreen({ navigation }) {
         body: JSON.stringify({ role }),
       });
       
-      console.log('Response status:', response.status);
-      
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Dev login error response:', errorText);
         throw new Error(`Login failed: ${response.status}`);
       }
       
       const data = await response.json();
-      console.log('Dev login response:', data);
       
       if (data.session_token) {
         await login(data.session_token, data.user);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         
         if (biometricAvailable && !biometricEnabled) {
           setTimeout(() => promptEnableBiometric(data.session_token), 1000);
@@ -156,12 +320,13 @@ export default function LoginScreen({ navigation }) {
       }
     } catch (err) {
       console.error('Dev login error:', err);
-      setError(err.message || 'Login failed. Please try again.');
+      setError(err.message || 'Login failed');
     } finally {
       setDevLoading(null);
     }
   };
 
+  // Biometric Login
   const handleBiometricLogin = async () => {
     setBiometricLoading(true);
     setError(null);
@@ -171,9 +336,8 @@ export default function LoginScreen({ navigation }) {
       
       if (result.success && result.sessionToken) {
         await login(result.sessionToken);
-      } else if (result.cancelled) {
-        // User cancelled
-      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else if (!result.cancelled) {
         setError(result.error || 'Biometric login failed');
         if (result.error?.includes('Session expired')) {
           setBiometricEnabled(false);
@@ -189,8 +353,8 @@ export default function LoginScreen({ navigation }) {
 
   const promptEnableBiometric = (token) => {
     Alert.alert(
-      `Enable Face/Fingerprint Sign In?`,
-      `Would you like to use Face/Fingerprint for faster login next time?`,
+      'Enable Quick Sign In?',
+      'Use Face ID or Fingerprint for faster login next time?',
       [
         { text: 'Not Now', style: 'cancel' },
         { 
@@ -198,7 +362,7 @@ export default function LoginScreen({ navigation }) {
           onPress: async () => {
             const result = await biometricService.enableBiometricLogin(token);
             if (result.success) {
-              Alert.alert('Success', `Face/Fingerprint login enabled!`);
+              Alert.alert('Success', 'Quick sign-in enabled!');
               setBiometricEnabled(true);
             }
           }
@@ -213,100 +377,334 @@ export default function LoginScreen({ navigation }) {
     return 'lock-closed';
   };
 
-  return (
-    <LinearGradient colors={['#0f172a', '#1e1b4b', '#0f172a']} style={styles.container}>
-      <View style={styles.content}>
-        {/* Header with Logo */}
-        <View style={styles.header}>
-          <Text style={styles.logoText}>FamFocus Hub</Text>
-        </View>
-
-        {/* Main Content */}
-        <View style={styles.mainContent}>
-          {/* Hero Image */}
-          <Image 
-            source={{ uri: 'https://customer-assets.emergentagent.com/job_homebridge-5/artifacts/tqccfghc_startup.gif.gif' }}
-            style={styles.heroImage}
-            resizeMode="contain"
-          />
-
-          {/* Title */}
-          <Text style={styles.title}>Welcome to Your</Text>
-          <Text style={styles.titleGradient}>Family Space</Text>
-          <Text style={styles.subtitle}>
-            A place where keeping up with the day-to-day is no longer a chore within itself
-          </Text>
-
-          {/* Pixie Greeting */}
-          <PixieGreeting />
-
-          {/* Feature Cards - 2x2 Grid */}
-          <View style={styles.featuresGrid}>
-            <FeatureCard icon="calendar" text="Smart Scheduling" color="#a78bfa" />
-            <FeatureCard icon="trophy" text="Rewards System" color="#f472b6" />
-            <FeatureCard icon="chatbubbles" text="Family Chat" color="#34d399" />
-            <FeatureCard icon="trending-up" text="Leaderboards" color="#f87171" />
+  // Render email/password form
+  const renderAuthForm = () => {
+    if (authMode === 'login') {
+      return (
+        <Animated.View style={[styles.formContainer, { opacity: fadeAnim }]}>
+          <Text style={styles.formTitle}>Welcome Back</Text>
+          <Text style={styles.formSubtitle}>Sign in to continue</Text>
+          
+          <View style={styles.inputContainer}>
+            <Ionicons name="mail-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="#6b7280"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
           </View>
-
-          {/* Biometric Login Button */}
-          {biometricAvailable && biometricEnabled && (
-            <TouchableOpacity
-              style={styles.biometricButton}
-              onPress={handleBiometricLogin}
-              disabled={biometricLoading}
-            >
-              {biometricLoading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <>
-                  <Ionicons name={getBiometricIcon()} size={24} color="#fff" />
-                  <Text style={styles.biometricButtonText}>Sign in with Face/Fingerprint</Text>
-                </>
-              )}
+          
+          <View style={styles.inputContainer}>
+            <Ionicons name="lock-closed-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#6b7280"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+              <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#9ca3af" />
             </TouchableOpacity>
-          )}
-
-          {/* Google Login Button */}
-          <TouchableOpacity
-            style={styles.googleButton}
-            onPress={handleGoogleLogin}
-            disabled={loading}
-          >
+          </View>
+          
+          <TouchableOpacity onPress={() => switchMode('forgot')} style={styles.forgotLink}>
+            <Text style={styles.forgotText}>Forgot Password?</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.primaryButton} onPress={handleEmailLogin} disabled={loading}>
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
               <>
-                <Text style={styles.googleButtonText}>Sign In with Google</Text>
-                <Ionicons name="sparkles" size={20} color="#fff" />
+                <Text style={styles.primaryButtonText}>Sign In</Text>
+                <Ionicons name="arrow-forward" size={20} color="#fff" />
               </>
             )}
           </TouchableOpacity>
-
-          {/* Dev Login Buttons - Match web app style */}
-          <View style={styles.devButtons}>
-            <TouchableOpacity
-              style={styles.devButton}
-              onPress={() => handleDevLogin('parent')}
-              disabled={devLoading !== null}
-            >
-              {devLoading === 'parent' ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.devButtonText}>Dev: Parent Login</Text>
-              )}
+          
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or continue with</Text>
+            <View style={styles.dividerLine} />
+          </View>
+          
+          <View style={styles.socialButtons}>
+            <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin}>
+              <Ionicons name="logo-google" size={22} color="#fff" />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.devButton}
-              onPress={() => handleDevLogin('child')}
-              disabled={devLoading !== null}
-            >
-              {devLoading === 'child' ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.devButtonText}>Dev: Child Login</Text>
-              )}
+            {biometricAvailable && biometricEnabled && (
+              <TouchableOpacity style={styles.socialButton} onPress={handleBiometricLogin} disabled={biometricLoading}>
+                {biometricLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Ionicons name={getBiometricIcon()} size={22} color="#fff" />
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          <TouchableOpacity onPress={() => switchMode('signup')} style={styles.switchLink}>
+            <Text style={styles.switchText}>Don't have an account? <Text style={styles.switchTextBold}>Sign Up</Text></Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity onPress={() => switchMode('main')} style={styles.backLink}>
+            <Ionicons name="arrow-back" size={18} color="#6b7280" />
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      );
+    }
+    
+    if (authMode === 'signup') {
+      return (
+        <Animated.View style={[styles.formContainer, { opacity: fadeAnim }]}>
+          <Text style={styles.formTitle}>Create Account</Text>
+          <Text style={styles.formSubtitle}>Join your family hub</Text>
+          
+          <View style={styles.inputContainer}>
+            <Ionicons name="person-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Display Name"
+              placeholderTextColor="#6b7280"
+              value={displayName}
+              onChangeText={setDisplayName}
+              autoCapitalize="words"
+            />
+          </View>
+          
+          <View style={styles.inputContainer}>
+            <Ionicons name="mail-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="#6b7280"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+          
+          <View style={styles.inputContainer}>
+            <Ionicons name="lock-closed-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#6b7280"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+              <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#9ca3af" />
             </TouchableOpacity>
           </View>
+          
+          <View style={styles.inputContainer}>
+            <Ionicons name="shield-checkmark-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm Password"
+              placeholderTextColor="#6b7280"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry={!showPassword}
+            />
+          </View>
+          
+          <TouchableOpacity style={styles.primaryButton} onPress={handleEmailSignup} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Text style={styles.primaryButtonText}>Create Account</Text>
+                <Ionicons name="arrow-forward" size={20} color="#fff" />
+              </>
+            )}
+          </TouchableOpacity>
+          
+          <TouchableOpacity onPress={() => switchMode('login')} style={styles.switchLink}>
+            <Text style={styles.switchText}>Already have an account? <Text style={styles.switchTextBold}>Sign In</Text></Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity onPress={() => switchMode('main')} style={styles.backLink}>
+            <Ionicons name="arrow-back" size={18} color="#6b7280" />
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      );
+    }
+    
+    if (authMode === 'forgot') {
+      return (
+        <Animated.View style={[styles.formContainer, { opacity: fadeAnim }]}>
+          <Text style={styles.formTitle}>Reset Password</Text>
+          <Text style={styles.formSubtitle}>We'll send you a reset link</Text>
+          
+          <View style={styles.inputContainer}>
+            <Ionicons name="mail-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="#6b7280"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+          
+          <TouchableOpacity style={styles.primaryButton} onPress={handleForgotPassword} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Text style={styles.primaryButtonText}>Send Reset Link</Text>
+                <Ionicons name="mail" size={20} color="#fff" />
+              </>
+            )}
+          </TouchableOpacity>
+          
+          <TouchableOpacity onPress={() => switchMode('login')} style={styles.backLink}>
+            <Ionicons name="arrow-back" size={18} color="#6b7280" />
+            <Text style={styles.backText}>Back to Sign In</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      );
+    }
+    
+    return null;
+  };
+
+  // Main view
+  return (
+    <LinearGradient colors={['#0f172a', '#1e1b4b', '#0f172a']} style={styles.container}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.logoText}>🏠 FamFocus Hub</Text>
+          </View>
+
+          {authMode === 'main' ? (
+            <>
+              {/* Hero Image */}
+              <Image 
+                source={{ uri: 'https://customer-assets.emergentagent.com/job_homebridge-5/artifacts/tqccfghc_startup.gif.gif' }}
+                style={styles.heroImage}
+                resizeMode="contain"
+              />
+
+              {/* Title */}
+              <Text style={styles.title}>Welcome to Your</Text>
+              <Text style={styles.titleGradient}>Family Space</Text>
+              <Text style={styles.subtitle}>
+                A place where keeping up with the day-to-day is no longer a chore within itself
+              </Text>
+
+              {/* Pixie Greeting */}
+              <PixieGreeting />
+
+              {/* Feature Cards */}
+              <View style={styles.featuresGrid}>
+                <FeatureCard icon="calendar" text="Smart Scheduling" color="#a78bfa" />
+                <FeatureCard icon="trophy" text="Rewards System" color="#f472b6" />
+                <FeatureCard icon="chatbubbles" text="Family Chat" color="#34d399" />
+                <FeatureCard icon="trending-up" text="Leaderboards" color="#f87171" />
+              </View>
+
+              {/* Biometric Quick Login */}
+              {biometricAvailable && biometricEnabled && (
+                <TouchableOpacity
+                  style={styles.biometricButton}
+                  onPress={handleBiometricLogin}
+                  disabled={biometricLoading}
+                >
+                  {biometricLoading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name={getBiometricIcon()} size={24} color="#fff" />
+                      <Text style={styles.biometricButtonText}>Quick Sign In</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+
+              {/* Main Login Buttons */}
+              <TouchableOpacity style={styles.primaryButton} onPress={() => switchMode('login')}>
+                <Text style={styles.primaryButtonText}>Sign In with Email</Text>
+                <Ionicons name="mail" size={20} color="#fff" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin} disabled={loading}>
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="logo-google" size={20} color="#fff" />
+                    <Text style={styles.googleButtonText}>Continue with Google</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => switchMode('signup')} style={styles.createAccountLink}>
+                <Text style={styles.createAccountText}>New here? <Text style={styles.createAccountBold}>Create Account</Text></Text>
+              </TouchableOpacity>
+
+              {/* Dev Login Buttons */}
+              <View style={styles.devSection}>
+                <Text style={styles.devLabel}>Development Mode</Text>
+                <View style={styles.devButtons}>
+                  <TouchableOpacity
+                    style={styles.devButton}
+                    onPress={() => handleDevLogin('parent')}
+                    disabled={devLoading !== null}
+                  >
+                    {devLoading === 'parent' ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name="person" size={16} color="#a78bfa" />
+                        <Text style={styles.devButtonText}>Parent</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.devButton}
+                    onPress={() => handleDevLogin('child')}
+                    disabled={devLoading !== null}
+                  >
+                    {devLoading === 'child' ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name="happy" size={16} color="#34d399" />
+                        <Text style={styles.devButtonText}>Child</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </>
+          ) : (
+            renderAuthForm()
+          )}
 
           {/* Error Message */}
           {error && (
@@ -318,80 +716,66 @@ export default function LoginScreen({ navigation }) {
 
           {/* Footer */}
           <Text style={styles.footer}>
-            Secure authentication powered by Google
+            Secure authentication powered by Firebase
           </Text>
-        </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1 
-  },
-  content: {
-    flex: 1,
+  container: { flex: 1 },
+  keyboardView: { flex: 1 },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
     paddingBottom: 40,
   },
   header: {
     paddingTop: 50,
-    paddingHorizontal: 20,
     paddingBottom: 10,
-  },
-  logoRow: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  logo: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
   },
   logoText: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '900',
     color: '#fff',
   },
-  mainContent: {
-    flex: 1,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
   heroImage: {
-    width: width * 0.5,
-    height: width * 0.5,
+    width: width * 0.45,
+    height: width * 0.45,
+    alignSelf: 'center',
     marginVertical: 10,
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '900',
     color: '#fff',
     textAlign: 'center',
   },
   titleGradient: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '900',
     color: '#818cf8',
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#94a3b8',
     textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 22,
+    marginBottom: 16,
+    lineHeight: 20,
     paddingHorizontal: 10,
   },
-  // Pixie Card Styles
+  // Pixie Card
   pixieCard: {
     width: '100%',
     backgroundColor: 'rgba(99, 102, 241, 0.15)',
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
+    padding: 14,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(99, 102, 241, 0.3)',
     position: 'relative',
@@ -401,37 +785,35 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -20,
     right: -20,
-    width: 80,
-    height: 80,
+    width: 60,
+    height: 60,
     backgroundColor: 'rgba(244, 114, 182, 0.3)',
-    borderRadius: 40,
+    borderRadius: 30,
   },
   pixieContent: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 10,
   },
   pixieAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#6366f1',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  pixieTextContainer: {
-    flex: 1,
-  },
+  pixieTextContainer: { flex: 1 },
   pixieLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: '#f472b6',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   pixieText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#fff',
-    lineHeight: 20,
+    lineHeight: 18,
   },
   // Features Grid
   featuresGrid: {
@@ -439,21 +821,21 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     width: '100%',
-    marginBottom: 24,
-    gap: 10,
+    marginBottom: 20,
+    gap: 8,
   },
   featureCard: {
     width: '48%',
     backgroundColor: 'rgba(30, 41, 59, 0.8)',
     borderRadius: 12,
-    padding: 14,
+    padding: 12,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(99, 102, 241, 0.2)',
-    gap: 8,
+    gap: 6,
   },
   featureText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#cbd5e1',
     fontWeight: '600',
   },
@@ -463,65 +845,220 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#10b981',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
     borderRadius: 50,
     width: '100%',
-    marginBottom: 12,
+    marginBottom: 10,
     gap: 10,
   },
   biometricButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  primaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#6366f1',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 50,
+    width: '100%',
+    gap: 8,
+    marginBottom: 10,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontSize: 15,
     fontWeight: '700',
   },
   googleButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#6366f1',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
+    backgroundColor: 'rgba(51, 65, 85, 0.8)',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
     borderRadius: 50,
     width: '100%',
     gap: 10,
-    shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.5)',
   },
   googleButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  createAccountLink: {
+    paddingVertical: 8,
+    marginBottom: 16,
+  },
+  createAccountText: {
+    color: '#94a3b8',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  createAccountBold: {
+    color: '#818cf8',
     fontWeight: '700',
+  },
+  // Dev Section
+  devSection: {
+    width: '100%',
+    marginTop: 10,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(100, 116, 139, 0.3)',
+  },
+  devLabel: {
+    color: '#64748b',
+    fontSize: 11,
+    textAlign: 'center',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   devButtons: {
     flexDirection: 'row',
     width: '100%',
     gap: 10,
-    marginTop: 12,
   },
   devButton: {
     flex: 1,
-    backgroundColor: 'rgba(51, 65, 85, 0.8)',
+    flexDirection: 'row',
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     borderWidth: 1,
-    borderColor: 'rgba(100, 116, 139, 0.5)',
+    borderColor: 'rgba(100, 116, 139, 0.3)',
   },
   devButtonText: {
     color: '#fff',
     fontSize: 13,
     fontWeight: '600',
   },
+  // Form Styles
+  formContainer: {
+    width: '100%',
+    marginTop: 20,
+  },
+  formTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  formSubtitle: {
+    fontSize: 14,
+    color: '#94a3b8',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.3)',
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: '#fff',
+  },
+  eyeIcon: {
+    padding: 4,
+  },
+  forgotLink: {
+    alignSelf: 'flex-end',
+    marginBottom: 20,
+  },
+  forgotText: {
+    color: '#818cf8',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(100, 116, 139, 0.3)',
+  },
+  dividerText: {
+    color: '#64748b',
+    fontSize: 12,
+    marginHorizontal: 12,
+  },
+  socialButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    marginBottom: 20,
+  },
+  socialButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(51, 65, 85, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.3)',
+  },
+  switchLink: {
+    paddingVertical: 10,
+  },
+  switchText: {
+    color: '#94a3b8',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  switchTextBold: {
+    color: '#818cf8',
+    fontWeight: '700',
+  },
+  backLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 6,
+  },
+  backText: {
+    color: '#6b7280',
+    fontSize: 14,
+  },
+  // Error
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 16,
+    marginTop: 12,
     gap: 8,
     backgroundColor: 'rgba(239, 68, 68, 0.15)',
     padding: 12,
@@ -530,11 +1067,12 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: '#ef4444',
-    fontSize: 14,
+    fontSize: 13,
+    flex: 1,
   },
   footer: {
     color: '#64748b',
-    fontSize: 12,
+    fontSize: 11,
     textAlign: 'center',
     marginTop: 20,
   },
