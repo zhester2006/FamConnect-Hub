@@ -6,6 +6,9 @@ export const API_ENDPOINTS = {
   AUTH_SESSION: '/auth/session',
   AUTH_ME: '/auth/me',
   AUTH_LOGOUT: '/auth/logout',
+  FIREBASE_LOGIN: '/auth/firebase-login',
+  FIREBASE_SIGNUP: '/auth/firebase-signup',
+  DEV_LOGIN: '/auth/dev-login',
   
   // Family
   FAMILIES: '/families',
@@ -20,6 +23,7 @@ export const API_ENDPOINTS = {
   CHORES: '/chores',
   CHORE_TYPES: '/chores/types',
   CHORE_COMPLETE: (id) => `/chores/${id}/complete`,
+  CHORE_APPROVE: (id) => `/chores/${id}/approve`,
   CHORE_AI_SCHEDULE: '/chores/ai-schedule',
   
   // Tasks
@@ -33,13 +37,17 @@ export const API_ENDPOINTS = {
   // Family Wall
   FAMILY_WALL: '/family-wall',
   DAILY_QUOTE: '/family-wall/daily-quote',
+  FAMILY_WALL_LIKE: (id) => `/family-wall/${id}/like`,
+  FAMILY_WALL_VOTE: (id) => `/family-wall/${id}/vote`,
   
   // Calendar
   EVENTS: '/events',
+  EVENT_DELETE: (id) => `/events/${id}`,
   
   // Rewards
   REWARDS: '/rewards',
   REDEEM_REWARD: (id) => `/rewards/${id}/redeem`,
+  PENDING_REDEMPTIONS: '/rewards/pending',
   
   // Shopping
   SHOPPING_LIST: '/shopping',
@@ -56,18 +64,51 @@ export const API_ENDPOINTS = {
   // Location
   LOCATION_UPDATE: '/location/update',
   GEOFENCES: '/geofences',
+  CHECKINS: '/checkins',
+  LOCATION_ALERTS: '/location/alerts',
   
   // Battery
   BATTERY_UPDATE: '/battery/update',
-  BATTERY_STATUS: '/battery/family',
+  BATTERY_STATUS: '/battery/family-status',
   
   // Notifications
   NOTIFICATIONS: '/notifications',
   
   // User
   USER_PROFILE: '/users/me',
-  USER_UPDATE: '/users/update',
+  USER_UPDATE: (id) => `/users/${id}`,
+  USER_NICKNAME: (id) => `/users/${id}/nickname`,
+  USER_POINTS: (id) => `/users/${id}/points`,
   UPLOAD_PICTURE: '/users/upload-picture',
+  
+  // AI Features
+  AI_PIXIE: '/ai/pixie',
+  AI_MEAL_PLAN: '/ai/meal-plan',
+  AI_CHORE_TIPS: '/ai/chore-tips',
+  AI_FAMILY_ACTIVITY: '/ai/family-activity',
+  
+  // Goals
+  GOALS: '/goals',
+  
+  // Achievements
+  ACHIEVEMENTS: '/achievements',
+  ACHIEVEMENTS_FAMILY: '/achievements/family',
+  
+  // Dashboard
+  DASHBOARD_CONFIG: '/dashboard/config',
+  
+  // Tutorial
+  TUTORIAL_CONTENT: '/tutorial/content',
+  TUTORIAL_COMPLETE: '/tutorial/complete',
+  TUTORIAL_RESET: '/tutorial/reset',
+  
+  // GIFs
+  GIFS_SEARCH: '/gifs/search',
+  GIFS_TRENDING: '/gifs/trending',
+  
+  // Dinner Planner
+  DINNER_PLAN: '/dinner-plan',
+  DINNER_PLAN_GENERATE: '/dinner-plan/generate',
 };
 
 export default API_BASE_URL;
