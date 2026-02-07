@@ -290,12 +290,14 @@ export default function DinnerPlannerScreen({ navigation }) {
         {/* Quick Meal Ideas */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Meal Ideas</Text>
+          <Text style={styles.quickMealHint}>Tap for an instant AI suggestion!</Text>
           <View style={styles.quickMealsGrid}>
             {QUICK_MEALS.map((meal) => (
               <TouchableOpacity
                 key={meal.name}
-                style={styles.quickMealCard}
-                onPress={() => setPreferences(meal.pref)}
+                style={[styles.quickMealCard, loading && styles.buttonDisabled]}
+                onPress={() => handleQuickMeal(meal)}
+                disabled={loading}
               >
                 <Text style={styles.quickMealIcon}>{meal.icon}</Text>
                 <Text style={styles.quickMealName}>{meal.name}</Text>
