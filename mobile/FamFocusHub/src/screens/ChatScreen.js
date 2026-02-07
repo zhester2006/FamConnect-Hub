@@ -82,15 +82,23 @@ export default function ChatScreen({ navigation }) {
         familyId
       );
 
-      // Connect and listen for messages
+      // Connect and listen for messages with connection status callback
       const isConnected = firebaseChatService.connect(
         (newMessages) => {
           setMessages(newMessages);
-          setConnected(true);
           setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
         },
         (typing) => {
           setTypingUsers(typing);
+        },
+        (connectionStatus) => {
+          // Handle connection status changes
+          setConnected(connectionStatus);
+          if (connectionStatus) {
+            console.log('Chat connected');
+          } else {
+            console.log('Chat disconnected - will auto-reconnect');
+          }
         }
       );
 
