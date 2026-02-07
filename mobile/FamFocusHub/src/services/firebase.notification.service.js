@@ -227,6 +227,69 @@ class FirebaseNotificationService {
     );
   }
 
+  // Notify parent of pending approval
+  async notifyPendingApproval(itemType, childName, itemName) {
+    const titles = {
+      chore: '✅ Chore Needs Approval',
+      shopping: '🛒 Shopping Item Request',
+      reading: '📚 Reading Log Submitted',
+      reward: '🎁 Reward Redemption Request',
+    };
+
+    return this.scheduleLocalNotification(
+      titles[itemType] || '⏳ Approval Needed',
+      `${childName} needs approval for: ${itemName}`,
+      { type: 'pending_approval', itemType, itemName }
+    );
+  }
+
+  // Notify child of approval/denial
+  async notifyApprovalResult(approved, itemType, itemName, points = 0) {
+    const status = approved ? 'approved' : 'denied';
+    const emoji = approved ? '✅' : '❌';
+    const pointsMsg = approved && points > 0 ? ` (+${points} points!)` : '';
+
+    return this.scheduleLocalNotification(
+      `${emoji} ${itemType} ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+      `Your ${itemType} "${itemName}" was ${status}${pointsMsg}`,
+      { type: 'approval_result', approved, itemType, itemName, points }
+    );
+  }
+
+  // Notify parent of child check-in
+  async notifyChildCheckin(childName, locationName) {
+    return this.scheduleLocalNotification(
+      '📍 Check-in Alert',
+      `${childName} checked in at ${locationName}`,
+      { type: 'checkin', childName, locationName }
+    );
+  }
+
+  // Notify of new family wall post
+  async notifyNewFamilyWallPost(authorName, postType) {
+    const types = {
+      text: 'shared a post',
+      photo: 'shared a photo',
+      poll: 'created a poll',
+      gif: 'shared a GIF',
+    };
+
+    return this.scheduleLocalNotification(
+      '📱 Family Wall',
+      `${authorName} ${types[postType] || 'posted something new'}`,
+      { type: 'family_wall', postType }
+    );
+  }
+
+  // Notify of new chat message
+  async notifyNewChatMessage(senderName, messagePreview) {
+    return this.scheduleLocalNotification(
+      `💬 New Message`,
+      `${senderName}: ${messagePreview.substring(0, 80)}${messagePreview.length > 80 ? '...' : ''}`,
+      { type: 'chat_message', senderName }
+    );
+  }
+
   // Cancel a scheduled notification
   async cancelNotification(notificationId) {
     try {
