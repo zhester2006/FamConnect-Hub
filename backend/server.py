@@ -1217,13 +1217,14 @@ async def get_messages(request: Request):
 async def send_message(request: Request, data: dict):
     current_user = await get_current_user(request)
     message_id = f"msg_{uuid.uuid4().hex[:12]}"
+    family_id = current_user.get('parent_id', current_user['user_id'])
     
     message_doc = {
         "message_id": message_id,
-        "family_id": current_user.get('parent_id', current_user['user_id']),
+        "family_id": family_id,
         "user_id": current_user['user_id'],
         "user_name": current_user['name'],
-        "user_picture": current_user.get('picture'),
+        "user_picture": sanitize_picture(current_user.get('picture')),
         "content": data['content'],
         "encrypted_content": data.get('encrypted_content'),  # E2E encrypted content
         "media_url": data.get('media_url'),
@@ -1232,6 +1233,28 @@ async def send_message(request: Request, data: dict):
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.messages.insert_one(message_doc)
+    
+    # Notify other family members about new message
+    family_members = await db.users.find(
+        {"$or": [{"user_id": family_id}, {"parent_id": family_id}]},
+        {"_id": 0, "user_id": 1}
+    ).to_list(100)
+    
+    sender_name = current_user.get('nickname') or current_user.get('name', 'Someone')
+    for member in family_members:
+        if member['user_id'] != current_user['user_id']:
+            notification_doc = {
+                "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+                "user_id": member['user_id'],
+                "type": "chat_message",
+                "title": "New Chat Message",
+                "message": f"{sender_name}: {data['content'][:50]}{'...' if len(data['content']) > 50 else ''}",
+                "data": {"message_id": message_id, "sender_id": current_user['user_id']},
+                "read": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.notifications.insert_one(notification_doc)
+    
     return await db.messages.find_one({"message_id": message_id}, {"_id": 0})
 
 @api_router.put("/messages/{message_id}/read")
