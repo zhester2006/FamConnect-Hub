@@ -496,6 +496,331 @@ async def firebase_signup(response: Response, data: FirebaseAuthRequest):
     
     return {"session_token": session_token, "user": user}
 
+# ============== Family Management ==============
+
+@api_router.post("/family/create")
+async def create_family(request: Request, data: dict):
+    """Create a new family (parent account creation)"""
+    current_user = await get_current_user(request)
+    
+    family_name = data.get('family_name', f"{current_user.get('name', 'My')}'s Family")
+    
+    # Check if user already belongs to a family
+    if current_user.get('family_id'):
+        raise HTTPException(status_code=400, detail="You already belong to a family")
+    
+    # Generate unique family code
+    family_code = generate_family_code()
+    while await db.families.find_one({"family_code": family_code}):
+        family_code = generate_family_code()
+    
+    family_id = f"family_{uuid.uuid4().hex[:12]}"
+    family_doc = {
+        "family_id": family_id,
+        "family_code": family_code,
+        "family_name": family_name,
+        "created_by": current_user['user_id'],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "settings": {}
+    }
+    await db.families.insert_one(family_doc)
+    
+    # Update user to be parent of this family
+    await db.users.update_one(
+        {"user_id": current_user['user_id']},
+        {"$set": {
+            "family_id": family_id,
+            "parent_id": current_user['user_id'],  # Parent's parent_id is themselves
+            "role": "parent"
+        }}
+    )
+    
+    return {
+        "family_id": family_id,
+        "family_code": family_code,
+        "family_name": family_name,
+        "message": "Family created successfully! Share the code with family members to join."
+    }
+
+@api_router.post("/family/join")
+async def join_family(request: Request, data: dict):
+    """Join an existing family using family code"""
+    current_user = await get_current_user(request)
+    
+    family_code = data.get('family_code', '').strip().upper()
+    role = data.get('role', 'member')  # child or member (not parent during join)
+    
+    if not family_code:
+        raise HTTPException(status_code=400, detail="Family code is required")
+    
+    if role not in ['child', 'member']:
+        raise HTTPException(status_code=400, detail="Role must be 'child' or 'member'")
+    
+    # Check if user already belongs to a family
+    if current_user.get('family_id'):
+        raise HTTPException(status_code=400, detail="You already belong to a family")
+    
+    # Find family by code
+    family = await db.families.find_one({"family_code": family_code}, {"_id": 0})
+    if not family:
+        raise HTTPException(status_code=404, detail="Invalid family code")
+    
+    # Find the parent user (creator) of the family
+    parent_user = await db.users.find_one({"user_id": family['created_by']}, {"_id": 0})
+    parent_id = parent_user['user_id'] if parent_user else family['created_by']
+    
+    # Update user to join this family
+    await db.users.update_one(
+        {"user_id": current_user['user_id']},
+        {"$set": {
+            "family_id": family['family_id'],
+            "parent_id": parent_id,
+            "role": role
+        }}
+    )
+    
+    # Notify parents about new member
+    parents = await db.users.find(
+        {"family_id": family['family_id'], "role": "parent"},
+        {"_id": 0, "user_id": 1}
+    ).to_list(100)
+    
+    for parent in parents:
+        notification_doc = {
+            "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+            "user_id": parent['user_id'],
+            "type": "family_join",
+            "title": "New Family Member",
+            "message": f"{current_user.get('name', 'Someone')} joined your family as a {role}",
+            "data": {"new_member_id": current_user['user_id'], "role": role},
+            "read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.notifications.insert_one(notification_doc)
+    
+    return {
+        "family_id": family['family_id'],
+        "family_name": family['family_name'],
+        "role": role,
+        "message": f"Successfully joined {family['family_name']}!"
+    }
+
+@api_router.get("/family/info")
+async def get_family_info(request: Request):
+    """Get family information including family code"""
+    current_user = await get_current_user(request)
+    
+    family_id = current_user.get('family_id') or current_user.get('parent_id', current_user['user_id'])
+    
+    # For legacy users without family_id, try to find by parent_id pattern
+    family = await db.families.find_one({"family_id": family_id}, {"_id": 0})
+    
+    if not family:
+        # Create family for legacy parent users
+        if current_user['role'] == 'parent':
+            family_code = generate_family_code()
+            while await db.families.find_one({"family_code": family_code}):
+                family_code = generate_family_code()
+            
+            family = {
+                "family_id": family_id,
+                "family_code": family_code,
+                "family_name": f"{current_user.get('name', 'My')}'s Family",
+                "created_by": current_user['user_id'],
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "settings": {}
+            }
+            await db.families.insert_one(family)
+            
+            # Update user's family_id
+            await db.users.update_one(
+                {"user_id": current_user['user_id']},
+                {"$set": {"family_id": family_id}}
+            )
+        else:
+            return {"error": "No family found", "family_code": None}
+    
+    # Get member count
+    member_count = await db.users.count_documents({
+        "$or": [{"family_id": family_id}, {"parent_id": family_id}]
+    })
+    
+    return {
+        "family_id": family['family_id'],
+        "family_code": family['family_code'] if current_user['role'] == 'parent' else None,
+        "family_name": family['family_name'],
+        "member_count": member_count,
+        "created_at": family['created_at']
+    }
+
+@api_router.get("/family/members/detailed")
+async def get_family_members_detailed(request: Request):
+    """Get detailed family members list for management UI"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('family_id') or current_user.get('parent_id', current_user['user_id'])
+    
+    members = await db.users.find(
+        {"$or": [{"family_id": family_id}, {"parent_id": family_id}, {"user_id": family_id}]},
+        {"_id": 0}
+    ).to_list(100)
+    
+    # Sanitize and enhance member data
+    for member in members:
+        member['picture'] = sanitize_picture(member.get('picture'))
+        member['is_current_user'] = member['user_id'] == current_user['user_id']
+    
+    # Sort: parents first, then by name
+    members.sort(key=lambda x: (0 if x.get('role') == 'parent' else 1, x.get('name', '')))
+    
+    return {"members": members, "total": len(members)}
+
+@api_router.put("/family/members/{member_id}/role")
+async def update_member_role(member_id: str, request: Request, data: dict):
+    """Update a family member's role (parent only)"""
+    current_user = await get_current_user(request)
+    
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can change member roles")
+    
+    new_role = data.get('role')
+    if new_role not in ['parent', 'member', 'child']:
+        raise HTTPException(status_code=400, detail="Invalid role. Must be parent, member, or child")
+    
+    # Get the member
+    member = await db.users.find_one({"user_id": member_id}, {"_id": 0})
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+    
+    # Verify member belongs to same family
+    family_id = current_user.get('family_id') or current_user.get('parent_id', current_user['user_id'])
+    member_family = member.get('family_id') or member.get('parent_id')
+    
+    if member_family != family_id and member.get('user_id') != family_id:
+        raise HTTPException(status_code=403, detail="Member does not belong to your family")
+    
+    # Update role
+    await db.users.update_one(
+        {"user_id": member_id},
+        {"$set": {"role": new_role}}
+    )
+    
+    # Notify the member about role change
+    if member_id != current_user['user_id']:
+        notification_doc = {
+            "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+            "user_id": member_id,
+            "type": "role_change",
+            "title": "Role Updated",
+            "message": f"Your role has been changed to {new_role}",
+            "data": {"new_role": new_role, "changed_by": current_user['user_id']},
+            "read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.notifications.insert_one(notification_doc)
+    
+    return {"success": True, "new_role": new_role}
+
+@api_router.delete("/family/members/{member_id}")
+async def remove_family_member(member_id: str, request: Request):
+    """Remove a member from the family (parent only)"""
+    current_user = await get_current_user(request)
+    
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can remove members")
+    
+    # Can't remove yourself
+    if member_id == current_user['user_id']:
+        raise HTTPException(status_code=400, detail="Cannot remove yourself from the family")
+    
+    # Get the member
+    member = await db.users.find_one({"user_id": member_id}, {"_id": 0})
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+    
+    # Verify member belongs to same family
+    family_id = current_user.get('family_id') or current_user.get('parent_id', current_user['user_id'])
+    member_family = member.get('family_id') or member.get('parent_id')
+    
+    if member_family != family_id:
+        raise HTTPException(status_code=403, detail="Member does not belong to your family")
+    
+    # Remove from family
+    await db.users.update_one(
+        {"user_id": member_id},
+        {"$unset": {"family_id": "", "parent_id": ""}, "$set": {"role": "member"}}
+    )
+    
+    # Notify the removed member
+    notification_doc = {
+        "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+        "user_id": member_id,
+        "type": "family_removed",
+        "title": "Removed from Family",
+        "message": "You have been removed from the family",
+        "data": {"removed_by": current_user['user_id']},
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.notifications.insert_one(notification_doc)
+    
+    return {"success": True, "message": "Member removed from family"}
+
+@api_router.post("/family/invite")
+async def send_family_invite(request: Request, data: dict):
+    """Send an invite link/code to join the family"""
+    current_user = await get_current_user(request)
+    
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can send invites")
+    
+    # Get family info
+    family_id = current_user.get('family_id') or current_user.get('parent_id', current_user['user_id'])
+    family = await db.families.find_one({"family_id": family_id}, {"_id": 0})
+    
+    if not family:
+        # Create family if doesn't exist
+        family_code = generate_family_code()
+        family = {
+            "family_id": family_id,
+            "family_code": family_code,
+            "family_name": f"{current_user.get('name', 'My')}'s Family",
+            "created_by": current_user['user_id'],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "settings": {}
+        }
+        await db.families.insert_one(family)
+    
+    invite_message = data.get('message', '')
+    
+    return {
+        "family_code": family['family_code'],
+        "family_name": family['family_name'],
+        "invite_text": f"Join {family['family_name']} on FamFocus Hub! Use code: {family['family_code']}\n\n{invite_message}".strip()
+    }
+
+@api_router.put("/family/name")
+async def update_family_name(request: Request, data: dict):
+    """Update the family name (parent only)"""
+    current_user = await get_current_user(request)
+    
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can update family name")
+    
+    new_name = data.get('family_name', '').strip()
+    if not new_name:
+        raise HTTPException(status_code=400, detail="Family name is required")
+    
+    family_id = current_user.get('family_id') or current_user.get('parent_id', current_user['user_id'])
+    
+    await db.families.update_one(
+        {"family_id": family_id},
+        {"$set": {"family_name": new_name}}
+    )
+    
+    return {"success": True, "family_name": new_name}
+
+# ============== End Family Management ==============
+
 # Push notification device registration
 @api_router.post("/notifications/register-device")
 async def register_device_for_push(request: Request, data: dict):
