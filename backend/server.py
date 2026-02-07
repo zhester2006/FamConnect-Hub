@@ -5651,7 +5651,7 @@ async def update_shortcuts(request: Request, data: dict):
     
     return {"shortcuts": shortcuts}
 
-# ==================== BUG REPORTS ====================
+# ==================== BUG REPORTS & SUGGESTIONS ====================
 
 @api_router.post("/bug-reports")
 async def submit_bug_report(request: Request, data: dict):
@@ -5660,10 +5660,14 @@ async def submit_bug_report(request: Request, data: dict):
         current_user = await get_current_user(request)
         user_id = current_user['user_id']
         user_role = current_user.get('role', 'unknown')
+        user_email = current_user.get('email', '')
+        user_name = current_user.get('nickname') or current_user.get('name', 'User')
     except:
         # Allow anonymous bug reports if user is not authenticated
         user_id = data.get('user_id', 'anonymous')
         user_role = data.get('user_role', 'unknown')
+        user_email = data.get('email', '')
+        user_name = data.get('name', 'User')
     
     report_id = f"bug_{uuid.uuid4().hex[:12]}"
     
@@ -5671,6 +5675,8 @@ async def submit_bug_report(request: Request, data: dict):
         "report_id": report_id,
         "user_id": user_id,
         "user_role": user_role,
+        "user_email": user_email,
+        "user_name": user_name,
         "description": data.get('description', ''),
         "steps_to_reproduce": data.get('steps_to_reproduce', ''),
         "device_info": data.get('device_info', {}),
@@ -5682,7 +5688,159 @@ async def submit_bug_report(request: Request, data: dict):
     
     await db.bug_reports.insert_one(report_doc)
     
-    return {"report_id": report_id, "message": "Bug report submitted successfully"}
+    # Send email to admin
+    if ADMIN_EMAIL:
+        device_info = data.get('device_info', {})
+        admin_html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #ef4444;">🐛 New Bug Report</h2>
+            <p><strong>Report ID:</strong> {report_id}</p>
+            <p><strong>From:</strong> {user_name} ({user_role})</p>
+            <p><strong>App Version:</strong> {data.get('app_version', '1.0.0')}</p>
+            <hr style="border: 1px solid #e5e7eb;">
+            <h3>Description:</h3>
+            <p style="background: #f3f4f6; padding: 12px; border-radius: 8px;">{data.get('description', 'No description provided')}</p>
+            <h3>Steps to Reproduce:</h3>
+            <p style="background: #f3f4f6; padding: 12px; border-radius: 8px;">{data.get('steps_to_reproduce', 'Not provided')}</p>
+            <h3>Device Info:</h3>
+            <ul>
+                <li>OS: {device_info.get('os', 'Unknown')} {device_info.get('osVersion', '')}</li>
+                <li>Device: {device_info.get('brand', '')} {device_info.get('modelName', '')}</li>
+            </ul>
+        </div>
+        """
+        await send_email_async(ADMIN_EMAIL, f"[FamFocus] Bug Report: {report_id}", admin_html)
+    
+    # Send thank you email to user
+    if user_email:
+        user_html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 30px; border-radius: 12px 12px 0 0;">
+                <h1 style="color: white; margin: 0;">FamFocus Hub</h1>
+            </div>
+            <div style="padding: 30px; background: #ffffff;">
+                <h2 style="color: #1f2937;">Thank You for Your Bug Report! 🙏</h2>
+                <p style="color: #4b5563; line-height: 1.6;">
+                    Hi {user_name},
+                </p>
+                <p style="color: #4b5563; line-height: 1.6;">
+                    We've received your bug report and our team is on it! Your feedback helps us make FamFocus Hub better for everyone.
+                </p>
+                <div style="background: #f0f9ff; padding: 16px; border-radius: 8px; border-left: 4px solid #6366f1;">
+                    <p style="margin: 0; color: #1e40af;"><strong>Report ID:</strong> {report_id}</p>
+                </div>
+                <p style="color: #4b5563; line-height: 1.6; margin-top: 20px;">
+                    We'll investigate this issue and work on a fix. Thank you for helping us improve!
+                </p>
+                <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+                    With gratitude,<br>
+                    <strong>The FamFocus Team</strong> 💜
+                </p>
+            </div>
+        </div>
+        """
+        await send_email_async(user_email, "Thanks for your FamFocus Bug Report!", user_html)
+    
+    return {"report_id": report_id, "message": "Bug report submitted successfully. Thank you!"}
+
+@api_router.post("/suggestions")
+async def submit_suggestion(request: Request, data: dict):
+    """Submit a suggestion/feature request from the mobile app"""
+    try:
+        current_user = await get_current_user(request)
+        user_id = current_user['user_id']
+        user_role = current_user.get('role', 'unknown')
+        user_email = current_user.get('email', '')
+        user_name = current_user.get('nickname') or current_user.get('name', 'User')
+    except:
+        # Allow anonymous suggestions if user is not authenticated
+        user_id = data.get('user_id', 'anonymous')
+        user_role = data.get('user_role', 'unknown')
+        user_email = data.get('email', '')
+        user_name = data.get('name', 'User')
+    
+    suggestion_id = f"sug_{uuid.uuid4().hex[:12]}"
+    
+    suggestion_doc = {
+        "suggestion_id": suggestion_id,
+        "user_id": user_id,
+        "user_role": user_role,
+        "user_email": user_email,
+        "user_name": user_name,
+        "title": data.get('title', ''),
+        "description": data.get('description', ''),
+        "category": data.get('category', 'general'),  # general, feature, improvement, other
+        "app_version": data.get('app_version', '1.0.0'),
+        "status": "new",  # new, under_review, planned, implemented, declined
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.suggestions.insert_one(suggestion_doc)
+    
+    # Send email to admin
+    if ADMIN_EMAIL:
+        admin_html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #10b981;">💡 New Suggestion</h2>
+            <p><strong>Suggestion ID:</strong> {suggestion_id}</p>
+            <p><strong>From:</strong> {user_name} ({user_role})</p>
+            <p><strong>Category:</strong> {data.get('category', 'general').title()}</p>
+            <hr style="border: 1px solid #e5e7eb;">
+            <h3>{data.get('title', 'Untitled Suggestion')}</h3>
+            <p style="background: #f3f4f6; padding: 12px; border-radius: 8px;">{data.get('description', 'No description provided')}</p>
+        </div>
+        """
+        await send_email_async(ADMIN_EMAIL, f"[FamFocus] Suggestion: {data.get('title', suggestion_id)}", admin_html)
+    
+    # Send thank you email to user
+    if user_email:
+        user_html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; border-radius: 12px 12px 0 0;">
+                <h1 style="color: white; margin: 0;">FamFocus Hub</h1>
+            </div>
+            <div style="padding: 30px; background: #ffffff;">
+                <h2 style="color: #1f2937;">We Love Your Idea! 💡</h2>
+                <p style="color: #4b5563; line-height: 1.6;">
+                    Hi {user_name},
+                </p>
+                <p style="color: #4b5563; line-height: 1.6;">
+                    Thank you so much for sharing your suggestion with us! Ideas like yours help shape the future of FamFocus Hub.
+                </p>
+                <div style="background: #ecfdf5; padding: 16px; border-radius: 8px; border-left: 4px solid #10b981;">
+                    <p style="margin: 0 0 8px 0; color: #065f46;"><strong>Your Suggestion:</strong></p>
+                    <p style="margin: 0; color: #047857;">{data.get('title', 'Your suggestion')}</p>
+                </div>
+                <p style="color: #4b5563; line-height: 1.6; margin-top: 20px;">
+                    Our team will review your idea and consider it for future updates. We truly appreciate your input in making FamFocus Hub the best it can be for families everywhere!
+                </p>
+                <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+                    With appreciation,<br>
+                    <strong>The FamFocus Team</strong> 💚
+                </p>
+            </div>
+        </div>
+        """
+        await send_email_async(user_email, "Thanks for your FamFocus Suggestion!", user_html)
+    
+    return {"suggestion_id": suggestion_id, "message": "Suggestion submitted successfully. Thank you for your feedback!"}
+
+@api_router.get("/suggestions")
+async def get_suggestions(request: Request, status: Optional[str] = None, category: Optional[str] = None):
+    """Get suggestions (parent/admin only)"""
+    current_user = await get_current_user(request)
+    
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can view suggestions")
+    
+    query = {}
+    if status:
+        query["status"] = status
+    if category:
+        query["category"] = category
+    
+    suggestions = await db.suggestions.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return {"suggestions": suggestions}
 
 @api_router.get("/bug-reports")
 async def get_bug_reports(request: Request, status: Optional[str] = None):
