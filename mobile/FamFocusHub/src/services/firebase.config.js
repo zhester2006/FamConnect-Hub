@@ -2,13 +2,13 @@
 // Using Firebase Realtime Database for reliable real-time chat
 
 const firebaseConfig = {
-  apiKey: "WRgjuWR4pmKIkLnmXY2uxtE14Iged61qtUGcv_VOFrQ",
+  apiKey: "AIzaSyBY0WHn9JnhNmIygAUDHtIdXHGM5rFLoaM",
   authDomain: "family-hub-app-d9c04.firebaseapp.com",
   projectId: "family-hub-app-d9c04",
   databaseURL: "https://family-hub-app-d9c04-default-rtdb.firebaseio.com",
-  storageBucket: "family-hub-app-d9c04.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:android:abcdef123456"
+  storageBucket: "family-hub-app-d9c04.firebasestorage.app",
+  messagingSenderId: "348288030353",
+  appId: "1:348288030353:android:f0585b5ba679b8773ed130"
 };
 
 export default firebaseConfig;
