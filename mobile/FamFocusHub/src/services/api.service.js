@@ -259,9 +259,10 @@ class ApiService {
     return this.post(API_ENDPOINTS.REDEEM_REWARD(rewardId), {});
   }
 
-  // Leaderboard (with caching)
-  async getLeaderboard() {
-    return this.get(API_ENDPOINTS.LEADERBOARD, 'leaderboard');
+  // Leaderboard (with caching and timeframe filter)
+  async getLeaderboard(timeframe = 'all-time') {
+    const url = `${API_ENDPOINTS.LEADERBOARD}?timeframe=${timeframe}`;
+    return this.get(url, `leaderboard_${timeframe}`);
   }
 
   // Weather (short cache)
