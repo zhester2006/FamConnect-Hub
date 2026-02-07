@@ -332,6 +332,7 @@ const styles = StyleSheet.create({
   deleteBtn: { padding: 8 },
   approveBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#10b981', justifyContent: 'center', alignItems: 'center' },
   rejectBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#ef4444', justifyContent: 'center', alignItems: 'center' },
+  pendingBadge: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(245, 158, 11, 0.2)', justifyContent: 'center', alignItems: 'center' },
   
   // Empty State
   emptyCard: { backgroundColor: 'rgba(30, 27, 75, 0.5)', borderRadius: 20, padding: 40, alignItems: 'center' },
