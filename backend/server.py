@@ -634,14 +634,18 @@ async def get_chores(request: Request, date: Optional[str] = None):
         {"$or": [{"user_id": family_id}, {"parent_id": family_id}]},
         {"_id": 0, "user_id": 1, "name": 1, "nickname": 1, "picture": 1, "role": 1}
     ).to_list(100)
-    member_map = {m['user_id']: m for m in family_members}
+    # Sanitize pictures to prevent large base64 data in responses
+    member_map = {}
+    for m in family_members:
+        m['picture'] = sanitize_picture(m.get('picture'))
+        member_map[m['user_id']] = m
     
     query = {"$or": [{"family_id": family_id}, {"created_by": current_user['user_id']}, {"assigned_to": current_user['user_id']}]}
     if date:
         query["scheduled_date"] = date
     chores = await db.chores.find(query, {"_id": 0}).to_list(1000)
     
-    # Enrich chores with assignee details
+    # Enrich chores with assignee details (already sanitized)
     for chore in chores:
         assignee_id = chore.get('assigned_to')
         if assignee_id and assignee_id in member_map:
