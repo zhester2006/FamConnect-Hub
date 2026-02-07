@@ -6,6 +6,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
+import PixieAssistant from '../components/PixieAssistant';
 
 // Screens
 import LoginScreen from '../screens/LoginScreen';
