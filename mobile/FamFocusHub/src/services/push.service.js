@@ -154,14 +154,17 @@ class PushNotificationService {
   }
 
   async cancelAllNotifications() {
+    if (!notificationsAvailable || !Notifications) return;
     await Notifications.cancelAllScheduledNotificationsAsync();
   }
 
   async getBadgeCount() {
+    if (!notificationsAvailable || !Notifications) return 0;
     return await Notifications.getBadgeCountAsync();
   }
 
   async setBadgeCount(count) {
+    if (!notificationsAvailable || !Notifications) return;
     await Notifications.setBadgeCountAsync(count);
   }
 
