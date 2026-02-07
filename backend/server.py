@@ -3224,6 +3224,146 @@ async def get_analytics_trends(request: Request, days: int = 30):
     
     return {"trends": trends, "period_days": days}
 
+# ==================== PANTRY SYSTEM ====================
+
+@api_router.get("/pantry")
+async def get_pantry_items(request: Request):
+    """Get all pantry items for the family"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    items = await db.pantry.find(
+        {"family_id": family_id},
+        {"_id": 0}
+    ).sort("name", 1).to_list(500)
+    
+    return {"items": items}
+
+@api_router.post("/pantry")
+async def add_pantry_item(request: Request, data: dict):
+    """Add an item to the pantry"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    item_id = f"pantry_{uuid.uuid4().hex[:12]}"
+    item_doc = {
+        "item_id": item_id,
+        "family_id": family_id,
+        "name": data.get('name'),
+        "category": data.get('category', 'other'),
+        "quantity": data.get('quantity', 1),
+        "added_by": current_user['user_id'],
+        "added_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.pantry.insert_one(item_doc)
+    item_doc.pop('_id', None)
+    
+    return {"item": item_doc}
+
+@api_router.put("/pantry/{item_id}")
+async def update_pantry_item(item_id: str, request: Request, data: dict):
+    """Update a pantry item"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    update_fields = {}
+    if 'quantity' in data:
+        update_fields['quantity'] = data['quantity']
+    if 'category' in data:
+        update_fields['category'] = data['category']
+    if 'name' in data:
+        update_fields['name'] = data['name']
+    
+    if update_fields:
+        await db.pantry.update_one(
+            {"item_id": item_id, "family_id": family_id},
+            {"$set": update_fields}
+        )
+    
+    return {"success": True}
+
+@api_router.delete("/pantry/{item_id}")
+async def delete_pantry_item(item_id: str, request: Request):
+    """Remove an item from the pantry"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    result = await db.pantry.delete_one({"item_id": item_id, "family_id": family_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    return {"success": True}
+
+@api_router.post("/pantry/ai-suggestions")
+async def get_ai_pantry_suggestions(request: Request, data: dict):
+    """Get AI suggestions for pantry items based on current inventory"""
+    current_user = await get_current_user(request)
+    pantry_items = data.get('items', [])
+    
+    if not pantry_items:
+        return {"suggestions": ["Milk", "Eggs", "Bread", "Butter", "Chicken", "Rice", "Vegetables"]}
+    
+    # Build a list of current items
+    current_items = [item.get('name', '') for item in pantry_items if item.get('name')]
+    
+    try:
+        from emergentintegrations.llm.chat import chat, UserMessage
+        
+        prompt = f"""Based on this pantry inventory: {', '.join(current_items)}
+
+Suggest 5-7 essential items that would complement this pantry for balanced meal preparation.
+Consider common staples that might be missing.
+Return only item names, one per line, no numbering or explanations."""
+        
+        response = await asyncio.to_thread(
+            chat,
+            model="gpt-5.2",
+            messages=[UserMessage(content=prompt)]
+        )
+        
+        suggestions = [line.strip() for line in response.content.split('\n') if line.strip()]
+        return {"suggestions": suggestions[:7]}
+    except Exception as e:
+        print(f"AI pantry suggestions error: {e}")
+        # Fallback suggestions
+        common_items = ["Milk", "Eggs", "Bread", "Butter", "Cheese", "Chicken", "Rice", "Pasta", "Onions", "Garlic"]
+        missing = [item for item in common_items if item.lower() not in [i.lower() for i in current_items]]
+        return {"suggestions": missing[:7]}
+
+@api_router.post("/pantry/ai-shopping")
+async def get_ai_shopping_suggestions(request: Request, data: dict):
+    """Get AI suggestions for shopping based on pantry and recipes"""
+    current_user = await get_current_user(request)
+    pantry_items = data.get('items', [])
+    
+    current_items = [item.get('name', '') for item in pantry_items if item.get('name')]
+    
+    try:
+        from emergentintegrations.llm.chat import chat, UserMessage
+        
+        prompt = f"""Based on this pantry inventory: {', '.join(current_items) if current_items else 'Empty pantry'}
+
+What essential items should be on the shopping list to prepare balanced meals for a week?
+Consider protein, vegetables, dairy, and staples.
+Return only item names, one per line, no numbering or explanations.
+Only list items NOT already in the pantry."""
+        
+        response = await asyncio.to_thread(
+            chat,
+            model="gpt-5.2",
+            messages=[UserMessage(content=prompt)]
+        )
+        
+        suggestions = [line.strip() for line in response.content.split('\n') if line.strip()]
+        # Filter out items already in pantry
+        suggestions = [s for s in suggestions if s.lower() not in [i.lower() for i in current_items]]
+        return {"suggestions": suggestions[:10]}
+    except Exception as e:
+        print(f"AI shopping suggestions error: {e}")
+        return {"suggestions": ["Milk", "Eggs", "Bread", "Vegetables", "Chicken"]}
+
 # ==================== DATA EXPORT ====================
 
 @api_router.get("/export/chores")
