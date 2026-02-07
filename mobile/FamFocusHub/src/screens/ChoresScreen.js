@@ -733,7 +733,7 @@ export default function ChoresScreen({ navigation }) {
                   <Text style={styles.repeatLabel}>Repeat Daily</Text>
                 </View>
                 <Switch
-                  value={choreForm.isRepeat}
+                  value={!!choreForm.isRepeat}
                   onValueChange={(val) => setChoreForm({ ...choreForm, isRepeat: val })}
                   trackColor={{ false: '#4b5563', true: primaryColor }}
                   thumbColor="#fff"
