@@ -117,13 +117,33 @@ export default function CalendarScreen({ navigation }) {
         event_type: eventType,
       });
       
-      Alert.alert('Success', 'Event created!');
+      Alert.alert('Success', user?.role === 'child' 
+        ? 'Event submitted for parent approval!' 
+        : 'Event created!');
       setShowAddModal(false);
       setEventTitle('');
       setEventTime('');
       fetchEvents();
     } catch (error) {
       Alert.alert('Error', 'Failed to create event');
+    }
+  };
+
+  const handleApproveEvent = async (event, approved) => {
+    setProcessing(event.event_id);
+    try {
+      await apiService.put(`/events/${event.event_id}/approve`, { approved });
+      Alert.alert(
+        approved ? 'Approved!' : 'Denied',
+        approved 
+          ? `"${event.title}" has been added to the calendar!` 
+          : 'Event request has been denied.'
+      );
+      fetchEvents();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to process event');
+    } finally {
+      setProcessing(null);
     }
   };
 
