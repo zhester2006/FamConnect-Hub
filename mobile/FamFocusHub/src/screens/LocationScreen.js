@@ -651,7 +651,11 @@ export default function LocationScreen({ navigation }) {
                     <View style={styles.childActions}>
                       <TouchableOpacity 
                         style={styles.actionButton}
-                        onPress={() => openMaps(lastLocation.lat, lastLocation.lng, child.name)}
+                        onPress={() => openMaps(
+                          lastLocation.lat || lastLocation.latitude, 
+                          lastLocation.lng || lastLocation.longitude, 
+                          child.name
+                        )}
                       >
                         <Ionicons name="map-outline" size={16} color="#818cf8" />
                         <Text style={styles.actionButtonText}>View on Map</Text>
