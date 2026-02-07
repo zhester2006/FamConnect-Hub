@@ -202,11 +202,19 @@ export function ThemeProvider({ children }) {
   };
 
   // Switch to standard mode
-  const enableStandardMode = () => {
+  const enableStandardMode = async () => {
     console.log('enableStandardMode called');
     setIsCustomMode(false);
+    setAutoMode(false);
     setTheme(STANDARD_THEME);
-    AsyncStorage.setItem('themeMode', 'standard');
+    try {
+      await AsyncStorage.setItem('themeMode', 'standard');
+      await AsyncStorage.setItem('autoThemeMode', 'false');
+      await AsyncStorage.setItem('familyTheme', JSON.stringify(STANDARD_THEME));
+      console.log('Standard mode saved');
+    } catch (error) {
+      console.error('Failed to save standard mode:', error);
+    }
     console.log('Standard mode enabled');
   };
 
