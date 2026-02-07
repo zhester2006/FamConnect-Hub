@@ -14,13 +14,16 @@ export default function CalendarScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [events, setEvents] = useState([]);
+  const [pendingEvents, setPendingEvents] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedDayEvents, setSelectedDayEvents] = useState([]);
+  const [processing, setProcessing] = useState(null);
   
   // Modals
   const [showDayModal, setShowDayModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showPendingModal, setShowPendingModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   
   // Form data
@@ -30,14 +33,20 @@ export default function CalendarScreen({ navigation }) {
 
   const fetchEvents = useCallback(async () => {
     try {
-      const data = await apiService.getEvents();
-      setEvents(data.events || []);
+      const [eventsData, pendingData] = await Promise.all([
+        apiService.getEvents(),
+        user?.role === 'parent' 
+          ? apiService.get('/events/pending').catch(() => ({ events: [] }))
+          : { events: [] }
+      ]);
+      setEvents(eventsData.events || []);
+      setPendingEvents(pendingData.events || []);
     } catch (error) {
       console.error('Failed to fetch events:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.role]);
 
   useEffect(() => {
     fetchEvents();
