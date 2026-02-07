@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   View, Text, StyleSheet, ScrollView, TouchableOpacity, 
   RefreshControl, ActivityIndicator, Modal, TextInput, Alert,
-  Linking, Platform, Dimensions, Switch, AppState
+  Linking, Platform, Dimensions, Switch, AppState, Image
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,7 +14,7 @@ import locationService from '../services/location.service';
 import batteryService from '../services/battery.service';
 import MedalEmblem from '../components/MedalEmblem';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Haversine formula to calculate distance between two coordinates
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
