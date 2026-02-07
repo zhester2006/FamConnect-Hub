@@ -16,7 +16,7 @@ import {
 } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
-import { getFirebaseApp, getFirebaseAuth, initializeFirebase } from './firebase.init';
+import { getFirebaseApp, initializeFirebaseAuth } from './firebase.init';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -37,10 +37,9 @@ class FirebaseAuthService {
         return true;
       }
 
-      // Use centralized Firebase initialization
-      initializeFirebase();
+      // Use centralized Firebase initialization with async auth init
       this.app = getFirebaseApp();
-      this.auth = getFirebaseAuth();
+      this.auth = await initializeFirebaseAuth();
       
       if (!this.auth) {
         console.error('Firebase Auth not available');
