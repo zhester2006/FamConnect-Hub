@@ -405,16 +405,13 @@ export default function ChatScreen({ navigation }) {
       >
         <View style={[styles.messageContainer, isOwn && styles.ownMessageContainer]}>
           {!isOwn && (
-            <View style={styles.avatarContainer}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{senderName?.charAt(0)}</Text>
-              </View>
-              {userRank && userRank <= 3 && (
-                <View style={styles.medalPosition}>
-                  <MedalEmblem rank={userRank} size="tiny" />
-                </View>
-              )}
-            </View>
+            <ProfileAvatar
+              picture={item.sender_picture || item.user_picture}
+              name={senderName}
+              size="small"
+              rank={userRank}
+              showMedal={userRank && userRank <= 3}
+            />
           )}
           <View style={[styles.messageBubble, isOwn ? styles.ownBubble : styles.otherBubble]}>
             {!isOwn && <Text style={styles.senderName}>{senderName}</Text>}
