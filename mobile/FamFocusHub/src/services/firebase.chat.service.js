@@ -1,5 +1,5 @@
 // Firebase Chat Service for FamFocus Hub
-// Replaces WebSocket with Firebase Realtime Database for reliable messaging
+// Uses Firebase Realtime Database for reliable messaging
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
@@ -14,9 +14,11 @@ import {
   limitToLast,
   serverTimestamp,
   onDisconnect,
-  update
+  update,
+  connectDatabaseEmulator
 } from 'firebase/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 import firebaseConfig from './firebase.config';
 
 class FirebaseChatService {
@@ -33,24 +35,67 @@ class FirebaseChatService {
     this.unsubscribers = [];
     this.messageCallback = null;
     this.typingCallback = null;
+    this.connectionCallback = null;
     this.isInitialized = false;
+    this.isConnected = false;
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
+    this.reconnectTimer = null;
+    this.networkListener = null;
   }
 
   // Initialize Firebase
   async initialize() {
     try {
+      // Check if already initialized
+      if (this.isInitialized && this.db) {
+        console.log('Firebase already initialized');
+        return true;
+      }
+
+      // Initialize app
       if (!getApps().length) {
         this.app = initializeApp(firebaseConfig);
       } else {
         this.app = getApp();
       }
+      
       this.db = getDatabase(this.app);
       this.isInitialized = true;
-      console.log('Firebase initialized successfully');
+      
+      // Setup network listener for auto-reconnect
+      this.setupNetworkListener();
+      
+      console.log('Firebase chat service initialized');
       return true;
     } catch (error) {
       console.error('Firebase initialization error:', error);
+      this.isInitialized = false;
       return false;
+    }
+  }
+
+  // Setup network listener for auto-reconnect
+  setupNetworkListener() {
+    if (this.networkListener) return;
+    
+    try {
+      this.networkListener = NetInfo.addEventListener(state => {
+        const wasConnected = this.isConnected;
+        
+        if (state.isConnected && !wasConnected && this.familyId) {
+          console.log('Network reconnected, re-establishing Firebase connection');
+          this.reconnect();
+        } else if (!state.isConnected && wasConnected) {
+          console.log('Network disconnected');
+          this.isConnected = false;
+          if (this.connectionCallback) {
+            this.connectionCallback(false);
+          }
+        }
+      });
+    } catch (error) {
+      console.warn('Failed to setup network listener:', error);
     }
   }
 
@@ -61,100 +106,178 @@ class FirebaseChatService {
     this.userPicture = userPicture;
     this.familyId = familyId;
     
-    if (this.isInitialized && familyId) {
+    if (this.isInitialized && familyId && this.db) {
       this.messagesRef = ref(this.db, `chats/${familyId}/messages`);
       this.typingRef = ref(this.db, `chats/${familyId}/typing`);
       this.presenceRef = ref(this.db, `chats/${familyId}/presence/${userId}`);
-      
-      // Set online presence
-      this.setOnlinePresence();
     }
   }
 
   // Set online presence with disconnect handling
   setOnlinePresence() {
-    if (!this.presenceRef) return;
+    if (!this.presenceRef || !this.db) return;
     
-    set(this.presenceRef, {
-      online: true,
-      lastSeen: serverTimestamp(),
-      name: this.userName
-    });
-    
-    // Set offline when disconnected
-    onDisconnect(this.presenceRef).set({
-      online: false,
-      lastSeen: serverTimestamp(),
-      name: this.userName
-    });
+    try {
+      set(this.presenceRef, {
+        online: true,
+        lastSeen: serverTimestamp(),
+        name: this.userName,
+        picture: this.userPicture
+      });
+      
+      // Set offline when disconnected
+      onDisconnect(this.presenceRef).set({
+        online: false,
+        lastSeen: serverTimestamp(),
+        name: this.userName
+      });
+    } catch (error) {
+      console.warn('Failed to set online presence:', error);
+    }
   }
 
   // Connect to chat and listen for messages
-  connect(onMessage, onTyping) {
-    if (!this.isInitialized || !this.messagesRef) {
+  connect(onMessage, onTyping, onConnection) {
+    if (!this.isInitialized || !this.messagesRef || !this.db) {
       console.log('Firebase not initialized or no family set');
+      if (onConnection) onConnection(false);
       return false;
     }
 
     this.messageCallback = onMessage;
     this.typingCallback = onTyping;
+    this.connectionCallback = onConnection;
 
-    // Listen for new messages (last 100)
-    const messagesQuery = query(
-      this.messagesRef,
-      orderByChild('timestamp'),
-      limitToLast(100)
-    );
+    try {
+      // Clear any existing listeners
+      this.clearListeners();
 
-    const unsubMessages = onValue(messagesQuery, (snapshot) => {
-      const messages = [];
-      snapshot.forEach((childSnapshot) => {
-        const message = childSnapshot.val();
-        messages.push({
-          ...message,
-          message_id: childSnapshot.key,
-        });
-      });
-      
-      // Sort by timestamp
-      messages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-      
-      if (this.messageCallback) {
-        this.messageCallback(messages);
-      }
-    }, (error) => {
-      console.error('Error listening to messages:', error);
-    });
-
-    this.unsubscribers.push(() => off(messagesQuery));
-
-    // Listen for typing indicators
-    if (this.typingRef && onTyping) {
-      const unsubTyping = onValue(this.typingRef, (snapshot) => {
-        const typingUsers = [];
-        snapshot.forEach((childSnapshot) => {
-          const data = childSnapshot.val();
-          if (data.isTyping && childSnapshot.key !== this.userId) {
-            typingUsers.push(data.name || 'Someone');
-          }
-        });
+      // Listen for connection state
+      const connectedRef = ref(this.db, '.info/connected');
+      const connectedUnsub = onValue(connectedRef, (snapshot) => {
+        const connected = snapshot.val() === true;
+        this.isConnected = connected;
+        this.reconnectAttempts = 0; // Reset on successful connection
         
-        if (this.typingCallback) {
-          this.typingCallback(typingUsers);
+        if (connected) {
+          console.log('Firebase connected');
+          this.setOnlinePresence();
+        } else {
+          console.log('Firebase disconnected');
+        }
+        
+        if (this.connectionCallback) {
+          this.connectionCallback(connected);
         }
       });
+      this.unsubscribers.push(() => off(connectedRef));
 
-      this.unsubscribers.push(() => off(this.typingRef));
+      // Listen for new messages (last 100)
+      const messagesQuery = query(
+        this.messagesRef,
+        orderByChild('timestamp'),
+        limitToLast(100)
+      );
+
+      const messagesUnsub = onValue(messagesQuery, (snapshot) => {
+        const messages = [];
+        snapshot.forEach((childSnapshot) => {
+          const message = childSnapshot.val();
+          messages.push({
+            ...message,
+            message_id: childSnapshot.key,
+          });
+        });
+        
+        // Sort by timestamp
+        messages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+        
+        if (this.messageCallback) {
+          this.messageCallback(messages);
+        }
+      }, (error) => {
+        console.error('Error listening to messages:', error);
+        this.handleConnectionError(error);
+      });
+
+      this.unsubscribers.push(() => off(messagesQuery));
+
+      // Listen for typing indicators
+      if (this.typingRef && onTyping) {
+        const typingUnsub = onValue(this.typingRef, (snapshot) => {
+          const typingUsers = [];
+          snapshot.forEach((childSnapshot) => {
+            const data = childSnapshot.val();
+            if (data.isTyping && childSnapshot.key !== this.userId) {
+              typingUsers.push(data.name || 'Someone');
+            }
+          });
+          
+          if (this.typingCallback) {
+            this.typingCallback(typingUsers);
+          }
+        }, (error) => {
+          console.warn('Error listening to typing:', error);
+        });
+
+        this.unsubscribers.push(() => off(this.typingRef));
+      }
+
+      console.log('Firebase chat listeners established');
+      return true;
+    } catch (error) {
+      console.error('Error connecting to Firebase chat:', error);
+      this.handleConnectionError(error);
+      return false;
     }
+  }
 
-    console.log('Firebase chat connected');
-    return true;
+  // Handle connection errors with retry logic
+  handleConnectionError(error) {
+    console.error('Firebase connection error:', error);
+    
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      this.reconnectAttempts++;
+      const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+      
+      console.log(`Attempting reconnect ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`);
+      
+      if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = setTimeout(() => this.reconnect(), delay);
+    } else {
+      console.error('Max reconnect attempts reached');
+      if (this.connectionCallback) {
+        this.connectionCallback(false);
+      }
+    }
+  }
+
+  // Reconnect to chat
+  reconnect() {
+    if (this.messageCallback || this.typingCallback) {
+      console.log('Reconnecting to Firebase chat...');
+      this.connect(this.messageCallback, this.typingCallback, this.connectionCallback);
+    }
+  }
+
+  // Clear all listeners
+  clearListeners() {
+    for (const unsub of this.unsubscribers) {
+      try {
+        unsub();
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+    }
+    this.unsubscribers = [];
   }
 
   // Send a message
   async sendMessage(content, type = 'text', mediaUrl = null) {
-    if (!this.messagesRef || !this.userId) {
+    if (!this.messagesRef || !this.userId || !this.db) {
       console.error('Cannot send message: not connected');
+      // Queue for offline sending
+      await this.queueOfflineMessage(content, type, mediaUrl);
       return null;
     }
 
@@ -168,7 +291,7 @@ class FirebaseChatService {
         sender_name: this.userName,
         sender_picture: this.userPicture,
         timestamp: Date.now(),
-        read_by: [this.userId],
+        read_by: { [this.userId]: true },
         reactions: {},
       };
 
@@ -202,7 +325,7 @@ class FirebaseChatService {
 
   // Add reaction to a message
   async addReaction(messageId, emoji) {
-    if (!this.messagesRef || !this.userId) return;
+    if (!this.db || !this.userId || !this.familyId) return;
 
     try {
       const reactionRef = ref(this.db, `chats/${this.familyId}/messages/${messageId}/reactions/${this.userId}`);
@@ -214,7 +337,7 @@ class FirebaseChatService {
 
   // Remove reaction from a message
   async removeReaction(messageId) {
-    if (!this.messagesRef || !this.userId) return;
+    if (!this.db || !this.userId || !this.familyId) return;
 
     try {
       const reactionRef = ref(this.db, `chats/${this.familyId}/messages/${messageId}/reactions/${this.userId}`);
@@ -226,7 +349,7 @@ class FirebaseChatService {
 
   // Mark messages as read
   async markAsRead(messageIds) {
-    if (!this.messagesRef || !this.userId) return;
+    if (!this.db || !this.userId || !this.familyId) return;
 
     try {
       const updates = {};
@@ -241,24 +364,30 @@ class FirebaseChatService {
 
   // Set typing indicator
   setTyping(isTyping) {
-    if (!this.typingRef || !this.userId) return;
+    if (!this.db || !this.userId || !this.familyId) return;
 
-    const userTypingRef = ref(this.db, `chats/${this.familyId}/typing/${this.userId}`);
-    set(userTypingRef, {
-      isTyping,
-      name: this.userName,
-      timestamp: Date.now()
-    });
+    try {
+      const userTypingRef = ref(this.db, `chats/${this.familyId}/typing/${this.userId}`);
+      set(userTypingRef, {
+        isTyping,
+        name: this.userName,
+        timestamp: Date.now()
+      });
 
-    // Auto-clear typing after 3 seconds
-    if (isTyping) {
-      setTimeout(() => {
-        set(userTypingRef, {
-          isTyping: false,
-          name: this.userName,
-          timestamp: Date.now()
-        });
-      }, 3000);
+      // Auto-clear typing after 3 seconds
+      if (isTyping) {
+        setTimeout(() => {
+          if (this.db && this.userId && this.familyId) {
+            set(userTypingRef, {
+              isTyping: false,
+              name: this.userName,
+              timestamp: Date.now()
+            });
+          }
+        }, 3000);
+      }
+    } catch (error) {
+      console.warn('Error setting typing indicator:', error);
     }
   }
 
@@ -275,6 +404,7 @@ class FirebaseChatService {
         familyId: this.familyId
       });
       await AsyncStorage.setItem(queueKey, JSON.stringify(queue));
+      console.log('Message queued for offline sending');
     } catch (error) {
       console.error('Error queueing offline message:', error);
     }
@@ -285,6 +415,10 @@ class FirebaseChatService {
     try {
       const queueKey = 'offlineMessageQueue';
       const queue = JSON.parse(await AsyncStorage.getItem(queueKey) || '[]');
+      
+      if (queue.length === 0) return;
+      
+      console.log(`Syncing ${queue.length} offline messages`);
       
       for (const msg of queue) {
         if (msg.familyId === this.familyId) {
@@ -302,7 +436,7 @@ class FirebaseChatService {
 
   // Get message history (for initial load)
   async getMessageHistory(limit = 50) {
-    if (!this.messagesRef) return [];
+    if (!this.messagesRef || !this.db) return [];
 
     try {
       const messagesQuery = query(
@@ -332,33 +466,47 @@ class FirebaseChatService {
 
   // Disconnect and cleanup
   disconnect() {
+    // Clear reconnect timer
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
     // Remove all listeners
-    for (const unsub of this.unsubscribers) {
+    this.clearListeners();
+
+    // Set offline presence
+    if (this.presenceRef && this.db) {
       try {
-        unsub();
+        set(this.presenceRef, {
+          online: false,
+          lastSeen: serverTimestamp(),
+          name: this.userName
+        });
       } catch (e) {
         // Ignore errors during cleanup
       }
     }
-    this.unsubscribers = [];
 
-    // Set offline presence
-    if (this.presenceRef) {
-      set(this.presenceRef, {
-        online: false,
-        lastSeen: serverTimestamp(),
-        name: this.userName
-      });
-    }
-
+    this.isConnected = false;
     this.messageCallback = null;
     this.typingCallback = null;
+    this.connectionCallback = null;
     console.log('Firebase chat disconnected');
   }
 
-  // Reset service
+  // Reset service completely
   reset() {
     this.disconnect();
+    
+    // Remove network listener
+    if (this.networkListener) {
+      try {
+        this.networkListener();
+      } catch (e) {}
+      this.networkListener = null;
+    }
+    
     this.familyId = null;
     this.userId = null;
     this.userName = null;
@@ -366,6 +514,18 @@ class FirebaseChatService {
     this.messagesRef = null;
     this.typingRef = null;
     this.presenceRef = null;
+    this.reconnectAttempts = 0;
+  }
+
+  // Get connection status
+  getConnectionStatus() {
+    return {
+      isInitialized: this.isInitialized,
+      isConnected: this.isConnected,
+      reconnectAttempts: this.reconnectAttempts,
+      familyId: this.familyId,
+      userId: this.userId
+    };
   }
 }
 
