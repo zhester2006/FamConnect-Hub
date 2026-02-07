@@ -1716,3 +1716,26 @@ Update Firebase Realtime Database rules in Firebase Console to:
 
 **Key Changes:**
 - `/app/mobile/FamFocusHub/src/screens/FamilyWallScreen.js` - Optimistic UI updates for likes/votes
+
+### Session 41 Update - Approval Workflows (Feb 2026) ✅
+
+**Points Auto-Update Fix:**
+- Added `await refreshUser()` call to RewardsScreen after reward approval
+- Child's points now update in real-time when rewards are approved
+
+**Shopping List Improvements:**
+- Children now see their pending items with "Awaiting Approval" status
+- Parents see approve/deny buttons with "Pending Approval" section
+- UI shows hourglass icon for children's pending items
+
+**Calendar Event Approval System (NEW):**
+- Backend endpoints:
+  - `PUT /api/events/{event_id}/approve` - Approve/deny events
+  - `GET /api/events/pending` - Get pending events (parent only)
+- Events from children automatically get `status: "pending"`
+- Parents receive notifications when events are approved/denied
+
+**Key Files Modified:**
+- `/app/backend/server.py` - Added event approval endpoints
+- `/app/mobile/FamFocusHub/src/screens/RewardsScreen.js` - Points refresh
+- `/app/mobile/FamFocusHub/src/screens/ShoppingListScreen.js` - Pending UI for children
