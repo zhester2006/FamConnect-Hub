@@ -1113,5 +1113,54 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 **Remaining P2 Issues:**
 - [ ] Location map picker not showing image (P2)
 - [ ] Native module errors (crypto, SQLITE_FULL) (P2)
-- [ ] Profile pictures as icons throughout app (P2)
+- [ ] Profile pictures as icons throughout app (P2) - PARTIALLY DONE
+
+### Session 33 - P2 Fixes, AI Integration & Quick Actions (Feb 2026) ✅
+
+**New Features Implemented:**
+
+1. **Quick Actions Widget (Parents Only)**
+   - Award/Deduct points directly from home screen
+   - Send quick messages to family
+   - View and approve pending chores/shopping items
+   - File: `/app/mobile/FamFocusHub/src/components/QuickActionsWidget.js`
+
+2. **AI-Powered Meal Planning with Shopping Integration**
+   - Three new AI endpoints: `/ai/meal-plan`, `/ai/chore-tips`, `/ai/family-activity`
+   - Structured JSON responses with ingredients, steps, tips
+   - One-click "Add All" to shopping list feature
+   - Graphical ingredient cards with category icons
+   - File: `/app/mobile/FamFocusHub/src/components/AIMealCard.js`
+
+3. **Profile Avatar Component**
+   - Reusable avatar component with medal support
+   - Color-coded initials when no picture
+   - Multiple sizes (tiny, small, medium, large, xlarge)
+   - File: `/app/mobile/FamFocusHub/src/components/ProfileAvatar.js`
+
+4. **Improved Firebase Chat Service**
+   - Better connection handling with auto-reconnect
+   - Network listener for connection state changes
+   - Exponential backoff for reconnection attempts
+   - Online presence with disconnect handling
+   - File: `/app/mobile/FamFocusHub/src/services/firebase.chat.service.js`
+
+**Backend API Additions:**
+- `POST /api/ai/meal-plan` - Structured meal suggestions with ingredients
+- `POST /api/ai/chore-tips` - Age-appropriate tips for chores
+- `POST /api/ai/family-activity` - Family activity suggestions
+
+**Testing Results:**
+- All 23 tests passed (100%)
+- Test report: `/app/test_reports/iteration_15.json`
+
+**Key Files Modified/Created:**
+- `/app/mobile/FamFocusHub/src/components/QuickActionsWidget.js` - NEW
+- `/app/mobile/FamFocusHub/src/components/AIMealCard.js` - NEW
+- `/app/mobile/FamFocusHub/src/components/ProfileAvatar.js` - NEW
+- `/app/mobile/FamFocusHub/src/screens/HomeHubScreen.js` - Added QuickActionsWidget
+- `/app/mobile/FamFocusHub/src/screens/DinnerPlannerScreen.js` - AI meal modal
+- `/app/mobile/FamFocusHub/src/screens/ChoresScreen.js` - ProfileAvatar integration
+- `/app/mobile/FamFocusHub/src/services/firebase.chat.service.js` - Improved reconnection
+- `/app/backend/server.py` - New AI endpoints
 
