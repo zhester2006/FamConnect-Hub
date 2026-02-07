@@ -1739,3 +1739,21 @@ Update Firebase Realtime Database rules in Firebase Console to:
 - `/app/backend/server.py` - Added event approval endpoints
 - `/app/mobile/FamFocusHub/src/screens/RewardsScreen.js` - Points refresh
 - `/app/mobile/FamFocusHub/src/screens/ShoppingListScreen.js` - Pending UI for children
+
+### Session 41 Update - Calendar Approval UI (Feb 2026) ✅
+
+**Calendar Screen Updates for Event Approval:**
+- Added pending events counter badge in header (parents only)
+- New "Pending Event Requests" modal with approve/deny buttons
+- Events from children show as pending until approved
+- Notifications sent to children when events approved/denied
+
+**Key Files Modified:**
+- `/app/mobile/FamFocusHub/src/screens/CalendarScreen.js` - Full pending events UI
+
+**Summary of All Approval Workflows:**
+1. **Shopping List:** Items from children → pending → parent approves
+2. **Calendar Events:** Events from children → pending → parent approves  
+3. **Rewards Redemption:** Child requests → pending → parent approves (already existed)
+4. **Chore Completion:** Child marks done → parent approves (already existed)
+5. **Reading Logs:** Child submits → parent approves (already existed)
