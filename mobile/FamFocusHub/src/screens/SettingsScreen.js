@@ -463,6 +463,70 @@ export default function SettingsScreen({ navigation }) {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Bug Report Modal */}
+      <Modal
+        visible={showBugReport}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowBugReport(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Report Bug/Glitch</Text>
+              <TouchableOpacity onPress={() => setShowBugReport(false)}>
+                <Ionicons name="close" size={24} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalSubtext}>
+              Help us improve FamFocus Hub by reporting any bugs or glitches you encounter.
+            </Text>
+
+            <Text style={styles.inputLabel}>Describe the issue *</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="What happened? What were you trying to do?"
+              placeholderTextColor="#6b7280"
+              multiline
+              numberOfLines={4}
+              value={bugDescription}
+              onChangeText={setBugDescription}
+            />
+
+            <Text style={styles.inputLabel}>Steps to reproduce (optional)</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="1. Tap on...\n2. Then..."
+              placeholderTextColor="#6b7280"
+              multiline
+              numberOfLines={3}
+              value={bugSteps}
+              onChangeText={setBugSteps}
+            />
+
+            <Text style={styles.infoText}>
+              Device info and recent logs will be included automatically to help diagnose the issue.
+            </Text>
+
+            <TouchableOpacity 
+              style={[styles.submitButton, submittingBug && styles.submitButtonDisabled]}
+              onPress={handleSubmitBugReport}
+              disabled={submittingBug}
+            >
+              {submittingBug ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="send" size={18} color="#fff" />
+                  <Text style={styles.submitButtonText}>Submit Report</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </AnimatedBackground>
   );
 }
