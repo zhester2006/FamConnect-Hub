@@ -32,6 +32,7 @@ import WidgetSettingsScreen from '../screens/WidgetSettingsScreen';
 import PantryScreen from '../screens/PantryScreen';
 import CheckinLogScreen from '../screens/CheckinLogScreen';
 import RecipesScreen from '../screens/RecipesScreen';
+import FamilyManagementScreen from '../screens/FamilyManagementScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
