@@ -567,14 +567,32 @@ export default function RewardsScreen({ navigation }) {
         </View>
       </Modal>
 
-      {/* Award Points Modal */}
+      {/* Award/Deduct Points Modal */}
       <Modal visible={showAwardModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Award Points</Text>
-              <TouchableOpacity onPress={() => setShowAwardModal(false)}>
+              <Text style={styles.modalTitle}>{awardData.isDeduction ? 'Deduct Points' : 'Award Points'}</Text>
+              <TouchableOpacity onPress={() => { setShowAwardModal(false); setAwardData({ child_id: '', points: '', reason: '', isDeduction: false }); }}>
                 <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Award/Deduct Toggle */}
+            <View style={styles.toggleContainer}>
+              <TouchableOpacity
+                style={[styles.toggleOption, !awardData.isDeduction && styles.toggleOptionActive]}
+                onPress={() => setAwardData({ ...awardData, isDeduction: false })}
+              >
+                <Ionicons name="add-circle" size={20} color={!awardData.isDeduction ? '#10b981' : '#6b7280'} />
+                <Text style={[styles.toggleOptionText, !awardData.isDeduction && { color: '#10b981' }]}>Award</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.toggleOption, awardData.isDeduction && styles.toggleOptionActiveDeduct]}
+                onPress={() => setAwardData({ ...awardData, isDeduction: true })}
+              >
+                <Ionicons name="remove-circle" size={20} color={awardData.isDeduction ? '#ef4444' : '#6b7280'} />
+                <Text style={[styles.toggleOptionText, awardData.isDeduction && { color: '#ef4444' }]}>Deduct</Text>
               </TouchableOpacity>
             </View>
             
@@ -589,13 +607,14 @@ export default function RewardsScreen({ navigation }) {
                   <Text style={[styles.childOptionText, awardData.child_id === child.user_id && styles.childOptionTextActive]}>
                     {child.nickname || child.name}
                   </Text>
+                  <Text style={styles.childPointsText}>{child.points || 0} pts</Text>
                 </TouchableOpacity>
               ))}
             </View>
             
             <TextInput
               style={styles.input}
-              placeholder="Points to award"
+              placeholder={awardData.isDeduction ? 'Points to deduct' : 'Points to award'}
               placeholderTextColor="#6b7280"
               keyboardType="numeric"
               value={awardData.points}
@@ -609,15 +628,17 @@ export default function RewardsScreen({ navigation }) {
               onChangeText={(text) => setAwardData({ ...awardData, reason: text })}
             />
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowAwardModal(false)}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => { setShowAwardModal(false); setAwardData({ child_id: '', points: '', reason: '', isDeduction: false }); }}>
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.submitBtn, { backgroundColor: '#fbbf24' }, processing && styles.submitBtnDisabled]}
+                style={[styles.submitBtn, { backgroundColor: awardData.isDeduction ? '#ef4444' : '#fbbf24' }, processing && styles.submitBtnDisabled]}
                 onPress={handleAwardPoints}
                 disabled={processing}
               >
-                <Text style={[styles.submitBtnText, { color: '#000' }]}>Award</Text>
+                <Text style={[styles.submitBtnText, { color: awardData.isDeduction ? '#fff' : '#000' }]}>
+                  {awardData.isDeduction ? 'Deduct' : 'Award'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
