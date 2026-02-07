@@ -65,6 +65,16 @@ async def get_current_user(request: Request):
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
+# Helper function to sanitize picture data (prevent large base64 from bloating responses)
+def sanitize_picture(picture_data, max_len=500):
+    if not picture_data:
+        return None
+    if picture_data.startswith('http'):
+        return picture_data
+    if len(picture_data) <= max_len:
+        return picture_data
+    return None  # Skip large base64 images
+
 # Models
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
