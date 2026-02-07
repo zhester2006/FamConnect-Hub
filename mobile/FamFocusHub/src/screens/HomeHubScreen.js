@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
 import { formatDate, formatTime } from '../utils/dateUtils';
 import MedalEmblem from '../components/MedalEmblem';
+import QuickActionsWidget from '../components/QuickActionsWidget';
 
 const { width, height } = Dimensions.get('window');
 
