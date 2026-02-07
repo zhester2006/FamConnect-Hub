@@ -68,9 +68,10 @@ export const AuthProvider = ({ children }) => {
           setUser(userData);
           setIsAuthenticated(true);
           
-          // Initialize WebSocket for real-time features
-          webSocketService.setSessionToken(apiService.sessionToken);
-          webSocketService.connect();
+          // NOTE: WebSocket is deprecated in favor of Firebase
+          // Chat now uses Firebase Realtime Database for better reliability
+          // webSocketService.setSessionToken(apiService.sessionToken);
+          // webSocketService.connect();
           
           // Update biometric stored session if enabled
           await biometricService.updateStoredSession(apiService.sessionToken);
