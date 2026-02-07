@@ -1971,6 +1971,10 @@ async def get_leaderboard(request: Request, timeframe: str = "all-time"):
         {"_id": 0, "user_id": 1, "name": 1, "nickname": 1, "picture": 1, "points": 1, "badges": 1}
     ).to_list(100)
     
+    # Sanitize pictures to prevent large base64 data in responses
+    for child in children:
+        child['picture'] = sanitize_picture(child.get('picture'))
+    
     # If timeframe filter is applied, calculate points for that period
     if timeframe in ['this-week', 'this-month']:
         now = datetime.now(timezone.utc)
