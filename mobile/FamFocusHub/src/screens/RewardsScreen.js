@@ -400,31 +400,65 @@ export default function RewardsScreen({ navigation }) {
                   <Text style={styles.emptySubtext}>Complete chores to earn points!</Text>
                 </View>
               ) : (
-                tasks.map((task) => (
-                  <View key={task.task_id} style={styles.taskCard}>
-                    <View style={[styles.rewardIcon, { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
-                      <Ionicons name="checkbox" size={28} color="#10b981" />
-                    </View>
-                    <View style={styles.rewardInfo}>
-                      <Text style={styles.rewardName}>{task.title}</Text>
-                      {task.deadline && (
-                        <Text style={styles.taskDeadline}>Due: {new Date(task.deadline).toLocaleDateString()}</Text>
-                      )}
-                      <View style={styles.rewardPoints}>
-                        <Ionicons name="star" size={14} color="#fbbf24" />
-                        <Text style={styles.rewardPointsText}>+{task.points} pts</Text>
+                tasks.map((task) => {
+                  // Determine if task is completed or pending review
+                  const isCompleted = task.status === 'completed' || task.status === 'approved';
+                  const isPendingReview = task.status === 'completed';
+                  const isApproved = task.status === 'approved';
+                  const claimedByName = task.completed_by_name || task.claimed_by_name;
+                  
+                  return (
+                    <View key={task.task_id} style={[styles.taskCard, isCompleted && styles.taskCardCompleted]}>
+                      <View style={[
+                        styles.rewardIcon, 
+                        { backgroundColor: isApproved ? 'rgba(16, 185, 129, 0.3)' : 
+                                          isPendingReview ? 'rgba(251, 191, 36, 0.2)' : 
+                                          'rgba(16, 185, 129, 0.2)' }
+                      ]}>
+                        <Ionicons 
+                          name={isApproved ? "checkmark-circle" : isPendingReview ? "hourglass" : "checkbox-outline"} 
+                          size={28} 
+                          color={isApproved ? "#10b981" : isPendingReview ? "#fbbf24" : "#10b981"} 
+                        />
                       </View>
+                      <View style={styles.rewardInfo}>
+                        <Text style={[styles.rewardName, isApproved && styles.taskTitleCompleted]}>{task.title}</Text>
+                        {claimedByName && (
+                          <Text style={styles.taskClaimedBy}>
+                            {isApproved ? `✓ Completed by ${claimedByName}` : 
+                             isPendingReview ? `⏳ ${claimedByName} - Awaiting approval` : 
+                             `Claimed by ${claimedByName}`}
+                          </Text>
+                        )}
+                        {task.deadline && (
+                          <Text style={styles.taskDeadline}>Due: {new Date(task.deadline).toLocaleDateString()}</Text>
+                        )}
+                        <View style={styles.rewardPoints}>
+                          <Ionicons name="star" size={14} color="#fbbf24" />
+                          <Text style={styles.rewardPointsText}>+{task.points} pts</Text>
+                        </View>
+                      </View>
+                      {user?.role === 'child' && !isCompleted && (
+                        <TouchableOpacity
+                          style={[styles.redeemButton, { backgroundColor: '#10b981' }]}
+                          onPress={() => handleCompleteTask(task)}
+                        >
+                          <Text style={styles.redeemButtonText}>Done</Text>
+                        </TouchableOpacity>
+                      )}
+                      {isPendingReview && !isApproved && (
+                        <View style={styles.pendingBadge}>
+                          <Text style={styles.pendingBadgeText}>Pending</Text>
+                        </View>
+                      )}
+                      {isApproved && (
+                        <View style={styles.approvedBadge}>
+                          <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+                        </View>
+                      )}
                     </View>
-                    {user?.role === 'child' && task.status !== 'completed' && (
-                      <TouchableOpacity
-                        style={[styles.redeemButton, { backgroundColor: '#10b981' }]}
-                        onPress={() => handleCompleteTask(task)}
-                      >
-                        <Text style={styles.redeemButtonText}>Done</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                ))
+                  );
+                })
               )}
             </View>
 
