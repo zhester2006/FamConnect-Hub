@@ -261,9 +261,9 @@ export default function SettingsScreen({ navigation }) {
             <>
               <Text style={[styles.sectionTitle, { fontSize: 14, marginTop: 12 }]}>Primary Color</Text>
               <View style={styles.colorGrid}>
-                {theme.availablePrimaryColors?.map((color) => (
+                {theme.availablePrimaryColors?.map((color, index) => (
                   <TouchableOpacity
-                    key={color}
+                    key={`primary-${index}-${color}`}
                     style={[
                       styles.colorOption,
                       { backgroundColor: color },
@@ -281,9 +281,9 @@ export default function SettingsScreen({ navigation }) {
               
               <Text style={[styles.sectionTitle, { fontSize: 14, marginTop: 16 }]}>Accent Color</Text>
               <View style={styles.colorGrid}>
-                {theme.availableAccentColors?.map((color) => (
+                {theme.availableAccentColors?.map((color, index) => (
                   <TouchableOpacity
-                    key={color}
+                    key={`accent-${index}-${color}`}
                     style={[
                       styles.colorOption,
                       { backgroundColor: color },
