@@ -363,18 +363,18 @@ export default function PixieAssistant() {
 }
 
 const styles = StyleSheet.create({
-  // Floating Button
+  // Floating Button - Now draggable with absolute positioning
   floatingButton: {
     position: 'absolute',
-    right: 16,
-    bottom: 90,
+    left: 0,
+    top: 0,
     alignItems: 'center',
     zIndex: 1000,
   },
   buttonGradient: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
+    borderRadius: BUTTON_SIZE / 2,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#ec4899',
@@ -382,6 +382,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 8,
+  },
+  buttonDragging: {
+    shadowOpacity: 0.6,
+    shadowRadius: 12,
+    transform: [{ scale: 1.1 }],
   },
   buttonEmoji: {
     fontSize: 28,
