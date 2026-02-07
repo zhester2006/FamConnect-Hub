@@ -1,28 +1,16 @@
 // Firebase Auth Service for FamFocus Hub
-// Handles Firebase Authentication with email/password and Google Sign-In
+// Note: Full Firebase Auth requires a development build, not Expo Go
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { 
-  initializeAuth,
-  getReactNativePersistence,
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  GoogleAuthProvider,
-  signInWithCredential,
-  sendPasswordResetEmail,
-  updateProfile,
-  EmailAuthProvider,
-  reauthenticateWithCredential,
-  updatePassword
-} from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import firebaseConfig from './firebase.config';
 
 WebBrowser.maybeCompleteAuthSession();
+
+// Firebase Auth is limited in Expo Go - we'll use the backend API for auth instead
+let auth = null;
+let authAvailable = false;
 
 class FirebaseAuthService {
   constructor() {
@@ -37,7 +25,7 @@ class FirebaseAuthService {
   // Initialize Firebase Auth
   async initialize() {
     try {
-      if (this.isInitialized && this.auth) {
+      if (this.isInitialized) {
         return true;
       }
 
@@ -48,42 +36,15 @@ class FirebaseAuthService {
         this.app = getApp();
       }
 
-      // Initialize Auth with AsyncStorage persistence
-      try {
-        this.auth = initializeAuth(this.app, {
-          persistence: getReactNativePersistence(AsyncStorage)
-        });
-      } catch (error) {
-        // Auth might already be initialized, try to get existing instance
-        if (error.code === 'auth/already-initialized') {
-          const { getAuth } = require('firebase/auth');
-          this.auth = getAuth(this.app);
-        } else {
-          throw error;
-        }
-      }
-      
+      // Skip Firebase Auth in Expo Go - use backend API instead
+      // Firebase Auth with persistence requires native modules not available in Expo Go
+      console.log('Firebase Auth: Using backend API for authentication (Expo Go mode)');
       this.isInitialized = true;
-
-      // Listen for auth state changes
-      this.unsubscribe = onAuthStateChanged(this.auth, (user) => {
-        this.currentUser = user;
-        this.notifyListeners(user);
-        
-        if (user) {
-          this.persistSession(user);
-        } else {
-          this.clearPersistedSession();
-        }
-      });
-
-      console.log('Firebase Auth initialized');
       return true;
     } catch (error) {
-      console.error('Firebase Auth initialization error:', error);
-      // Don't block the app if auth fails
+      console.log('Firebase Auth initialization skipped:', error.message);
       this.isInitialized = true;
-      return false;
+      return true; // Don't block the app
     }
   }
 
