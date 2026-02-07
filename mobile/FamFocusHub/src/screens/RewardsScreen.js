@@ -778,4 +778,10 @@ const styles = StyleSheet.create({
   submitBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#a855f7', alignItems: 'center' },
   submitBtnDisabled: { opacity: 0.5 },
   submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  taskCardCompleted: { backgroundColor: 'rgba(16, 185, 129, 0.1)', borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.3)' },
+  taskTitleCompleted: { textDecorationLine: 'line-through', opacity: 0.7 },
+  taskClaimedBy: { color: '#10b981', fontSize: 11, marginTop: 2, fontWeight: '500' },
+  pendingBadge: { backgroundColor: '#fbbf24', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  pendingBadgeText: { color: '#000', fontSize: 10, fontWeight: '600' },
+  approvedBadge: { backgroundColor: 'rgba(16, 185, 129, 0.2)', padding: 8, borderRadius: 20 },
 });
