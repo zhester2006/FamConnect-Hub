@@ -1,16 +1,27 @@
-import * as Notifications from 'expo-notifications';
+// Push notification service - wrapped for Expo Go compatibility
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import apiService from './api.service';
 
-// Configure notification handler
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+// Safely import Notifications (may not work in Expo Go)
+let Notifications = null;
+let notificationsAvailable = false;
+
+try {
+  Notifications = require('expo-notifications');
+  notificationsAvailable = true;
+  
+  // Configure notification handler only if available
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+} catch (e) {
+  console.log('expo-notifications not available in Expo Go');
+}
 
 class PushNotificationService {
   constructor() {
@@ -20,41 +31,50 @@ class PushNotificationService {
   }
 
   async registerForPushNotifications() {
+    if (!notificationsAvailable || !Notifications) {
+      console.log('Push notifications not available in Expo Go');
+      return null;
+    }
+    
     let token = null;
 
     if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'FamFocus Notifications',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#6366f1',
-      });
+      try {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'FamFocus Notifications',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#6366f1',
+        });
+      } catch (e) {
+        console.log('Cannot set notification channel in Expo Go');
+      }
     }
 
     if (Device.isDevice) {
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-      
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      
-      if (finalStatus !== 'granted') {
-        console.log('Push notification permission denied');
-        return null;
-      }
-      
       try {
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+        
+        if (existingStatus !== 'granted') {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+        
+        if (finalStatus !== 'granted') {
+          console.log('Push notification permission denied');
+          return null;
+        }
+        
         token = (await Notifications.getExpoPushTokenAsync({
-          projectId: 'famfocus-hub' // Replace with your Expo project ID
+          projectId: 'famfocus-hub'
         })).data;
         this.expoPushToken = token;
         
         // Register token with backend
         await this.registerTokenWithBackend(token);
       } catch (error) {
-        console.error('Failed to get push token:', error);
+        console.log('Push notifications not supported in Expo Go:', error.message);
       }
     } else {
       console.log('Must use physical device for Push Notifications');
