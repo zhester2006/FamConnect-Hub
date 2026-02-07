@@ -1,10 +1,41 @@
 import 'react-native-gesture-handler';
 import React, { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, Text, StyleSheet, AppState } from 'react-native';
+import { View, Text, StyleSheet, AppState, LogBox } from 'react-native';
 import { AuthProvider } from './src/context/AuthContext';
 import { ThemeProvider } from './src/context/ThemeContext';
 import AppNavigator from './src/navigation/AppNavigator';
+import errorHandler from './src/utils/errorHandler';
+
+// Suppress specific warnings that are device-level issues
+LogBox.ignoreLogs([
+  'Native crypto module could not be used',
+  'database or disk is full',
+  'SQLITE_FULL',
+]);
+
+// Global error handler for unhandled errors
+if (!global.__errorHandlerSet) {
+  global.__errorHandlerSet = true;
+  
+  const originalConsoleError = console.error;
+  console.error = (...args) => {
+    const errorString = args.join(' ');
+    
+    // Handle known device-level errors gracefully
+    if (errorString.includes('crypto') || 
+        errorString.includes('SQLITE') || 
+        errorString.includes('disk is full')) {
+      const result = errorHandler.handle(new Error(errorString));
+      if (result.handled) {
+        console.warn('Handled error:', result.message || errorString);
+        return;
+      }
+    }
+    
+    originalConsoleError.apply(console, args);
+  };
+}
 
 // Network status indicator component
 function NetworkIndicator({ isOnline }) {
