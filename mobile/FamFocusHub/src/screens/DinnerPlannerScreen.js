@@ -22,8 +22,10 @@ const QUICK_MEALS = [
   { name: 'BBQ Night', icon: '🍖', pref: 'Grilled meats and BBQ' },
 ];
 
-export default function DinnerPlannerScreen({ navigation }) {
+export default function DinnerPlannerScreen({ navigation, route }) {
   const { user } = useAuth();
+  const theme = useTheme();
+  const primaryColor = theme?.primary || '#6366f1';
   const [loading, setLoading] = useState(false);
   const [weeklyLoading, setWeeklyLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -33,6 +35,13 @@ export default function DinnerPlannerScreen({ navigation }) {
   const [preferences, setPreferences] = useState('');
   const [familySize, setFamilySize] = useState(4);
   const [budget, setBudget] = useState('moderate');
+  
+  // Check for pantry items passed from PantryScreen
+  useEffect(() => {
+    if (route?.params?.pantryItems) {
+      setIngredients(route.params.pantryItems);
+    }
+  }, [route?.params?.pantryItems]);
   
   // Results
   const [suggestion, setSuggestion] = useState('');
