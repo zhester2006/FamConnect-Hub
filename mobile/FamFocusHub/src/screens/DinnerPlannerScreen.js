@@ -103,14 +103,34 @@ export default function DinnerPlannerScreen({ navigation }) {
     setPreferences(meal.pref);
     setLoading(true);
     try {
-      const response = await apiService.post('/dinner/suggest', {
-        ingredients: [],
+      // Try the structured AI endpoint first
+      const response = await apiService.post('/ai/meal-plan', {
         preferences: meal.pref,
+        servings: familySize,
+        meal_type: 'dinner',
       });
-      setSuggestion(response.suggestion || 'No suggestion available');
+      
+      if (response.success && response.meal) {
+        setStructuredMeal(response.meal);
+        setShowMealModal(true);
+        setSuggestion('');
+      } else {
+        setSuggestion(response.suggestion || 'No suggestion available');
+        setStructuredMeal(null);
+      }
     } catch (error) {
       console.error('Failed to get suggestion:', error);
-      Alert.alert('Error', 'Failed to get dinner suggestion');
+      // Fallback to original endpoint
+      try {
+        const fallbackRes = await apiService.post('/dinner/suggest', {
+          ingredients: [],
+          preferences: meal.pref,
+        });
+        setSuggestion(fallbackRes.suggestion || 'No suggestion available');
+        setStructuredMeal(null);
+      } catch (e) {
+        Alert.alert('Error', 'Failed to get dinner suggestion');
+      }
     } finally {
       setLoading(false);
     }
