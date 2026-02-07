@@ -893,42 +893,37 @@ export default function LocationScreen({ navigation }) {
           </View>
           
           {(selectedLocation || currentLocation) ? (
-            (mapError || !mapsAvailable) ? (
-              // Static Map Fallback when MapView fails or not available (Expo Go)
-              <View style={styles.staticMapContainer}>
-                <Image
-                  source={{
-                    uri: `https://maps.googleapis.com/maps/api/staticmap?center=${
-                      selectedLocation?.latitude || currentLocation?.latitude
-                    },${
-                      selectedLocation?.longitude || currentLocation?.longitude
-                    }&zoom=15&size=600x400&maptype=roadmap&markers=color:purple%7C${
-                      selectedLocation?.latitude || currentLocation?.latitude
-                    },${
-                      selectedLocation?.longitude || currentLocation?.longitude
-                    }&key=AIzaSyBx${Date.now().toString(36)}` // Placeholder key for demo
-                  }}
-                  style={styles.staticMapImage}
-                  onError={() => console.log('Static map also failed')}
-                />
-                <View style={styles.staticMapOverlay}>
-                  <Ionicons name="location" size={48} color="#818cf8" />
-                  <Text style={styles.staticMapText}>
-                    {!mapsAvailable 
-                      ? "Maps not available in Expo Go. Build the app for full map support."
-                      : "Tap 'Use Current Location' to set the safe zone at your current position"
-                    }
-                  </Text>
-                  <TouchableOpacity 
-                    style={styles.staticMapButton}
-                    onPress={handleUseCurrentLocation}
-                  >
-                    <Ionicons name="locate" size={20} color="#fff" />
-                    <Text style={styles.staticMapButtonText}>Use Current Location</Text>
-                  </TouchableOpacity>
-                </View>
+            // Static Map Fallback - Maps not available in Expo Go
+            <View style={styles.staticMapContainer}>
+              <Image
+                source={{
+                  uri: `https://maps.googleapis.com/maps/api/staticmap?center=${
+                    selectedLocation?.latitude || currentLocation?.latitude
+                  },${
+                    selectedLocation?.longitude || currentLocation?.longitude
+                  }&zoom=15&size=600x400&maptype=roadmap&markers=color:purple%7C${
+                    selectedLocation?.latitude || currentLocation?.latitude
+                  },${
+                    selectedLocation?.longitude || currentLocation?.longitude
+                  }&key=AIzaSyBx${Date.now().toString(36)}`
+                }}
+                style={styles.staticMapImage}
+                onError={() => console.log('Static map also failed')}
+              />
+              <View style={styles.staticMapOverlay}>
+                <Ionicons name="location" size={48} color="#818cf8" />
+                <Text style={styles.staticMapText}>
+                  Maps not available in Expo Go. Build the app for full map support.
+                </Text>
+                <TouchableOpacity 
+                  style={styles.staticMapButton}
+                  onPress={handleUseCurrentLocation}
+                >
+                  <Ionicons name="locate" size={20} color="#fff" />
+                  <Text style={styles.staticMapButtonText}>Use Current Location</Text>
+                </TouchableOpacity>
               </View>
-            )
+            </View>
           ) : (
             <View style={[styles.map, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#1e1b4b' }]}>
               <ActivityIndicator size="large" color="#818cf8" />
