@@ -1248,3 +1248,76 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - Test report: `/app/test_reports/iteration_17.json`
 - Note: Native mobile features require building the app to test
 
+
+### Session 36 - P0/P1 UI/UX Bug Fixes (Feb 2026) ✅
+
+**Bug Fixes Applied:**
+
+1. **P0 - Pixie Assistant Button Visibility (Fixed)**
+   - Root cause: PixieAssistant was rendered outside proper View context
+   - Fix: Wrapped Stack.Navigator in a `<View style={{ flex: 1 }}>` wrapper
+   - PixieAssistant now renders correctly inside the wrapper with absolute positioning
+   - File: `/app/mobile/FamFocusHub/src/navigation/AppNavigator.js`
+
+2. **P0 - Chore Filter Tabs Too Large (Fixed)**
+   - Reduced padding: `paddingHorizontal: 10, paddingVertical: 4`
+   - Reduced borderRadius: `12` (from 16)
+   - Reduced marginRight: `6` (from 8)
+   - Reduced fontSize: `11` (from 12)
+   - File: `/app/mobile/FamFocusHub/src/screens/ChoresScreen.js`
+
+3. **P0 - "Go to Chores" Button Navigation (Fixed)**
+   - Shop tab: Added "Need more points? Go to Earn tab" link that switches to Earn tab
+   - Earn tab: Link now says "Go to Chores for more tasks" if already on Earn
+   - Dynamic text based on active tab
+   - File: `/app/mobile/FamFocusHub/src/screens/RewardsScreen.js`
+
+4. **P0 - Theme Color Schemes Not Working (Fixed)**
+   - `enableCustomMode()` now async and saves to AsyncStorage immediately
+   - `updateColor()` now checks both `isCustomMode` and `theme.mode === 'custom'`
+   - Added auto-disable of autoMode when enabling custom mode
+   - File: `/app/mobile/FamFocusHub/src/context/ThemeContext.js`
+
+5. **P1 - Leaderboard Time Filters Not Working (Fixed)**
+   - Added timeframe parameter to `getLeaderboard()` API call
+   - Backend now calculates `period_points` for this-week/this-month filters
+   - Filters based on `approved_at` date for chores and `created_at` for point logs
+   - Files:
+     - `/app/mobile/FamFocusHub/src/screens/LeaderboardScreen.js`
+     - `/app/mobile/FamFocusHub/src/services/api.service.js`
+     - `/app/backend/server.py`
+
+6. **P1 - Location "View on Map" Coordinate Handling (Fixed)**
+   - Now handles both `lat/lng` and `latitude/longitude` formats
+   - `openMaps()` and `openNavigationToChild()` updated with fallback logic
+   - File: `/app/mobile/FamFocusHub/src/screens/LocationScreen.js`
+
+7. **P1 - Dinner Planner Regenerate Button (Added)**
+   - Added "Regenerate Plan" button below existing weekly plan
+   - Styled with pink border and refresh icon
+   - File: `/app/mobile/FamFocusHub/src/screens/DinnerPlannerScreen.js`
+
+**Testing Results:**
+- All 9 backend tests passed (100%)
+- Code review confirms all frontend fixes are correctly implemented
+- Test report: `/app/test_reports/iteration_18.json`
+
+**Key Files Modified:**
+- `/app/mobile/FamFocusHub/src/navigation/AppNavigator.js` - View wrapper for PixieAssistant
+- `/app/mobile/FamFocusHub/src/screens/ChoresScreen.js` - Compact filter chips
+- `/app/mobile/FamFocusHub/src/screens/RewardsScreen.js` - Tab navigation fix
+- `/app/mobile/FamFocusHub/src/context/ThemeContext.js` - Theme persistence fix
+- `/app/mobile/FamFocusHub/src/screens/LeaderboardScreen.js` - Timeframe filter
+- `/app/mobile/FamFocusHub/src/services/api.service.js` - Timeframe parameter
+- `/app/backend/server.py` - Leaderboard timeframe logic
+- `/app/mobile/FamFocusHub/src/screens/LocationScreen.js` - Coordinate handling
+- `/app/mobile/FamFocusHub/src/screens/DinnerPlannerScreen.js` - Regenerate button
+
+**Remaining P2 Issues (Require User Action):**
+- Mobile app connectivity - User must rebuild app with `npx expo run:android` (outdated build using wrong backend URL)
+- Native module errors (crypto, SQLITE_FULL) - Device-level issues with workarounds in place
+- Firebase push notifications on Android - Requires native build configuration
+
+**Important Note:**
+User's mobile app build is connecting to old backend URL (`familyhq-1` instead of `famfocus-hub-1`). 
+User MUST delete the app and run `npx expo run:android` to create fresh build with correct configuration.
