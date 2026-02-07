@@ -36,8 +36,14 @@ class WebSocketService {
     this.sessionToken = token;
   }
 
+  // NOTE: This method is deprecated - use Firebase Chat instead
   // Connect to WebSocket
   async connect() {
+    if (!this.isEnabled) {
+      console.log('WebSocket is disabled - using Firebase Chat instead');
+      return;
+    }
+
     if (this.isConnecting) {
       console.log('WebSocket already connecting, skipping');
       return;
