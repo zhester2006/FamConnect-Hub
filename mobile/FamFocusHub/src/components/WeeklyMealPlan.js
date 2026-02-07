@@ -288,6 +288,7 @@ export default function WeeklyMealPlan({ planText, onRegenerateDay }) {
                 {dayData.meals.map((meal, mealIndex) => {
                   const mealKey = `${dayData.day}-${meal.type}`;
                   const mealStatus = addingToList[mealKey];
+                  const mealIngredients = meal.ingredients.length > 0 ? meal.ingredients : extractIngredients(meal.description);
                   
                   return (
                     <View key={mealIndex} style={styles.mealItem}>
@@ -297,27 +298,57 @@ export default function WeeklyMealPlan({ planText, onRegenerateDay }) {
                           <Text style={styles.mealType}>{meal.type.charAt(0).toUpperCase() + meal.type.slice(1)}</Text>
                           <Text style={styles.mealDesc}>{meal.description}</Text>
                         </View>
-                        <TouchableOpacity 
-                          style={[styles.addMealBtn, mealStatus === 'done' && styles.addMealBtnDone]}
-                          onPress={() => handleAddMealToList(dayData.day, meal)}
-                          disabled={mealStatus === true || mealStatus === 'done'}
-                        >
-                          {mealStatus === true ? (
-                            <ActivityIndicator size="small" color="#6366f1" />
-                          ) : mealStatus === 'done' ? (
-                            <Ionicons name="checkmark-circle" size={20} color="#10b981" />
-                          ) : (
-                            <Ionicons name="add-circle-outline" size={20} color="#6366f1" />
-                          )}
-                        </TouchableOpacity>
+                        <View style={styles.mealActions}>
+                          {/* Individual ingredient picker button */}
+                          <TouchableOpacity 
+                            style={styles.pickBtn}
+                            onPress={() => openIngredientPicker(dayData.day, meal)}
+                          >
+                            <Ionicons name="list" size={16} color="#f59e0b" />
+                          </TouchableOpacity>
+                          {/* Add all button */}
+                          <TouchableOpacity 
+                            style={[styles.addMealBtn, mealStatus === 'done' && styles.addMealBtnDone]}
+                            onPress={() => handleAddMealToList(dayData.day, meal)}
+                            disabled={mealStatus === true || mealStatus === 'done'}
+                          >
+                            {mealStatus === true ? (
+                              <ActivityIndicator size="small" color="#6366f1" />
+                            ) : mealStatus === 'done' ? (
+                              <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+                            ) : (
+                              <Ionicons name="add-circle-outline" size={20} color="#6366f1" />
+                            )}
+                          </TouchableOpacity>
+                        </View>
                       </View>
                       
-                      {meal.ingredients.length > 0 && (
+                      {mealIngredients.length > 0 && (
                         <View style={styles.ingredientTags}>
-                          {meal.ingredients.slice(0, 5).map((ing, i) => (
-                            <View key={i} style={styles.ingredientTag}>
+                          {mealIngredients.slice(0, 5).map((ing, i) => (
+                            <TouchableOpacity 
+                              key={i} 
+                              style={styles.ingredientTag}
+                              onPress={() => {
+                                Alert.alert(
+                                  'Add to Shopping List?',
+                                  `Add "${ing}" to your shopping list?`,
+                                  [
+                                    { text: 'Cancel', style: 'cancel' },
+                                    { 
+                                      text: 'Add', 
+                                      onPress: async () => {
+                                        await apiService.addShoppingItem({ name: ing, category: 'meal-plan' });
+                                        Alert.alert('Added!', `${ing} added to shopping list`);
+                                      }
+                                    }
+                                  ]
+                                );
+                              }}
+                            >
                               <Text style={styles.ingredientTagText}>{ing}</Text>
-                            </View>
+                              <Ionicons name="add-circle" size={12} color="#a5b4fc" />
+                            </TouchableOpacity>
                           ))}
                         </View>
                       )}
