@@ -120,6 +120,7 @@ export default function SettingsScreen({ navigation }) {
         { icon: 'gift', label: 'Rewards', screen: 'Rewards', color: '#a855f7' },
         { icon: 'book', label: 'Reading Logs', screen: 'ReadingLogs', color: '#3b82f6' },
         { icon: 'restaurant', label: 'Dinner Planner', screen: 'DinnerPlanner', color: '#f97316' },
+        { icon: 'cube', label: 'Pantry', screen: 'Pantry', color: '#84cc16' },
         { icon: 'cart', label: 'Shopping List', screen: 'Shopping', color: '#14b8a6' },
         { icon: 'trophy', label: 'Leaderboard', screen: 'Leaderboard', color: '#eab308' },
         { icon: 'chatbubbles', label: 'Family Wall', screen: 'FamilyWall', color: '#ec4899' },
