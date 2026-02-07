@@ -1566,13 +1566,51 @@ Respond in this JSON format:
 
 @api_router.post("/ai/pixie")
 async def pixie_assistant(request: Request, data: dict):
-    """Pixie - The family's AI assistant that can help with various questions"""
+    """Pixie - The family's AI assistant that can help with various questions and uses weather for activity suggestions"""
     current_user = await get_current_user(request)
     
     message = data.get('message', '')
     user_name = data.get('user_name', 'Friend')
     user_role = data.get('user_role', 'child')
     context = data.get('context', [])
+    lat = data.get('lat')
+    lng = data.get('lng')
+    
+    # Fetch weather data if location available or if message seems to be about activities/weather
+    weather_info = ""
+    activity_keywords = ['activity', 'activities', 'do today', 'outside', 'weather', 'play', 'fun', 'weekend', 'plans']
+    should_include_weather = any(kw in message.lower() for kw in activity_keywords)
+    
+    if should_include_weather:
+        try:
+            # Try to get weather - use default location if not provided
+            weather_lat = lat or 40.7128  # Default to NYC
+            weather_lng = lng or -74.0060
+            
+            weather_api_key = os.environ.get('OPENWEATHER_API_KEY', '')
+            if weather_api_key:
+                weather_url = f"https://api.openweathermap.org/data/2.5/weather?lat={weather_lat}&lon={weather_lng}&appid={weather_api_key}&units=imperial"
+                async with httpx.AsyncClient() as client:
+                    weather_resp = await client.get(weather_url, timeout=5)
+                    if weather_resp.status_code == 200:
+                        w = weather_resp.json()
+                        temp = w.get('main', {}).get('temp', 70)
+                        desc = w.get('weather', [{}])[0].get('description', 'clear')
+                        weather_info = f"\n\nCurrent Weather: {temp:.0f}°F, {desc}. "
+                        if temp < 40:
+                            weather_info += "It's cold outside - suggest indoor activities."
+                        elif temp > 85:
+                            weather_info += "It's hot - suggest water activities or indoor fun."
+                        elif 'rain' in desc.lower():
+                            weather_info += "It's rainy - suggest indoor activities."
+                        else:
+                            weather_info += "Nice weather for outdoor activities!"
+            else:
+                # Simulated weather if no API key
+                weather_info = "\n\nCurrent Weather: Around 72°F, partly cloudy. Great for outdoor or indoor activities!"
+        except Exception as e:
+            print(f"Weather fetch for Pixie failed: {e}")
+            weather_info = ""
     
     # Build context from previous messages
     context_str = ""
@@ -1585,10 +1623,11 @@ async def pixie_assistant(request: Request, data: dict):
         system_message=f"""You are Pixie, a friendly and helpful AI assistant for families in the FamFocus Hub app. 
 You have a warm, encouraging personality and love helping families.
 You're talking to {user_name} who is a {user_role}.
+{weather_info}
 
 Your capabilities:
 - Suggest family dinner ideas
-- Recommend family activities
+- Recommend family activities (consider weather when suggesting outdoor vs indoor)
 - Provide homework help and study tips
 - Give chore tips and motivation
 - Offer parenting advice (for parents)
@@ -1601,6 +1640,7 @@ Personality traits:
 - Age-appropriate in your responses
 - Helpful but concise (keep responses under 150 words)
 - Sometimes playful with younger users
+- When suggesting activities, mention the weather conditions
 
 If asked about something you can't help with, kindly redirect to something you can help with."""
     ).with_model("openai", "gpt-5.2")
