@@ -310,31 +310,14 @@ export default function DinnerPlannerScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
 
-        {/* Weekly Plan Result */}
+        {/* Weekly Plan Result - Now Interactive */}
         {weeklyPlan && (
-          <View style={[styles.resultCard, { borderColor: 'rgba(236, 72, 153, 0.3)' }]}>
-            <View style={styles.resultHeader}>
-              <Ionicons name="calendar" size={18} color="#ec4899" />
-              <Text style={styles.resultTitle}>Your Weekly Plan</Text>
-            </View>
-            <Text style={styles.resultText}>{weeklyPlan}</Text>
-            
-            {/* Regenerate Button */}
-            <TouchableOpacity 
-              style={[styles.updatePlanButton, weeklyLoading && styles.buttonDisabled]}
-              onPress={handleGetWeeklyPlan}
-              disabled={weeklyLoading}
-            >
-              {weeklyLoading ? (
-                <ActivityIndicator size="small" color="#ec4899" />
-              ) : (
-                <>
-                  <Ionicons name="refresh" size={16} color="#ec4899" />
-                  <Text style={styles.updatePlanButtonText}>Regenerate Plan</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
+          <WeeklyMealPlan 
+            planText={weeklyPlan}
+            onRegenerateDay={(day) => {
+              Alert.alert('Coming Soon', `Regenerate ${day}'s meals feature coming soon!`);
+            }}
+          />
         )}
 
         {/* Quick Meal Ideas */}
