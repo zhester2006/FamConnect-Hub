@@ -292,6 +292,8 @@ export default function LoginScreen({ navigation }) {
     setError(null);
     
     try {
+      console.log(`Attempting dev login as ${role}...`);
+      
       const response = await fetch(`${API_BASE}/api/auth/dev-login`, {
         method: 'POST',
         headers: { 
@@ -301,12 +303,16 @@ export default function LoginScreen({ navigation }) {
         body: JSON.stringify({ role }),
       });
       
+      console.log(`Dev login response status: ${response.status}`);
+      
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Login failed: ${response.status}`);
+        console.error('Dev login error response:', errorText);
+        throw new Error(`Login failed (${response.status}): Please check your connection`);
       }
       
       const data = await response.json();
+      console.log('Dev login success:', data.user?.name);
       
       if (data.session_token) {
         await login(data.session_token, data.user);
@@ -320,7 +326,13 @@ export default function LoginScreen({ navigation }) {
       }
     } catch (err) {
       console.error('Dev login error:', err);
-      setError(err.message || 'Login failed');
+      // More descriptive error messages
+      let errorMessage = err.message || 'Login failed';
+      if (errorMessage.includes('Network request failed') || errorMessage.includes('fetch')) {
+        errorMessage = 'Cannot connect to server. Please check your internet connection.';
+      }
+      setError(errorMessage);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setDevLoading(null);
     }
