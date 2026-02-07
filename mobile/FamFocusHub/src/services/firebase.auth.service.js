@@ -1,11 +1,7 @@
 // Firebase Auth Service for FamFocus Hub
 // Handles Firebase Authentication with email/password and Google Sign-In
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
-  initializeAuth,
-  getReactNativePersistence,
-  getAuth,
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
@@ -20,7 +16,7 @@ import {
 } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
-import firebaseConfig from './firebase.config';
+import { getFirebaseApp, getFirebaseAuth, initializeFirebase } from './firebase.init';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -41,26 +37,15 @@ class FirebaseAuthService {
         return true;
       }
 
-      // Initialize Firebase app
-      if (!getApps().length) {
-        this.app = initializeApp(firebaseConfig);
-      } else {
-        this.app = getApp();
-      }
-
-      // Initialize Auth with AsyncStorage persistence for React Native
-      try {
-        this.auth = initializeAuth(this.app, {
-          persistence: getReactNativePersistence(AsyncStorage)
-        });
-      } catch (error) {
-        // Auth might already be initialized
-        if (error.code === 'auth/already-initialized') {
-          this.auth = getAuth(this.app);
-        } else {
-          console.warn('Auth init warning:', error.message);
-          this.auth = getAuth(this.app);
-        }
+      // Use centralized Firebase initialization
+      initializeFirebase();
+      this.app = getFirebaseApp();
+      this.auth = getFirebaseAuth();
+      
+      if (!this.auth) {
+        console.error('Firebase Auth not available');
+        this.isInitialized = true;
+        return false;
       }
       
       this.isInitialized = true;
@@ -77,7 +62,7 @@ class FirebaseAuthService {
         }
       });
 
-      console.log('Firebase Auth initialized');
+      console.log('Firebase Auth service initialized');
       return true;
     } catch (error) {
       console.error('Firebase Auth initialization error:', error);
