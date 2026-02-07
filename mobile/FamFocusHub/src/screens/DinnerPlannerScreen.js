@@ -405,4 +405,8 @@ const styles = StyleSheet.create({
   quickMealCard: { width: '23%', backgroundColor: 'rgba(15, 13, 26, 0.8)', borderRadius: 14, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.2)' },
   quickMealIcon: { fontSize: 28, marginBottom: 6 },
   quickMealName: { color: '#fff', fontSize: 10, fontWeight: '500', textAlign: 'center' },
+  
+  // AI Meal Modal
+  mealModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
+  mealModalContent: { maxHeight: '90%', backgroundColor: '#0f0d1a', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 16 },
 });
