@@ -560,7 +560,7 @@ export default function LocationScreen({ navigation }) {
               </View>
             </View>
             <Switch
-              value={batterySharing}
+              value={!!batterySharing}
               onValueChange={handleToggleBatterySharing}
               trackColor={{ false: '#374151', true: '#fbbf24' }}
               thumbColor="#fff"
