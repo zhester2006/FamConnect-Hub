@@ -1839,7 +1839,11 @@ async def get_tasks(request: Request):
         {"$or": [{"user_id": parent_id}, {"parent_id": parent_id}]},
         {"_id": 0, "user_id": 1, "name": 1, "nickname": 1, "picture": 1, "role": 1}
     ).to_list(100)
-    member_map = {m['user_id']: m for m in family_members}
+    # Sanitize pictures to prevent large base64 data
+    member_map = {}
+    for m in family_members:
+        m['picture'] = sanitize_picture(m.get('picture'))
+        member_map[m['user_id']] = m
     
     # Include all tasks including completed ones for history view
     tasks = await db.tasks.find(
@@ -1847,7 +1851,7 @@ async def get_tasks(request: Request):
         {"_id": 0}
     ).sort("created_at", -1).to_list(100)
     
-    # Enrich tasks with assignee details
+    # Enrich tasks with assignee details (already sanitized)
     for task in tasks:
         assignee_id = task.get('assigned_to')
         if assignee_id and assignee_id in member_map:
