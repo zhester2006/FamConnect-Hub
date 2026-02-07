@@ -51,7 +51,6 @@ class FirebaseAuthService {
   // Add auth state listener
   addAuthStateListener(listener) {
     this.authStateListeners.push(listener);
-    // Immediately notify with current state
     if (this.currentUser !== undefined) {
       listener(this.currentUser);
     }
@@ -67,57 +66,150 @@ class FirebaseAuthService {
     this.authStateListeners.forEach(listener => listener(user));
   }
 
-  // Sign in with email and password
+  // Sign in with email and password - Not available in Expo Go
   async signInWithEmail(email, password) {
-    if (!this.auth) {
-      await this.initialize();
-    }
-
-    try {
-      const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
-      return {
-        success: true,
-        user: this.formatUser(userCredential.user),
-      };
-    } catch (error) {
-      console.error('Email sign in error:', error);
-      return {
-        success: false,
-        error: this.getErrorMessage(error.code),
-      };
-    }
+    console.log('Firebase Auth not available in Expo Go - use backend API');
+    return {
+      success: false,
+      error: 'Firebase Auth requires a development build. Use Dev Login instead.',
+    };
   }
 
-  // Create account with email and password
+  // Create account with email and password - Not available in Expo Go
   async signUpWithEmail(email, password, displayName) {
-    if (!this.auth) {
-      await this.initialize();
-    }
+    console.log('Firebase Auth not available in Expo Go - use backend API');
+    return {
+      success: false,
+      error: 'Firebase Auth requires a development build. Use Dev Login instead.',
+    };
+  }
 
+  // Sign in with Google - Not available in Expo Go
+  async signInWithGoogle(idToken) {
+    console.log('Firebase Auth not available in Expo Go - use backend API');
+    return {
+      success: false,
+      error: 'Google Sign-In requires a development build.',
+    };
+  }
+
+  // Sign out
+  async signOut() {
+    this.currentUser = null;
+    await this.clearPersistedSession();
+    return { success: true };
+  }
+
+  // Send password reset email - Not available in Expo Go
+  async sendPasswordReset(email) {
+    return {
+      success: false,
+      error: 'Password reset requires a development build.',
+    };
+  }
+
+  // Change password - Not available in Expo Go
+  async changePassword(currentPassword, newPassword) {
+    return { success: false, error: 'Not available in Expo Go' };
+  }
+
+  // Update user profile - Not available in Expo Go
+  async updateUserProfile(updates) {
+    return { success: false, error: 'Not available in Expo Go' };
+  }
+
+  // Get current user
+  getCurrentUser() {
+    return this.currentUser ? this.formatUser(this.currentUser) : null;
+  }
+
+  // Check if user is authenticated
+  isAuthenticated() {
+    return !!this.currentUser;
+  }
+
+  // Get ID token - Not available in Expo Go
+  async getIdToken() {
+    return null;
+  }
+
+  // Format user object
+  formatUser(user) {
+    if (!user) return null;
+    return {
+      uid: user.uid || user.user_id,
+      email: user.email,
+      displayName: user.displayName || user.name,
+      photoURL: user.photoURL || user.picture,
+      user_id: user.uid || user.user_id,
+      name: user.displayName || user.name,
+      picture: user.photoURL || user.picture,
+    };
+  }
+
+  // Persist session to AsyncStorage
+  async persistSession(user) {
     try {
-      const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
-      
-      // Update profile with display name
-      if (displayName) {
-        await updateProfile(userCredential.user, { displayName });
-      }
-
-      return {
-        success: true,
-        user: this.formatUser(userCredential.user),
+      const sessionData = {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        timestamp: Date.now(),
       };
+      await AsyncStorage.setItem('@firebase_session', JSON.stringify(sessionData));
     } catch (error) {
-      console.error('Email sign up error:', error);
-      return {
-        success: false,
-        error: this.getErrorMessage(error.code),
-      };
+      console.log('Persist session error:', error);
     }
   }
 
-  // Sign in with Google
-  async signInWithGoogle(idToken) {
-    if (!this.auth) {
+  // Clear persisted session
+  async clearPersistedSession() {
+    try {
+      await AsyncStorage.removeItem('@firebase_session');
+    } catch (error) {
+      console.log('Clear session error:', error);
+    }
+  }
+
+  // Check for persisted session
+  async getPersistedSession() {
+    try {
+      const session = await AsyncStorage.getItem('@firebase_session');
+      return session ? JSON.parse(session) : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // Get user-friendly error message
+  getErrorMessage(errorCode) {
+    const errorMessages = {
+      'auth/invalid-email': 'Invalid email address',
+      'auth/user-disabled': 'This account has been disabled',
+      'auth/user-not-found': 'No account found with this email',
+      'auth/wrong-password': 'Incorrect password',
+      'auth/email-already-in-use': 'An account already exists with this email',
+      'auth/weak-password': 'Password should be at least 6 characters',
+      'auth/network-request-failed': 'Network error. Please check your connection',
+      'auth/too-many-requests': 'Too many attempts. Please try again later',
+    };
+    return errorMessages[errorCode] || 'An error occurred. Please try again.';
+  }
+
+  // Cleanup
+  cleanup() {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+    this.authStateListeners = [];
+    this.currentUser = null;
+  }
+}
+
+const firebaseAuthService = new FirebaseAuthService();
+export default firebaseAuthService;
       await this.initialize();
     }
 
