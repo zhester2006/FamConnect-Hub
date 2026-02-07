@@ -228,6 +228,7 @@ export default function SettingsScreen({ navigation }) {
       title: 'App Settings',
       items: [
         { icon: 'grid', label: 'Home Screen Widgets', screen: 'WidgetSettings', color: '#8b5cf6' },
+        { icon: 'bug', label: 'Report Bug/Glitch', action: 'bugReport', color: '#ef4444' },
         { icon: 'trash-bin', label: 'Clear Cache', action: 'clearCache', color: '#f59e0b' },
       ],
     },
