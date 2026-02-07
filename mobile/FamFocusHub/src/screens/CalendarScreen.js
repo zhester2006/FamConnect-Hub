@@ -601,6 +601,60 @@ export default function CalendarScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* Pending Events Modal - Parents Only */}
+      <Modal visible={showPendingModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Pending Event Requests</Text>
+              <TouchableOpacity onPress={() => setShowPendingModal(false)}>
+                <Ionicons name="close" size={24} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
+            
+            {pendingEvents.length === 0 ? (
+              <View style={styles.emptyPending}>
+                <Ionicons name="checkmark-circle" size={48} color="#10b981" />
+                <Text style={styles.emptyPendingText}>No pending requests!</Text>
+              </View>
+            ) : (
+              <ScrollView style={{ maxHeight: 400 }}>
+                {pendingEvents.map((event) => (
+                  <View key={event.event_id} style={styles.pendingEventCard}>
+                    <View style={styles.pendingEventInfo}>
+                      <Text style={styles.pendingEventTitle}>{event.title}</Text>
+                      <Text style={styles.pendingEventMeta}>
+                        {event.event_date} • By {event.created_by_name || 'Child'}
+                      </Text>
+                    </View>
+                    <View style={styles.pendingEventActions}>
+                      <TouchableOpacity 
+                        style={styles.approveEventBtn}
+                        onPress={() => handleApproveEvent(event, true)}
+                        disabled={processing === event.event_id}
+                      >
+                        {processing === event.event_id ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <Ionicons name="checkmark" size={20} color="#fff" />
+                        )}
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={styles.denyEventBtn}
+                        onPress={() => handleApproveEvent(event, false)}
+                        disabled={processing === event.event_id}
+                      >
+                        <Ionicons name="close" size={20} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </AnimatedBackground>
   );
 }
