@@ -3404,6 +3404,164 @@ Only list items NOT already in the pantry."""
         print(f"AI shopping suggestions error: {e}")
         return {"suggestions": ["Milk", "Eggs", "Bread", "Vegetables", "Chicken"]}
 
+# ==================== FAMILY RECIPES ====================
+
+@api_router.get("/recipes")
+async def get_recipes(request: Request):
+    """Get all family recipes"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    recipes = await db.recipes.find(
+        {"family_id": family_id},
+        {"_id": 0}
+    ).sort("name", 1).to_list(500)
+    
+    return {"recipes": recipes}
+
+@api_router.post("/recipes")
+async def create_recipe(request: Request, data: dict):
+    """Create a new family recipe"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    recipe_id = f"recipe_{uuid.uuid4().hex[:12]}"
+    recipe_doc = {
+        "recipe_id": recipe_id,
+        "family_id": family_id,
+        "name": data.get('name'),
+        "category": data.get('category', 'dinner'),
+        "difficulty": data.get('difficulty', 'medium'),
+        "prep_time": data.get('prep_time', 30),
+        "servings": data.get('servings', 4),
+        "description": data.get('description', ''),
+        "ingredients": data.get('ingredients', []),
+        "instructions": data.get('instructions', []),
+        "image": data.get('image'),
+        "tags": data.get('tags', []),
+        "created_by": current_user['user_id'],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "times_made": 0,
+        "rating": 0
+    }
+    
+    await db.recipes.insert_one(recipe_doc)
+    recipe_doc.pop('_id', None)
+    
+    return {"recipe": recipe_doc}
+
+@api_router.put("/recipes/{recipe_id}")
+async def update_recipe(recipe_id: str, request: Request, data: dict):
+    """Update a family recipe"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    update_fields = {}
+    for field in ['name', 'category', 'difficulty', 'prep_time', 'servings', 
+                  'description', 'ingredients', 'instructions', 'image', 'tags', 'rating']:
+        if field in data:
+            update_fields[field] = data[field]
+    
+    update_fields['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    if update_fields:
+        await db.recipes.update_one(
+            {"recipe_id": recipe_id, "family_id": family_id},
+            {"$set": update_fields}
+        )
+    
+    return {"success": True}
+
+@api_router.delete("/recipes/{recipe_id}")
+async def delete_recipe(recipe_id: str, request: Request):
+    """Delete a family recipe"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    result = await db.recipes.delete_one({"recipe_id": recipe_id, "family_id": family_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    
+    return {"success": True}
+
+@api_router.post("/recipes/{recipe_id}/made")
+async def mark_recipe_made(recipe_id: str, request: Request):
+    """Mark a recipe as made (for AI meal memory)"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    # Increment times_made counter
+    await db.recipes.update_one(
+        {"recipe_id": recipe_id, "family_id": family_id},
+        {"$inc": {"times_made": 1}, "$set": {"last_made": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Log to meal history for AI memory
+    await db.meal_history.insert_one({
+        "family_id": family_id,
+        "recipe_id": recipe_id,
+        "made_by": current_user['user_id'],
+        "made_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"success": True}
+
+@api_router.get("/recipes/suggestions")
+async def get_ai_recipe_suggestions(request: Request, based_on: str = "history"):
+    """Get AI recipe suggestions based on meal history"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    # Get meal history
+    history = await db.meal_history.find(
+        {"family_id": family_id}
+    ).sort("made_at", -1).limit(20).to_list(20)
+    
+    # Get recipes
+    recipes = await db.recipes.find(
+        {"family_id": family_id},
+        {"_id": 0, "name": 1, "category": 1, "times_made": 1}
+    ).to_list(100)
+    
+    # Get pantry items
+    pantry = await db.pantry.find(
+        {"family_id": family_id},
+        {"_id": 0, "name": 1}
+    ).to_list(100)
+    pantry_items = [p['name'] for p in pantry]
+    
+    try:
+        from emergentintegrations.llm.chat import chat, UserMessage
+        
+        recent_meals = [h.get('recipe_id', '') for h in history[:5]]
+        favorite_recipes = sorted(recipes, key=lambda x: x.get('times_made', 0), reverse=True)[:5]
+        favorite_names = [r['name'] for r in favorite_recipes]
+        
+        prompt = f"""Based on this family's cooking patterns:
+Recent meals: {', '.join(recent_meals)}
+Favorite recipes: {', '.join(favorite_names)}
+Pantry has: {', '.join(pantry_items[:15])}
+
+Suggest 5 meal ideas that:
+1. Use some pantry ingredients
+2. Are different from recent meals
+3. Match the family's preferences based on favorites
+
+Return only meal names, one per line, no explanations."""
+        
+        response = await asyncio.to_thread(
+            chat,
+            model="gpt-5.2",
+            messages=[UserMessage(content=prompt)]
+        )
+        
+        suggestions = [line.strip() for line in response.content.split('\n') if line.strip()]
+        return {"suggestions": suggestions[:5]}
+    except Exception as e:
+        print(f"AI recipe suggestions error: {e}")
+        return {"suggestions": ["Chicken Stir Fry", "Pasta Carbonara", "Tacos", "Grilled Salmon", "Vegetable Soup"]}
+
 # ==================== DATA EXPORT ====================
 
 @api_router.get("/export/chores")
