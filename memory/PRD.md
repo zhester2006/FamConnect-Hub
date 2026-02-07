@@ -1640,3 +1640,43 @@ Update Firebase Realtime Database rules in Firebase Console to:
 10. Advanced AI chore scheduler with exclusions
 11. Parent-editable chores list with AI icons
 12. Onboarding update with new features
+
+### Session 41 - Bug Fixes & Firebase Auth (Feb 2026) ✅
+
+**Completed:**
+
+1. **Bug Reporting Feature (Complete):**
+   - Backend endpoint: `POST /api/bug-reports` - Submit bug reports with device info and logs
+   - Backend endpoint: `GET /api/bug-reports` - View reports (parent only)
+   - Backend endpoint: `PUT /api/bug-reports/{report_id}` - Update status
+   - Frontend: Full bug report modal in SettingsScreen.js with description, steps to reproduce, auto-attached logs and device info
+
+2. **Firebase Auth Initialization Improved:**
+   - Updated `firebase.init.js` with more robust error handling
+   - Dynamic import of AsyncStorage and Firebase Auth modules
+   - Better handling of "already initialized" errors
+   - Fallback to getAuth() if initializeAuth fails
+   - AuthContext now explicitly initializes Firebase Auth first before other services
+
+3. **Firebase Service Update:**
+   - Using `Promise.allSettled` instead of `Promise.all` for resilient initialization
+   - Better logging of initialization success/failure
+
+**Key Files Modified:**
+- `/app/backend/server.py` - Added bug-reports endpoints
+- `/app/mobile/FamFocusHub/src/screens/SettingsScreen.js` - Added bug report modal UI
+- `/app/mobile/FamFocusHub/src/services/firebase.init.js` - Improved error handling
+- `/app/mobile/FamFocusHub/src/services/firebase.service.js` - Resilient initialization
+- `/app/mobile/FamFocusHub/src/context/AuthContext.js` - Firebase Auth init first
+
+**Remaining P0 Issues:**
+- Firebase Auth initialization still needs testing on actual device
+- Family Wall interactions need verification
+- Map display needs verification
+
+**Remaining P1 Issues:**
+- Dinner Planner interactive UI
+- Points auto-update
+- Animation conflicts
+
+**Build Required:** Yes - Mobile app changes need EAS build to verify on device
