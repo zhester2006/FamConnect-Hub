@@ -332,6 +332,7 @@ const styles = StyleSheet.create({
   section: { backgroundColor: 'rgba(30, 27, 75, 0.8)', borderRadius: 20, padding: 16, marginBottom: 16 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
   sectionTitle: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  quickMealHint: { color: '#6b7280', fontSize: 12, marginTop: 4, marginBottom: 12 },
   
   // Inputs
   input: { backgroundColor: 'rgba(15, 13, 26, 0.8)', borderRadius: 14, padding: 14, color: '#fff', fontSize: 15, borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.2)', marginBottom: 12 },
