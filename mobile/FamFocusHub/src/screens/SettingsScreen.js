@@ -1,21 +1,57 @@
 import React, { useState, useEffect } from 'react';
 import { 
   View, Text, StyleSheet, ScrollView, TouchableOpacity, 
-  Switch, Alert, Linking, ActivityIndicator 
+  Switch, Alert, Linking, ActivityIndicator, TextInput, Modal,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import * as Application from 'expo-application';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import AnimatedBackground from '../components/AnimatedBackground';
 import apiService from '../services/api.service';
+
+// Store recent logs for bug reports
+const logBuffer = [];
+const MAX_LOGS = 100;
+
+// Override console methods to capture logs
+const originalConsole = {
+  log: console.log,
+  warn: console.warn,
+  error: console.error,
+};
+
+console.log = (...args) => {
+  logBuffer.push({ type: 'LOG', timestamp: new Date().toISOString(), message: args.map(a => String(a)).join(' ') });
+  if (logBuffer.length > MAX_LOGS) logBuffer.shift();
+  originalConsole.log(...args);
+};
+
+console.warn = (...args) => {
+  logBuffer.push({ type: 'WARN', timestamp: new Date().toISOString(), message: args.map(a => String(a)).join(' ') });
+  if (logBuffer.length > MAX_LOGS) logBuffer.shift();
+  originalConsole.warn(...args);
+};
+
+console.error = (...args) => {
+  logBuffer.push({ type: 'ERROR', timestamp: new Date().toISOString(), message: args.map(a => String(a)).join(' ') });
+  if (logBuffer.length > MAX_LOGS) logBuffer.shift();
+  originalConsole.error(...args);
+};
 
 export default function SettingsScreen({ navigation }) {
   const { user, logout } = useAuth();
   const theme = useTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showBugReport, setShowBugReport] = useState(false);
+  const [bugDescription, setBugDescription] = useState('');
+  const [bugSteps, setBugSteps] = useState('');
+  const [submittingBug, setSubmittingBug] = useState(false);
 
   useEffect(() => {
     checkNotificationStatus();
@@ -27,6 +63,62 @@ export default function SettingsScreen({ navigation }) {
       setNotificationsEnabled(status === 'granted');
     } catch (error) {
       console.error('Failed to check notification status:', error);
+    }
+  };
+
+  const getDeviceInfo = async () => {
+    try {
+      return {
+        deviceName: Device.deviceName || 'Unknown',
+        brand: Device.brand || 'Unknown',
+        modelName: Device.modelName || 'Unknown',
+        osName: Device.osName || Platform.OS,
+        osVersion: Device.osVersion || Platform.Version,
+        appVersion: Application.nativeApplicationVersion || '1.0.0',
+        buildVersion: Application.nativeBuildVersion || '1',
+      };
+    } catch (e) {
+      return { error: 'Could not get device info' };
+    }
+  };
+
+  const handleSubmitBugReport = async () => {
+    if (!bugDescription.trim()) {
+      Alert.alert('Error', 'Please describe the bug or issue');
+      return;
+    }
+
+    setSubmittingBug(true);
+    try {
+      const deviceInfo = await getDeviceInfo();
+      const recentLogs = logBuffer.slice(-50); // Get last 50 logs
+      
+      const report = {
+        description: bugDescription.trim(),
+        steps_to_reproduce: bugSteps.trim(),
+        device_info: deviceInfo,
+        user_id: user?.user_id,
+        user_role: user?.role,
+        timestamp: new Date().toISOString(),
+        logs: recentLogs,
+      };
+
+      await apiService.post('/bug-reports', report);
+      
+      Alert.alert(
+        'Report Submitted',
+        'Thank you for helping us improve FamFocus Hub! Our team will review your report.',
+        [{ text: 'OK', onPress: () => {
+          setShowBugReport(false);
+          setBugDescription('');
+          setBugSteps('');
+        }}]
+      );
+    } catch (error) {
+      console.error('Failed to submit bug report:', error);
+      Alert.alert('Error', 'Failed to submit bug report. Please try again later.');
+    } finally {
+      setSubmittingBug(false);
     }
   };
 
