@@ -137,12 +137,14 @@ export default function ShoppingListScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />
         }
       >
-        {/* Pending Approval - Parents Only */}
-        {user?.role === 'parent' && pendingItems.length > 0 && (
+        {/* Pending Approval - Parents see approve/reject, Children see status */}
+        {pendingItems.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="time" size={18} color="#f59e0b" />
-              <Text style={styles.sectionTitle}>Pending Approval</Text>
+              <Text style={styles.sectionTitle}>
+                {user?.role === 'parent' ? 'Pending Approval' : 'Awaiting Approval'}
+              </Text>
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{pendingItems.length}</Text>
               </View>
@@ -151,30 +153,39 @@ export default function ShoppingListScreen({ navigation }) {
               <View key={item.item_id} style={styles.itemCard}>
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>{item.name}</Text>
-                  {item.requested_by && (
-                    <Text style={styles.itemRequester}>Requested by {item.requested_by}</Text>
+                  {user?.role === 'parent' && item.requested_by && (
+                    <Text style={styles.itemRequester}>Requested by child</Text>
+                  )}
+                  {user?.role !== 'parent' && (
+                    <Text style={styles.itemRequester}>Waiting for parent approval</Text>
                   )}
                 </View>
-                <View style={styles.itemActions}>
-                  <TouchableOpacity 
-                    style={styles.approveBtn}
-                    onPress={() => handleUpdateStatus(item.item_id, 'approved')}
-                    disabled={processing === item.item_id}
-                  >
-                    {processing === item.item_id ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <Ionicons name="checkmark" size={20} color="#fff" />
-                    )}
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.rejectBtn}
-                    onPress={() => handleUpdateStatus(item.item_id, 'rejected')}
-                    disabled={processing === item.item_id}
-                  >
-                    <Ionicons name="close" size={20} color="#fff" />
-                  </TouchableOpacity>
-                </View>
+                {user?.role === 'parent' ? (
+                  <View style={styles.itemActions}>
+                    <TouchableOpacity 
+                      style={styles.approveBtn}
+                      onPress={() => handleUpdateStatus(item.item_id, 'approved')}
+                      disabled={processing === item.item_id}
+                    >
+                      {processing === item.item_id ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Ionicons name="checkmark" size={20} color="#fff" />
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.rejectBtn}
+                      onPress={() => handleUpdateStatus(item.item_id, 'rejected')}
+                      disabled={processing === item.item_id}
+                    >
+                      <Ionicons name="close" size={20} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.pendingBadge}>
+                    <Ionicons name="hourglass" size={16} color="#f59e0b" />
+                  </View>
+                )}
               </View>
             ))}
           </View>
