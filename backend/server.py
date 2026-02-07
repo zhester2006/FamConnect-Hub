@@ -886,7 +886,7 @@ async def get_family_members(request: Request):
     
     # Sanitize pictures to prevent large base64 data in responses
     for member in members:
-        member['picture'] = sanitize_picture(member.get('picture'))
+        member['picture'] = sanitize_picture(member.get('picture'), fallback_name=member.get('nickname') or member.get('name'))
     
     return {"members": members}
 
