@@ -170,34 +170,48 @@ export function ThemeProvider({ children }) {
 
   // Update a single color
   const updateColor = (colorKey, value) => {
-    console.log('updateColor called:', colorKey, value, 'isCustomMode:', isCustomMode);
-    if (!isCustomMode) {
-      console.log('Cannot update color in standard mode');
+    console.log('updateColor called:', colorKey, value, 'isCustomMode:', isCustomMode, 'theme.mode:', theme.mode);
+    
+    // Allow color update if we're in custom mode OR if the theme mode is custom
+    if (!isCustomMode && theme.mode !== 'custom') {
+      console.log('Cannot update color - not in custom mode');
       return;
     }
     
     const newTheme = { ...theme, [colorKey]: value, mode: 'custom' };
     setTheme(newTheme);
+    setIsCustomMode(true); // Ensure custom mode is set
     saveTheme(newTheme);
     console.log('Theme updated:', newTheme);
   };
 
   // Update multiple colors at once
   const updateColors = (colors) => {
-    if (!isCustomMode) return;
+    if (!isCustomMode && theme.mode !== 'custom') return;
     
     const newTheme = { ...theme, ...colors, mode: 'custom' };
     setTheme(newTheme);
+    setIsCustomMode(true);
     saveTheme(newTheme);
   };
 
   // Switch to custom mode
-  const enableCustomMode = () => {
+  const enableCustomMode = async () => {
     console.log('enableCustomMode called');
     setIsCustomMode(true);
+    setAutoMode(false);
     const customTheme = { ...theme, mode: 'custom' };
     setTheme(customTheme);
-    saveTheme(customTheme);
+    
+    // Save immediately
+    try {
+      await AsyncStorage.setItem('themeMode', 'custom');
+      await AsyncStorage.setItem('autoThemeMode', 'false');
+      await AsyncStorage.setItem('familyTheme', JSON.stringify(customTheme));
+      console.log('Custom mode saved successfully');
+    } catch (error) {
+      console.error('Failed to save custom mode:', error);
+    }
     console.log('Custom mode enabled, theme:', customTheme);
   };
 
