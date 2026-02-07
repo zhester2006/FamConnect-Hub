@@ -216,6 +216,7 @@ export default function AppNavigator() {
                   <Stack.Screen name="DinnerPlanner" component={DinnerPlannerScreen} />
                   <Stack.Screen name="Achievements" component={AchievementsScreen} />
                   <Stack.Screen name="WidgetSettings" component={WidgetSettingsScreen} />
+                  <Stack.Screen name="Pantry" component={PantryScreen} />
                 </>
               )}
             </>
