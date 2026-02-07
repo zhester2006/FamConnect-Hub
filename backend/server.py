@@ -1593,7 +1593,7 @@ async def get_daily_quote(request: Request, refresh: bool = False, quote_type: s
             upsert=True
         )
     else:
-        await db.daily_quotes.insert_one(quote_doc)
+        await db.daily_quotes.insert_one(quote_doc.copy())
     
     return quote_doc
 
