@@ -7,6 +7,7 @@ import apiService from '../services/api.service';
 import biometricService from '../services/biometric.service';
 import webSocketService from '../services/websocket.service';
 import firebaseService from '../services/firebase.service';
+import { initializeFirebaseAuth } from '../services/firebase.init';
 
 const AuthContext = createContext(null);
 
@@ -46,12 +47,21 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Initialize Firebase on app start
+  // Initialize Firebase Auth FIRST on app start (before other Firebase services)
   useEffect(() => {
-    const initFirebase = async () => {
-      await firebaseService.initialize();
+    const initFirebaseAuth = async () => {
+      try {
+        // Initialize Firebase Auth with persistence first
+        await initializeFirebaseAuth();
+        console.log('Firebase Auth initialized in AuthProvider');
+        
+        // Then initialize remaining Firebase services
+        await firebaseService.initialize();
+      } catch (error) {
+        console.error('Firebase init error:', error);
+      }
     };
-    initFirebase();
+    initFirebaseAuth();
   }, []);
 
   useEffect(() => {
