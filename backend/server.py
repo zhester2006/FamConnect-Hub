@@ -1439,6 +1439,58 @@ Respond in this JSON format:
     except:
         return {"success": False, "suggestion": response}
 
+@api_router.post("/ai/pixie")
+async def pixie_assistant(request: Request, data: dict):
+    """Pixie - The family's AI assistant that can help with various questions"""
+    current_user = await get_current_user(request)
+    
+    message = data.get('message', '')
+    user_name = data.get('user_name', 'Friend')
+    user_role = data.get('user_role', 'child')
+    context = data.get('context', [])
+    
+    # Build context from previous messages
+    context_str = ""
+    if context:
+        context_str = "\n".join([f"{'User' if m['role'] == 'user' else 'Pixie'}: {m['content']}" for m in context[-3:]])
+    
+    chat = LlmChat(
+        api_key=os.environ['EMERGENT_LLM_KEY'],
+        session_id=f"pixie_{uuid.uuid4().hex[:8]}",
+        system_message=f"""You are Pixie, a friendly and helpful AI assistant for families in the FamFocus Hub app. 
+You have a warm, encouraging personality and love helping families.
+You're talking to {user_name} who is a {user_role}.
+
+Your capabilities:
+- Suggest family dinner ideas
+- Recommend family activities
+- Provide homework help and study tips
+- Give chore tips and motivation
+- Offer parenting advice (for parents)
+- Share fun facts and educational content
+- Help with scheduling and organization
+
+Personality traits:
+- Friendly and warm (use emojis occasionally)
+- Encouraging and positive
+- Age-appropriate in your responses
+- Helpful but concise (keep responses under 150 words)
+- Sometimes playful with younger users
+
+If asked about something you can't help with, kindly redirect to something you can help with."""
+    ).with_model("openai", "gpt-5.2")
+    
+    prompt = f"""Previous conversation:
+{context_str}
+
+User's message: {message}
+
+Respond helpfully as Pixie:"""
+    
+    response = await chat.send_message(UserMessage(text=prompt))
+    
+    return {"response": response}
+
 # Rewards
 @api_router.get("/rewards")
 async def get_rewards(request: Request):
