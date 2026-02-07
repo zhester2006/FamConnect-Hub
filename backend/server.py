@@ -2022,11 +2022,20 @@ async def pixie_assistant(request: Request, data: dict):
     current_user = await get_current_user(request)
     
     message = data.get('message', '')
-    user_name = data.get('user_name', 'Friend')
-    user_role = data.get('user_role', 'child')
+    # Use nickname if available, otherwise use name
+    user_name = current_user.get('nickname') or current_user.get('name', 'Friend')
+    user_role = current_user.get('role', 'child')
     context = data.get('context', [])
     lat = data.get('lat')
     lng = data.get('lng')
+    
+    # Get family members to reference by nickname
+    family_id = current_user.get('family_id') or current_user.get('parent_id', current_user['user_id'])
+    family_members = await db.users.find(
+        {"$or": [{"family_id": family_id}, {"parent_id": family_id}, {"user_id": family_id}]},
+        {"_id": 0, "name": 1, "nickname": 1, "role": 1}
+    ).to_list(20)
+    family_names = ", ".join([m.get('nickname') or m.get('name', 'Unknown') for m in family_members])
     
     # Fetch weather data if location available or if message seems to be about activities/weather
     weather_info = ""
