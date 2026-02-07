@@ -219,6 +219,7 @@ export default function AppNavigator() {
                   <Stack.Screen name="Achievements" component={AchievementsScreen} />
                   <Stack.Screen name="WidgetSettings" component={WidgetSettingsScreen} />
                   <Stack.Screen name="Pantry" component={PantryScreen} />
+                  <Stack.Screen name="CheckinLog" component={CheckinLogScreen} />
                 </>
               )}
             </>
