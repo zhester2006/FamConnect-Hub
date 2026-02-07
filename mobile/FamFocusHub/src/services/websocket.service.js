@@ -3,13 +3,18 @@ import { Platform } from 'react-native';
 const BACKEND_URL = 'https://famfocus-hub-1.preview.emergentagent.com';
 const WS_URL = BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://');
 
+// NOTE: WebSocket is DEPRECATED in favor of Firebase Realtime Database
+// This service is kept for backward compatibility but should not be used
+// Use firebase.chat.service.js instead for chat functionality
+
 class WebSocketService {
   constructor() {
     this.ws = null;
     this.sessionToken = null;
     this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 5;
+    this.maxReconnectAttempts = 3; // Reduced since we're not using this
     this.reconnectDelay = 3000;
+    this.isEnabled = false; // DISABLED by default - using Firebase instead
     this.listeners = {
       message: [],
       typing: [],
