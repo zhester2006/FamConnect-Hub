@@ -1027,8 +1027,11 @@ async def get_family_wall(request: Request):
     current_user = await get_current_user(request)
     posts = await db.family_wall.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
     
-    # Add user_voted_option for each poll post
+    # Sanitize and add user_voted_option for each post
     for post in posts:
+        # Sanitize author picture to prevent large base64 data
+        post['author_picture'] = sanitize_picture(post.get('author_picture'))
+        
         if post.get('type') == 'poll' or post.get('post_type') == 'poll':
             poll_options = post.get('poll_options', [])
             for idx, opt in enumerate(poll_options):
