@@ -251,13 +251,13 @@ export default function RecipesScreen({ navigation }) {
         />
       </View>
 
-      {/* Category Filter */}
+      {/* Category Filter - Compact Icon Tabs */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryFilter}>
         <TouchableOpacity
           style={[styles.categoryChip, selectedCategory === 'all' && { backgroundColor: primaryColor }]}
           onPress={() => setSelectedCategory('all')}
         >
-          <Text style={[styles.categoryChipText, selectedCategory === 'all' && { color: '#fff' }]}>All</Text>
+          <Ionicons name="apps" size={18} color={selectedCategory === 'all' ? '#fff' : '#9ca3af'} />
         </TouchableOpacity>
         {MEAL_CATEGORIES.map(cat => (
           <TouchableOpacity
@@ -265,10 +265,7 @@ export default function RecipesScreen({ navigation }) {
             style={[styles.categoryChip, selectedCategory === cat.id && { backgroundColor: cat.color }]}
             onPress={() => setSelectedCategory(cat.id)}
           >
-            <Ionicons name={cat.icon} size={14} color={selectedCategory === cat.id ? '#fff' : cat.color} />
-            <Text style={[styles.categoryChipText, selectedCategory === cat.id && { color: '#fff' }]}>
-              {cat.name}
-            </Text>
+            <Ionicons name={cat.icon} size={18} color={selectedCategory === cat.id ? '#fff' : cat.color} />
           </TouchableOpacity>
         ))}
       </ScrollView>
