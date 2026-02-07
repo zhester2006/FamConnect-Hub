@@ -578,6 +578,92 @@ export default function SettingsScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* Suggestion Modal */}
+      <Modal
+        visible={showSuggestion}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowSuggestion(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Share a Suggestion 💡</Text>
+              <TouchableOpacity onPress={() => setShowSuggestion(false)}>
+                <Ionicons name="close" size={24} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalSubtext}>
+              Have an idea to make FamFocus Hub better? We'd love to hear from you!
+            </Text>
+
+            <Text style={styles.inputLabel}>Category</Text>
+            <View style={styles.categoryRow}>
+              {[
+                { id: 'feature', label: 'New Feature', icon: 'star' },
+                { id: 'improvement', label: 'Improvement', icon: 'trending-up' },
+                { id: 'other', label: 'Other', icon: 'chatbubble' },
+              ].map((cat) => (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={[
+                    styles.categoryOption,
+                    suggestionCategory === cat.id && styles.categoryOptionActive
+                  ]}
+                  onPress={() => setSuggestionCategory(cat.id)}
+                >
+                  <Ionicons 
+                    name={cat.icon} 
+                    size={16} 
+                    color={suggestionCategory === cat.id ? '#fff' : '#10b981'} 
+                  />
+                  <Text style={[
+                    styles.categoryText,
+                    suggestionCategory === cat.id && styles.categoryTextActive
+                  ]}>{cat.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.inputLabel}>Title *</Text>
+            <TextInput
+              style={[styles.textInput, { minHeight: 48 }]}
+              placeholder="Give your idea a catchy title"
+              placeholderTextColor="#6b7280"
+              value={suggestionTitle}
+              onChangeText={setSuggestionTitle}
+            />
+
+            <Text style={styles.inputLabel}>Description *</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Describe your idea in detail. What problem does it solve? How would it work?"
+              placeholderTextColor="#6b7280"
+              multiline
+              numberOfLines={4}
+              value={suggestionDescription}
+              onChangeText={setSuggestionDescription}
+            />
+
+            <TouchableOpacity 
+              style={[styles.suggestionSubmitButton, submittingSuggestion && styles.submitButtonDisabled]}
+              onPress={handleSubmitSuggestion}
+              disabled={submittingSuggestion}
+            >
+              {submittingSuggestion ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="bulb" size={18} color="#fff" />
+                  <Text style={styles.submitButtonText}>Submit Suggestion</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </AnimatedBackground>
   );
 }
