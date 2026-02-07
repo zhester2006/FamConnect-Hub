@@ -890,37 +890,95 @@ export default function LocationScreen({ navigation }) {
           </View>
           
           {(selectedLocation || currentLocation) ? (
-            // Static Map Fallback - Maps not available in Expo Go
-            <View style={styles.staticMapContainer}>
-              <Image
-                source={{
-                  uri: `https://maps.googleapis.com/maps/api/staticmap?center=${
-                    selectedLocation?.latitude || currentLocation?.latitude
-                  },${
-                    selectedLocation?.longitude || currentLocation?.longitude
-                  }&zoom=15&size=600x400&maptype=roadmap&markers=color:purple%7C${
-                    selectedLocation?.latitude || currentLocation?.latitude
-                  },${
-                    selectedLocation?.longitude || currentLocation?.longitude
-                  }&key=AIzaSyBx${Date.now().toString(36)}`
-                }}
-                style={styles.staticMapImage}
-                onError={() => console.log('Static map also failed')}
-              />
-              <View style={styles.staticMapOverlay}>
-                <Ionicons name="location" size={48} color="#818cf8" />
-                <Text style={styles.staticMapText}>
-                  Maps not available in Expo Go. Build the app for full map support.
-                </Text>
-                <TouchableOpacity 
-                  style={styles.staticMapButton}
-                  onPress={handleUseCurrentLocation}
-                >
-                  <Ionicons name="locate" size={20} color="#fff" />
-                  <Text style={styles.staticMapButtonText}>Use Current Location</Text>
-                </TouchableOpacity>
+            mapError ? (
+              // Static Map Fallback when MapView fails
+              <View style={styles.staticMapContainer}>
+                <Image
+                  source={{
+                    uri: `https://maps.googleapis.com/maps/api/staticmap?center=${
+                      selectedLocation?.latitude || currentLocation?.latitude
+                    },${
+                      selectedLocation?.longitude || currentLocation?.longitude
+                    }&zoom=15&size=600x400&maptype=roadmap&markers=color:purple%7C${
+                      selectedLocation?.latitude || currentLocation?.latitude
+                    },${
+                      selectedLocation?.longitude || currentLocation?.longitude
+                    }&key=AIzaSyBx${Date.now().toString(36)}`
+                  }}
+                  style={styles.staticMapImage}
+                  onError={() => console.log('Static map also failed')}
+                />
+                <View style={styles.staticMapOverlay}>
+                  <Ionicons name="location" size={48} color="#818cf8" />
+                  <Text style={styles.staticMapText}>
+                    Tap "Use Current Location" to set the safe zone at your current position
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.staticMapButton}
+                    onPress={handleUseCurrentLocation}
+                  >
+                    <Ionicons name="locate" size={20} color="#fff" />
+                    <Text style={styles.staticMapButtonText}>Use Current Location</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
+            ) : (
+              <MapView
+                ref={mapRef}
+                style={styles.map}
+                provider={PROVIDER_DEFAULT}
+                initialRegion={{
+                  latitude: selectedLocation?.latitude || currentLocation?.latitude || 37.78825,
+                  longitude: selectedLocation?.longitude || currentLocation?.longitude || -122.4324,
+                  latitudeDelta: 0.01,
+                  longitudeDelta: 0.01,
+                }}
+                onPress={(e) => setSelectedLocation(e.nativeEvent.coordinate)}
+                onMapReady={() => setMapError(false)}
+                onError={(e) => {
+                  console.log('MapView error:', e);
+                  setMapError(true);
+                }}
+                showsUserLocation
+                showsMyLocationButton={false}
+              >
+                {selectedLocation && (
+                  <>
+                    <Marker
+                      coordinate={selectedLocation}
+                      pinColor="#818cf8"
+                      title={newGeofence.name || "New Safe Zone"}
+                    />
+                    <Circle
+                      center={selectedLocation}
+                      radius={newGeofence.radius * 0.3048}
+                      strokeColor="rgba(129, 140, 248, 0.8)"
+                      fillColor="rgba(129, 140, 248, 0.2)"
+                      strokeWidth={2}
+                    />
+                  </>
+                )}
+                
+                {/* Show existing geofences on map */}
+                {geofences.map((fence) => (
+                  <React.Fragment key={fence.geofence_id}>
+                    <Marker
+                      coordinate={{ latitude: fence.latitude, longitude: fence.longitude }}
+                      pinColor="#10b981"
+                      title={fence.name}
+                      description={`${fence.radius_feet} ft radius`}
+                    />
+                    <Circle
+                      center={{ latitude: fence.latitude, longitude: fence.longitude }}
+                      radius={fence.radius_feet * 0.3048}
+                      strokeColor="rgba(16, 185, 129, 0.8)"
+                      fillColor="rgba(16, 185, 129, 0.15)"
+                      strokeWidth={2}
+                    />
+                  </React.Fragment>
+                ))}
+              </MapView>
+            )
           ) : (
             <View style={[styles.map, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#1e1b4b' }]}>
               <ActivityIndicator size="large" color="#818cf8" />
