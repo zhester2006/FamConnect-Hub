@@ -524,6 +524,31 @@ class ApiService {
     return this.delete(`/goals/${goalId}`);
   }
 
+  // Pantry
+  async getPantryItems() {
+    return this.get('/pantry', 'pantry_items');
+  }
+
+  async addPantryItem(itemData) {
+    return this.post('/pantry', itemData);
+  }
+
+  async updatePantryItem(itemId, data) {
+    return this.put(`/pantry/${itemId}`, data);
+  }
+
+  async removePantryItem(itemId) {
+    return this.delete(`/pantry/${itemId}`);
+  }
+
+  async getAiPantrySuggestions(pantryItems) {
+    return this.post('/pantry/ai-suggestions', { items: pantryItems });
+  }
+
+  async getAiShoppingSuggestions(pantryItems) {
+    return this.post('/pantry/ai-shopping', { items: pantryItems });
+  }
+
   // Achievements
   async getAchievements(userId = null) {
     const endpoint = userId ? `/achievements?user_id=${userId}` : '/achievements';
