@@ -9,6 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
 import firebaseFamilyWallService from '../services/firebase.familywall.service';
+import ProfileAvatar from '../components/ProfileAvatar';
 import MedalEmblem from '../components/MedalEmblem';
 
 const POST_TYPES = [
