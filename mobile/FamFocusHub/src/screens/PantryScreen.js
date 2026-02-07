@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, paddingVertical: 12, paddingLeft: 8, color: '#fff', fontSize: 14 },
   
   categoryFilter: { paddingHorizontal: 16, marginBottom: 12 },
-  categoryChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: 'rgba(30, 41, 59, 0.8)', borderRadius: 20, marginRight: 8, gap: 6 },
+  categoryChip: { alignItems: 'center', justifyContent: 'center', width: 40, height: 40, backgroundColor: 'rgba(30, 41, 59, 0.8)', borderRadius: 20, marginRight: 8 },
   categoryChipText: { fontSize: 12, color: '#9ca3af', fontWeight: '600' },
   
   statsBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 12, gap: 12 },
