@@ -1146,4 +1146,11 @@ const styles = StyleSheet.create({
   mapConfirmButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#10b981', borderRadius: 12, paddingVertical: 16 },
   mapConfirmText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   mapHelpText: { color: '#9ca3af', fontSize: 14, textAlign: 'center', lineHeight: 22 },
+  // Static map fallback styles
+  staticMapContainer: { flex: 1, backgroundColor: '#1e1b4b', justifyContent: 'center', alignItems: 'center' },
+  staticMapImage: { width: SCREEN_WIDTH, height: 300, opacity: 0.3 },
+  staticMapOverlay: { position: 'absolute', justifyContent: 'center', alignItems: 'center', padding: 32 },
+  staticMapText: { color: '#9ca3af', fontSize: 16, textAlign: 'center', marginTop: 16, marginBottom: 24, lineHeight: 24 },
+  staticMapButton: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#818cf8', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 12 },
+  staticMapButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });
