@@ -1659,10 +1659,11 @@ async def get_tasks(request: Request):
     ).to_list(100)
     member_map = {m['user_id']: m for m in family_members}
     
+    # Include all tasks including completed ones for history view
     tasks = await db.tasks.find(
-        {"family_id": parent_id, "status": {"$ne": "completed"}},
+        {"family_id": parent_id},
         {"_id": 0}
-    ).sort("created_at", -1).to_list(50)
+    ).sort("created_at", -1).to_list(100)
     
     # Enrich tasks with assignee details
     for task in tasks:
@@ -1677,6 +1678,12 @@ async def get_tasks(request: Request):
             completer = member_map[completed_by_id]
             task['completed_by_name'] = completer.get('nickname') or completer.get('name')
             task['completed_by_picture'] = completer.get('picture')
+        
+        # Also add claimed_by_name for consistency
+        claimed_by_id = task.get('claimed_by')
+        if claimed_by_id and claimed_by_id in member_map:
+            claimer = member_map[claimed_by_id]
+            task['claimed_by_name'] = claimer.get('nickname') or claimer.get('name')
     
     return {"tasks": tasks}
 
