@@ -757,4 +757,18 @@ const styles = StyleSheet.create({
   submitBtn: { flex: 1, backgroundColor: '#6366f1', paddingVertical: 16, borderRadius: 30, alignItems: 'center' },
   submitBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   deleteEventBtn: { padding: 16, backgroundColor: 'rgba(239, 68, 68, 0.2)', borderRadius: 30, alignItems: 'center' },
+
+  // Pending Events
+  pendingButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(245, 158, 11, 0.2)', justifyContent: 'center', alignItems: 'center' },
+  pendingBadge: { position: 'absolute', top: -4, right: -4, backgroundColor: '#f59e0b', width: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center' },
+  pendingBadgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+  emptyPending: { alignItems: 'center', paddingVertical: 40 },
+  emptyPendingText: { color: '#10b981', fontSize: 16, marginTop: 12 },
+  pendingEventCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(15, 13, 26, 0.5)', borderRadius: 12, padding: 14, marginBottom: 10, borderLeftWidth: 3, borderLeftColor: '#f59e0b' },
+  pendingEventInfo: { flex: 1 },
+  pendingEventTitle: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  pendingEventMeta: { color: '#9ca3af', fontSize: 12, marginTop: 4 },
+  pendingEventActions: { flexDirection: 'row', gap: 8 },
+  approveEventBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#10b981', justifyContent: 'center', alignItems: 'center' },
+  denyEventBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#ef4444', justifyContent: 'center', alignItems: 'center' },
 });
