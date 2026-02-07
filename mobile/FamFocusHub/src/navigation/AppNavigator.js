@@ -29,6 +29,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import HomeHubScreen from '../screens/HomeHubScreen';
 import AchievementsScreen from '../screens/AchievementsScreen';
 import WidgetSettingsScreen from '../screens/WidgetSettingsScreen';
+import PantryScreen from '../screens/PantryScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
