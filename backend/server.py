@@ -1768,16 +1768,62 @@ async def award_points(request: Request):
 
 # Leaderboard
 @api_router.get("/leaderboard")
-async def get_leaderboard(request: Request):
+async def get_leaderboard(request: Request, timeframe: str = "all-time"):
     current_user = await get_current_user(request)
     parent_id = current_user.get('parent_id', current_user['user_id'])
     
+    # Get all children
     children = await db.users.find(
         {"parent_id": parent_id, "role": "child"},
         {"_id": 0, "user_id": 1, "name": 1, "nickname": 1, "picture": 1, "points": 1, "badges": 1}
-    ).sort("points", -1).to_list(100)
+    ).to_list(100)
     
-    return {"leaderboard": children}
+    # If timeframe filter is applied, calculate points for that period
+    if timeframe in ['this-week', 'this-month']:
+        now = datetime.now(timezone.utc)
+        
+        if timeframe == 'this-week':
+            # Get start of current week (Monday)
+            start_date = now - timedelta(days=now.weekday())
+            start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        else:  # this-month
+            # Get start of current month
+            start_date = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        start_date_str = start_date.isoformat()
+        
+        # Calculate points earned in this period from approved chores
+        for child in children:
+            period_points = 0
+            
+            # Get approved chores in the time period
+            approved_chores = await db.chores.find({
+                "assigned_to": child['user_id'],
+                "status": "approved",
+                "approved_at": {"$gte": start_date_str}
+            }).to_list(1000)
+            
+            for chore in approved_chores:
+                period_points += chore.get('points', 10)
+            
+            # Get points awarded in this period
+            point_logs = await db.point_logs.find({
+                "user_id": child['user_id'],
+                "created_at": {"$gte": start_date_str}
+            }).to_list(1000)
+            
+            for log in point_logs:
+                period_points += log.get('amount', 0)
+            
+            child['period_points'] = period_points
+        
+        # Sort by period points
+        children.sort(key=lambda x: x.get('period_points', 0), reverse=True)
+    else:
+        # Sort by total points (all-time)
+        children.sort(key=lambda x: x.get('points', 0), reverse=True)
+    
+    return {"leaderboard": children, "timeframe": timeframe}
 
 # Check-ins
 @api_router.post("/checkins")
