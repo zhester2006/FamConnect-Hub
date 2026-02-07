@@ -313,6 +313,8 @@ export default function SettingsScreen({ navigation }) {
       handleClearCache();
     } else if (item.action === 'bugReport') {
       setShowBugReport(true);
+    } else if (item.action === 'suggestion') {
+      setShowSuggestion(true);
     } else if (item.screen) {
       navigation.navigate(item.screen);
     }
