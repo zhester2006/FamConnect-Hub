@@ -904,8 +904,8 @@ export default function LocationScreen({ navigation }) {
           </View>
           
           {(selectedLocation || currentLocation) ? (
-            mapError ? (
-              // Static Map Fallback when MapView fails
+            (mapError || !mapsAvailable) ? (
+              // Static Map Fallback when MapView fails or not available (Expo Go)
               <View style={styles.staticMapContainer}>
                 <Image
                   source={{
@@ -925,7 +925,10 @@ export default function LocationScreen({ navigation }) {
                 <View style={styles.staticMapOverlay}>
                   <Ionicons name="location" size={48} color="#818cf8" />
                   <Text style={styles.staticMapText}>
-                    Tap "Use Current Location" to set the safe zone at your current position
+                    {!mapsAvailable 
+                      ? "Maps not available in Expo Go. Build the app for full map support."
+                      : "Tap 'Use Current Location' to set the safe zone at your current position"
+                    }
                   </Text>
                   <TouchableOpacity 
                     style={styles.staticMapButton}
