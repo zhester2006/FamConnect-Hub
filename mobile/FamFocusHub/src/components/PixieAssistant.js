@@ -295,6 +295,9 @@ export default function PixieAssistant() {
                   <Text style={styles.headerSubtitle}>Your Family AI Assistant</Text>
                 </View>
               </View>
+              <TouchableOpacity onPress={handleBackToMenu} style={styles.newChatButton}>
+                <Ionicons name="refresh" size={20} color="#fff" />
+              </TouchableOpacity>
               <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
                 <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
