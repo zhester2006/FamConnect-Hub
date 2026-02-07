@@ -3562,6 +3562,104 @@ Return only meal names, one per line, no explanations."""
         print(f"AI recipe suggestions error: {e}")
         return {"suggestions": ["Chicken Stir Fry", "Pasta Carbonara", "Tacos", "Grilled Salmon", "Vegetable Soup"]}
 
+@api_router.get("/recipes/export")
+async def export_recipes(request: Request):
+    """Export all family recipes as JSON for backup or sharing"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    recipes = await db.recipes.find(
+        {"family_id": family_id},
+        {"_id": 0, "family_id": 0, "created_by": 0}  # Exclude internal fields
+    ).to_list(500)
+    
+    export_data = {
+        "version": "1.0",
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "recipe_count": len(recipes),
+        "recipes": recipes
+    }
+    
+    return export_data
+
+@api_router.post("/recipes/import")
+async def import_recipes(request: Request, data: dict):
+    """Import recipes from JSON export"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    recipes_to_import = data.get('recipes', [])
+    imported_count = 0
+    skipped_count = 0
+    
+    for recipe_data in recipes_to_import:
+        # Check if recipe with same name already exists
+        existing = await db.recipes.find_one({
+            "family_id": family_id,
+            "name": recipe_data.get('name')
+        })
+        
+        if existing and not data.get('overwrite', False):
+            skipped_count += 1
+            continue
+        
+        recipe_id = f"recipe_{uuid.uuid4().hex[:12]}"
+        recipe_doc = {
+            "recipe_id": recipe_id,
+            "family_id": family_id,
+            "name": recipe_data.get('name'),
+            "category": recipe_data.get('category', 'dinner'),
+            "difficulty": recipe_data.get('difficulty', 'medium'),
+            "prep_time": recipe_data.get('prep_time', 30),
+            "servings": recipe_data.get('servings', 4),
+            "description": recipe_data.get('description', ''),
+            "ingredients": recipe_data.get('ingredients', []),
+            "instructions": recipe_data.get('instructions', []),
+            "image": recipe_data.get('image'),
+            "tags": recipe_data.get('tags', []),
+            "created_by": current_user['user_id'],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "imported": True,
+            "times_made": 0,
+            "rating": recipe_data.get('rating', 0)
+        }
+        
+        if existing:
+            await db.recipes.update_one(
+                {"recipe_id": existing['recipe_id']},
+                {"$set": recipe_doc}
+            )
+        else:
+            await db.recipes.insert_one(recipe_doc)
+        
+        imported_count += 1
+    
+    return {
+        "success": True,
+        "imported": imported_count,
+        "skipped": skipped_count,
+        "message": f"Imported {imported_count} recipes, skipped {skipped_count} duplicates"
+    }
+
+@api_router.get("/recipes/share/{recipe_id}")
+async def get_shareable_recipe(recipe_id: str, request: Request):
+    """Get a single recipe in shareable format"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    recipe = await db.recipes.find_one(
+        {"recipe_id": recipe_id, "family_id": family_id},
+        {"_id": 0, "family_id": 0, "created_by": 0}
+    )
+    
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    
+    return {
+        "version": "1.0",
+        "recipe": recipe
+    }
+
 # ==================== DATA EXPORT ====================
 
 @api_router.get("/export/chores")
