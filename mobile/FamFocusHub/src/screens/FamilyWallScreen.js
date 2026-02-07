@@ -84,8 +84,8 @@ export default function FamilyWallScreen({ navigation }) {
         apiService.getLeaderboard().catch(() => ({ leaderboard: [] })),
       ]);
       
-      // Only use REST API posts if Firebase isn't connected or has no posts
-      if (!firebaseConnected || posts.length === 0) {
+      // Only use REST API posts if Firebase isn't connected
+      if (!firebaseConnected) {
         setPosts(postsData.posts || []);
       }
       setDailyQuote(quoteData.quote || '');
@@ -95,7 +95,7 @@ export default function FamilyWallScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
-  }, [firebaseConnected, posts.length]);
+  }, [firebaseConnected]);
 
   // Get user's rank from leaderboard
   const getUserRank = (userId) => {
