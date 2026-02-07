@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, Text, StyleSheet, ScrollView, TouchableOpacity, 
-  RefreshControl, ActivityIndicator, TextInput, Alert 
+  RefreshControl, ActivityIndicator, TextInput, Alert, Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
 import AnimatedBackground from '../components/AnimatedBackground';
+import AIMealCard from '../components/AIMealCard';
 
 const QUICK_MEALS = [
   { name: 'Pasta Night', icon: '🍝', pref: 'Italian pasta dishes' },
@@ -33,6 +34,8 @@ export default function DinnerPlannerScreen({ navigation }) {
   
   // Results
   const [suggestion, setSuggestion] = useState('');
+  const [structuredMeal, setStructuredMeal] = useState(null);
+  const [showMealModal, setShowMealModal] = useState(false);
   const [weeklyPlan, setWeeklyPlan] = useState('');
   const [savedPlans, setSavedPlans] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
