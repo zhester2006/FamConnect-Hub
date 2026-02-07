@@ -13,20 +13,9 @@ import locationService from '../services/location.service';
 import batteryService from '../services/battery.service';
 import MedalEmblem from '../components/MedalEmblem';
 
-// Conditionally import react-native-maps (not available in Expo Go)
-let MapView, Marker, Circle, PROVIDER_DEFAULT;
-let mapsAvailable = false;
-try {
-  const Maps = require('react-native-maps');
-  MapView = Maps.default;
-  Marker = Maps.Marker;
-  Circle = Maps.Circle;
-  PROVIDER_DEFAULT = Maps.PROVIDER_DEFAULT;
-  mapsAvailable = true;
-} catch (e) {
-  console.log('react-native-maps not available (Expo Go mode)');
-  mapsAvailable = false;
-}
+// Maps disabled for Expo Go compatibility
+// To enable maps, build with: npx expo run:android
+const mapsAvailable = false;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
