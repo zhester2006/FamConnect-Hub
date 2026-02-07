@@ -1420,7 +1420,7 @@ async def get_family_wall(request: Request):
     # Sanitize and add user_voted_option for each post
     for post in posts:
         # Sanitize author picture to prevent large base64 data
-        post['author_picture'] = sanitize_picture(post.get('author_picture'))
+        post['author_picture'] = sanitize_picture(post.get('author_picture'), fallback_name=post.get('author_name'))
         
         if post.get('type') == 'poll' or post.get('post_type') == 'poll':
             poll_options = post.get('poll_options', [])
@@ -1448,12 +1448,13 @@ async def create_post(request: Request, data: dict):
             for opt in poll_options
         ]
     
+    author_name = current_user.get('nickname') or current_user['name']
     post_doc = {
         "post_id": post_id,
         "family_id": family_id,
         "author_id": current_user['user_id'],
-        "author_name": current_user.get('nickname') or current_user['name'],
-        "author_picture": sanitize_picture(current_user.get('picture')),
+        "author_name": author_name,
+        "author_picture": sanitize_picture(current_user.get('picture'), fallback_name=author_name),
         "content": data.get('content', ''),
         "gif_url": data.get('gif_url'),
         "image_url": data.get('image_url'),
