@@ -1,7 +1,7 @@
 // WeeklyMealPlan.js - Interactive weekly meal plan component with shopping list integration
 import React, { useState } from 'react';
 import { 
-  View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator 
+  View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Modal, ScrollView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import apiService from '../services/api.service';
@@ -28,6 +28,9 @@ const CATEGORY_COLORS = {
 export default function WeeklyMealPlan({ planText, onRegenerateDay }) {
   const [expandedDay, setExpandedDay] = useState(null);
   const [addingToList, setAddingToList] = useState({});
+  const [showIngredientPicker, setShowIngredientPicker] = useState(false);
+  const [selectedIngredients, setSelectedIngredients] = useState({});
+  const [currentMealForPicker, setCurrentMealForPicker] = useState(null);
 
   // Parse the plain text plan into structured data
   const parsePlan = (text) => {
