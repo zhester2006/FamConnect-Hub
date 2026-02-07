@@ -95,6 +95,11 @@ class PushNotificationService {
   }
 
   addNotificationListeners(onNotificationReceived, onNotificationResponse) {
+    if (!notificationsAvailable || !Notifications) {
+      console.log('Cannot add notification listeners in Expo Go');
+      return;
+    }
+    
     // Listener for when a notification is received while app is foregrounded
     this.notificationListener = Notifications.addNotificationReceivedListener(
       notification => {
@@ -115,6 +120,8 @@ class PushNotificationService {
   }
 
   removeNotificationListeners() {
+    if (!notificationsAvailable || !Notifications) return;
+    
     if (this.notificationListener) {
       Notifications.removeNotificationSubscription(this.notificationListener);
     }
@@ -124,6 +131,11 @@ class PushNotificationService {
   }
 
   async scheduleLocalNotification(title, body, data = {}, trigger = null) {
+    if (!notificationsAvailable || !Notifications) {
+      console.log('Cannot schedule notifications in Expo Go');
+      return null;
+    }
+    
     const id = await Notifications.scheduleNotificationAsync({
       content: {
         title,
@@ -137,6 +149,7 @@ class PushNotificationService {
   }
 
   async cancelNotification(notificationId) {
+    if (!notificationsAvailable || !Notifications) return;
     await Notifications.cancelScheduledNotificationAsync(notificationId);
   }
 
