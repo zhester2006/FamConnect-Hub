@@ -32,7 +32,8 @@
           "remote-notification",
           "fetch"
         ]
-      }
+      },
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "package": "com.famfocus.hub",
@@ -46,6 +47,7 @@
           "apiKey": "AIzaSyCaSocLshcobzOiriNteVo1jx-W6eV8tog"
         }
       },
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
