@@ -208,7 +208,13 @@ class WebSocketService {
   }
 
   // Send message through WebSocket
+  // NOTE: This method is deprecated - use Firebase Chat instead
   send(data) {
+    if (!this.isEnabled) {
+      console.log('WebSocket is disabled - use Firebase Chat instead');
+      return false;
+    }
+    
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(data));
       return true;
@@ -217,7 +223,13 @@ class WebSocketService {
   }
 
   // Send chat message
+  // NOTE: This method is deprecated - use Firebase Chat instead
   sendMessage(content) {
+    if (!this.isEnabled) {
+      console.log('WebSocket is disabled - use Firebase Chat instead');
+      return false;
+    }
+    
     return this.send({
       type: 'message',
       content,
