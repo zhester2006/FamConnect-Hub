@@ -380,16 +380,13 @@ export default function FamilyWallScreen({ navigation }) {
     return (
       <View style={styles.postCard}>
         <View style={styles.postHeader}>
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{item.author_name?.charAt(0) || '?'}</Text>
-            </View>
-            {authorRank && authorRank <= 3 && (
-              <View style={styles.medalPosition}>
-                <MedalEmblem rank={authorRank} size="tiny" />
-              </View>
-            )}
-          </View>
+          <ProfileAvatar 
+            picture={item.author_picture}
+            name={item.author_name}
+            size="medium"
+            rank={authorRank}
+            showMedal={authorRank && authorRank <= 3}
+          />
           <View style={styles.postMeta}>
             <Text style={styles.authorName}>{item.author_name}</Text>
             <Text style={styles.postTime}>{formatDate(item.created_at)}</Text>
