@@ -712,6 +712,8 @@ const styles = StyleSheet.create({
   redeemButtonText: { color: '#fff', fontWeight: '600', fontSize: 13 },
   choreLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 20, marginHorizontal: 16, marginTop: 8 },
   choreLinkText: { color: '#a855f7', fontSize: 14, fontWeight: '500' },
+  earnMoreLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: 'rgba(16, 185, 129, 0.1)', marginHorizontal: 16, marginTop: 12, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.3)' },
+  earnMoreLinkText: { color: '#10b981', fontSize: 13, fontWeight: '500' },
   pendingCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(251, 191, 36, 0.1)', borderRadius: 16, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(251, 191, 36, 0.3)' },
   pendingInfo: { flex: 1 },
   pendingChild: { color: '#fbbf24', fontSize: 12, fontWeight: '600' },
