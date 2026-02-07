@@ -995,7 +995,7 @@ async def get_chores(request: Request, date: Optional[str] = None):
     # Sanitize pictures to prevent large base64 data in responses
     member_map = {}
     for m in family_members:
-        m['picture'] = sanitize_picture(m.get('picture'))
+        m['picture'] = sanitize_picture(m.get('picture'), fallback_name=m.get('nickname') or m.get('name'))
         member_map[m['user_id']] = m
     
     query = {"$or": [{"family_id": family_id}, {"created_by": current_user['user_id']}, {"assigned_to": current_user['user_id']}]}
