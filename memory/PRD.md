@@ -1090,12 +1090,28 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - `/app/mobile/FamFocusHub/src/context/AuthContext.js` - Firebase cleanup on logout
 - `/app/backend/server.py` - Fixed reading logs endpoint
 
-**Remaining P1-P2 Issues:**
-- [ ] Theme persistence across sessions (P1)
+### Session 32 - P1 Bug Fixes (Feb 2026) ✅
+
+**P1 Fixes Completed:**
+- [x] Theme persistence improved - `enableStandardMode()` now properly saves all theme settings to AsyncStorage
+- [x] Quick meal ideas - Now triggers AI suggestion immediately when clicked (handleQuickMeal function added)
+- [x] Shopping list - Verified working (POST /shopping and GET /shopping)
+- [x] Parent points deduction UI - Added Award/Deduct toggle in RewardsScreen modal
+  - Toggle between Award (+) and Deduct (-) modes
+  - Shows child's current points
+  - Uses POST /users/{user_id}/points with positive or negative amount
+
+**Testing Results:**
+- All 39 tests passed (13 P1 tests + 26 existing)
+- Test report: `/app/test_reports/iteration_14.json`
+
+**Key Files Modified:**
+- `/app/mobile/FamFocusHub/src/context/ThemeContext.js` - Fixed enableStandardMode to save all settings
+- `/app/mobile/FamFocusHub/src/screens/DinnerPlannerScreen.js` - Added handleQuickMeal function
+- `/app/mobile/FamFocusHub/src/screens/RewardsScreen.js` - Added Award/Deduct toggle UI
+
+**Remaining P2 Issues:**
 - [ ] Location map picker not showing image (P2)
-- [ ] Quick meal ideas functionality (P1)
-- [ ] Shopping list add items (P1)
-- [ ] Family wall posting (covered by Firebase)
-- [ ] Parent points deduction UI (backend done)
 - [ ] Native module errors (crypto, SQLITE_FULL) (P2)
+- [ ] Profile pictures as icons throughout app (P2)
 
