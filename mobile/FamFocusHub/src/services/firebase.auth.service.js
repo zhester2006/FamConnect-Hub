@@ -3,7 +3,8 @@
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
-  getAuth, 
+  initializeAuth,
+  getReactNativePersistence,
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
@@ -47,7 +48,21 @@ class FirebaseAuthService {
         this.app = getApp();
       }
 
-      this.auth = getAuth(this.app);
+      // Initialize Auth with AsyncStorage persistence
+      try {
+        this.auth = initializeAuth(this.app, {
+          persistence: getReactNativePersistence(AsyncStorage)
+        });
+      } catch (error) {
+        // Auth might already be initialized, try to get existing instance
+        if (error.code === 'auth/already-initialized') {
+          const { getAuth } = require('firebase/auth');
+          this.auth = getAuth(this.app);
+        } else {
+          throw error;
+        }
+      }
+      
       this.isInitialized = true;
 
       // Listen for auth state changes
@@ -66,6 +81,8 @@ class FirebaseAuthService {
       return true;
     } catch (error) {
       console.error('Firebase Auth initialization error:', error);
+      // Don't block the app if auth fails
+      this.isInitialized = true;
       return false;
     }
   }
