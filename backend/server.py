@@ -1307,6 +1307,138 @@ Provide: meal name, ingredients list, and simple cooking instructions."""
     response = await chat.send_message(UserMessage(text=prompt))
     return {"suggestion": response}
 
+# AI Assistant endpoint with structured output
+@api_router.post("/ai/meal-plan")
+async def ai_meal_plan(request: Request, data: dict):
+    """Get structured AI meal suggestion with ingredients for shopping list"""
+    await get_current_user(request)
+    
+    preferences = data.get('preferences', '')
+    servings = data.get('servings', 4)
+    meal_type = data.get('meal_type', 'dinner')  # breakfast, lunch, dinner, snack
+    
+    chat = LlmChat(
+        api_key=os.environ['EMERGENT_LLM_KEY'],
+        session_id=f"meal_{uuid.uuid4().hex[:8]}",
+        system_message="You are a helpful family meal planning assistant. Always respond in valid JSON format."
+    ).with_model("openai", "gpt-5.2")
+    
+    prompt = f"""Suggest a family-friendly {meal_type} for {servings} people.
+Preferences: {preferences if preferences else 'none specified'}
+
+IMPORTANT: Respond ONLY with valid JSON in this exact format:
+{{
+  "meal_name": "Name of the meal",
+  "description": "Brief 1-2 sentence description",
+  "prep_time": "15 mins",
+  "cook_time": "30 mins",
+  "servings": {servings},
+  "difficulty": "Easy",
+  "ingredients": [
+    {{"name": "ingredient name", "amount": "2 cups", "category": "produce"}},
+    {{"name": "another ingredient", "amount": "1 lb", "category": "meat"}}
+  ],
+  "steps": [
+    "Step 1 instruction",
+    "Step 2 instruction"
+  ],
+  "tips": ["Helpful tip 1", "Helpful tip 2"],
+  "nutrition": {{"calories": "350 per serving", "protein": "25g"}}
+}}"""
+    
+    response = await chat.send_message(UserMessage(text=prompt))
+    
+    # Try to parse as JSON, fallback to text
+    import json
+    try:
+        # Clean the response - remove markdown code blocks if present
+        clean_response = response.strip()
+        if clean_response.startswith('```'):
+            clean_response = clean_response.split('```')[1]
+            if clean_response.startswith('json'):
+                clean_response = clean_response[4:]
+        parsed = json.loads(clean_response)
+        return {"success": True, "meal": parsed}
+    except:
+        return {"success": False, "suggestion": response}
+
+@api_router.post("/ai/chore-tips")
+async def ai_chore_tips(request: Request, data: dict):
+    """Get AI tips for completing a chore"""
+    await get_current_user(request)
+    
+    chore_title = data.get('title', '')
+    child_age = data.get('child_age', 10)
+    
+    chat = LlmChat(
+        api_key=os.environ['EMERGENT_LLM_KEY'],
+        session_id=f"tips_{uuid.uuid4().hex[:8]}",
+        system_message="You are a friendly family assistant helping children with chores."
+    ).with_model("openai", "gpt-5.2")
+    
+    prompt = f"""Give 3-4 quick, helpful tips for a {child_age}-year-old to complete this chore: "{chore_title}"
+
+Make tips:
+- Fun and encouraging
+- Age-appropriate
+- Practical and actionable
+
+Keep each tip to 1-2 sentences."""
+    
+    response = await chat.send_message(UserMessage(text=prompt))
+    return {"tips": response}
+
+@api_router.post("/ai/family-activity")
+async def ai_family_activity(request: Request, data: dict):
+    """Get AI-suggested family activities"""
+    await get_current_user(request)
+    
+    num_kids = data.get('num_kids', 2)
+    ages = data.get('ages', [])
+    weather = data.get('weather', 'any')
+    duration = data.get('duration', '1-2 hours')
+    indoor_outdoor = data.get('setting', 'any')
+    
+    chat = LlmChat(
+        api_key=os.environ['EMERGENT_LLM_KEY'],
+        session_id=f"activity_{uuid.uuid4().hex[:8]}",
+        system_message="You are a family activity planner. Respond ONLY with valid JSON."
+    ).with_model("openai", "gpt-5.2")
+    
+    prompt = f"""Suggest 3 fun family activities.
+Family: {num_kids} kids (ages: {', '.join(map(str, ages)) if ages else 'various'})
+Weather: {weather}
+Duration: {duration}
+Setting preference: {indoor_outdoor}
+
+Respond in this JSON format:
+{{
+  "activities": [
+    {{
+      "name": "Activity name",
+      "description": "Brief description",
+      "duration": "1 hour",
+      "setting": "indoor/outdoor",
+      "supplies_needed": ["item1", "item2"],
+      "fun_factor": "High"
+    }}
+  ]
+}}"""
+    
+    response = await chat.send_message(UserMessage(text=prompt))
+    
+    import json
+    try:
+        clean_response = response.strip()
+        if clean_response.startswith('```'):
+            clean_response = clean_response.split('```')[1]
+            if clean_response.startswith('json'):
+                clean_response = clean_response[4:]
+        parsed = json.loads(clean_response)
+        return {"success": True, "data": parsed}
+    except:
+        return {"success": False, "suggestion": response}
+
 # Rewards
 @api_router.get("/rewards")
 async def get_rewards(request: Request):
