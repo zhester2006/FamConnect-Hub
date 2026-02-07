@@ -1705,3 +1705,14 @@ Update Firebase Realtime Database rules in Firebase Console to:
 - ADMIN_EMAIL - Admin email for receiving submissions
 
 **Note:** Email sending requires a valid Resend API key. Placeholder key will skip sending.
+
+### Session 41 Update - Family Wall Fix (Feb 2026) ✅
+
+**Family Wall Interaction Fix:**
+- Updated `handleLike` and `handleVote` functions to use optimistic UI updates
+- Removed `fetchPosts()` calls after REST API operations (was causing re-renders)
+- Posts now update in-place immediately, API calls happen in background
+- Firebase real-time listener handles updates when connected
+
+**Key Changes:**
+- `/app/mobile/FamFocusHub/src/screens/FamilyWallScreen.js` - Optimistic UI updates for likes/votes
