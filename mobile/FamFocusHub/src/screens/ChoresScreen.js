@@ -433,20 +433,33 @@ export default function ChoresScreen({ navigation }) {
         </View>
       )}
 
-      {/* Filters */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-        {['all', 'pending', 'completed', 'approved'].map((f) => (
-          <TouchableOpacity
-            key={f}
-            style={[styles.filterChip, filter === f && { backgroundColor: primaryColor }]}
-            onPress={() => setFilter(f)}
-          >
-            <Text style={[styles.filterText, filter === f && { color: '#fff' }]}>
-              {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      {/* Filters - Small Icon Toggles */}
+      <View style={styles.filterRow}>
+        <TouchableOpacity
+          style={[styles.filterIcon, filter === 'all' && { backgroundColor: primaryColor }]}
+          onPress={() => setFilter('all')}
+        >
+          <Ionicons name="apps" size={16} color={filter === 'all' ? '#fff' : '#9ca3af'} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterIcon, filter === 'pending' && { backgroundColor: '#6b7280' }]}
+          onPress={() => setFilter('pending')}
+        >
+          <Ionicons name="time-outline" size={16} color={filter === 'pending' ? '#fff' : '#9ca3af'} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterIcon, filter === 'completed' && { backgroundColor: '#f59e0b' }]}
+          onPress={() => setFilter('completed')}
+        >
+          <Ionicons name="hourglass-outline" size={16} color={filter === 'completed' ? '#fff' : '#9ca3af'} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterIcon, filter === 'approved' && { backgroundColor: '#10b981' }]}
+          onPress={() => setFilter('approved')}
+        >
+          <Ionicons name="checkmark-circle" size={16} color={filter === 'approved' ? '#fff' : '#9ca3af'} />
+        </TouchableOpacity>
+      </View>
 
       {/* Chores List */}
       <ScrollView
