@@ -198,156 +198,106 @@ export default function SettingsScreen({ navigation }) {
           <Ionicons name="chevron-forward" size={20} color="#6b7280" />
         </TouchableOpacity>
 
-        {/* Theme Mode Section */}
+        {/* Theme Presets Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Theme Mode</Text>
+          <Text style={styles.sectionTitle}>Theme</Text>
+          <Text style={styles.settingHint}>Choose a color scheme for your app</Text>
           
-          {/* Auto Dark Mode Toggle */}
-          <TouchableOpacity 
-            style={styles.settingRow}
-            onPress={() => theme.toggleAutoMode && theme.toggleAutoMode(!theme.autoMode)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.settingInfo}>
-              <Ionicons name="moon" size={20} color={theme.autoMode ? theme.primary : '#6b7280'} />
-              <View style={{ marginLeft: 12 }}>
-                <Text style={styles.settingLabel}>Auto Dark Mode</Text>
-                <Text style={styles.settingHint}>Follow system settings</Text>
-              </View>
-            </View>
-            <View style={[
-              styles.toggleSwitch, 
-              theme.autoMode && { backgroundColor: theme.primary }
-            ]}>
-              <View style={[
-                styles.toggleKnob,
-                theme.autoMode && { transform: [{ translateX: 20 }] }
-              ]} />
-            </View>
-          </TouchableOpacity>
-          
-          {/* Manual Theme Selection */}
-          {!theme.autoMode && (
-            <>
-              <View style={styles.themeModeRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.themeModeOption,
-                    !theme.isCustomMode && styles.themeModeOptionActive
-                  ]}
-                  onPress={() => {
-                    console.log('Standard mode pressed');
-                    theme.enableStandardMode();
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons 
-                    name="color-palette-outline" 
-                    size={24} 
-                    color={!theme.isCustomMode ? '#fff' : '#6b7280'} 
-                  />
-                  <Text style={[
-                    styles.themeModeText,
-                    !theme.isCustomMode && styles.themeModeTextActive
-                  ]}>
-                    Standard
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.themeModeOption,
-                    theme.isCustomMode && styles.themeModeOptionActive
-                  ]}
-                  onPress={() => {
-                    console.log('Custom mode pressed');
-                    theme.enableCustomMode();
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons 
-                    name="brush" 
-                    size={24} 
-                    color={theme.isCustomMode ? '#fff' : '#6b7280'} 
-                  />
-                  <Text style={[
-                    styles.themeModeText,
-                    theme.isCustomMode && styles.themeModeTextActive
-                  ]}>
-                    Custom
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.themeModeHint}>
-                {!theme.isCustomMode 
-                  ? 'Standard mode uses default colors'
-                  : 'Custom mode applies your selected theme colors across the app'}
+          {/* Theme Presets */}
+          <View style={styles.themePresetsGrid}>
+            {theme.presets && Object.entries(theme.presets).map(([key, preset]) => (
+              <TouchableOpacity
+                key={key}
+                style={[
+                  styles.themePresetCard,
+                  { borderColor: preset.primary },
+                  theme.selectedPreset === key && !theme.isCustomMode && styles.themePresetActive
+                ]}
+                onPress={() => theme.selectPreset(key)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.themePresetPreview, { backgroundColor: preset.background }]}>
+                  <View style={[styles.themePresetDot, { backgroundColor: preset.primary }]} />
+                  <View style={[styles.themePresetDotSmall, { backgroundColor: preset.accent }]} />
+                </View>
+                <Text style={[
+                  styles.themePresetName,
+                  theme.selectedPreset === key && !theme.isCustomMode && { color: preset.primary }
+                ]}>
+                  {preset.name}
+                </Text>
+                {theme.selectedPreset === key && !theme.isCustomMode && (
+                  <View style={[styles.themeCheckmark, { backgroundColor: preset.primary }]}>
+                    <Ionicons name="checkmark" size={12} color="#fff" />
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Custom Colors Section */}
+        <View style={styles.section}>
+          <View style={styles.customModeHeader}>
+            <Text style={styles.sectionTitle}>Custom Colors</Text>
+            <TouchableOpacity
+              style={[
+                styles.customModeToggle,
+                theme.isCustomMode && { backgroundColor: theme.primary }
+              ]}
+              onPress={() => theme.isCustomMode ? theme.disableCustomMode() : theme.enableCustomMode()}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.customModeToggleText, theme.isCustomMode && { color: '#fff' }]}>
+                {theme.isCustomMode ? 'ON' : 'OFF'}
               </Text>
+            </TouchableOpacity>
+          </View>
+          
+          {theme.isCustomMode && (
+            <>
+              <Text style={[styles.sectionTitle, { fontSize: 14, marginTop: 12 }]}>Primary Color</Text>
+              <View style={styles.colorGrid}>
+                {theme.availablePrimaryColors?.map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[
+                      styles.colorOption,
+                      { backgroundColor: color },
+                      theme.primary === color && styles.colorOptionActive
+                    ]}
+                    onPress={() => theme.setPrimaryColor(color)}
+                    activeOpacity={0.7}
+                  >
+                    {theme.primary === color && (
+                      <Ionicons name="checkmark" size={18} color="#fff" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+              
+              <Text style={[styles.sectionTitle, { fontSize: 14, marginTop: 16 }]}>Accent Color</Text>
+              <View style={styles.colorGrid}>
+                {theme.availableAccentColors?.map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[
+                      styles.colorOption,
+                      { backgroundColor: color },
+                      theme.accent === color && styles.colorOptionActive
+                    ]}
+                    onPress={() => theme.setAccentColor(color)}
+                    activeOpacity={0.7}
+                  >
+                    {theme.accent === color && (
+                      <Ionicons name="checkmark" size={18} color="#fff" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
             </>
           )}
         </View>
-
-        {/* Theme Colors Section - Only show when Custom mode is selected */}
-        {theme.isCustomMode && !theme.autoMode && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Primary Color</Text>
-            <View style={styles.colorGrid}>
-              {theme.availableColors?.primary?.map((color) => (
-                <TouchableOpacity
-                  key={color}
-                  style={[
-                    styles.colorOption,
-                    { backgroundColor: color },
-                    theme.primary === color && styles.colorOptionActive
-                  ]}
-                  onPress={() => {
-                    console.log('Primary color selected:', color);
-                    theme.updateColor('primary', color);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  {theme.primary === color && (
-                    <Ionicons name="checkmark" size={18} color="#fff" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-            
-            <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Accent Color</Text>
-            <View style={styles.colorGrid}>
-              {theme.availableColors?.accent?.map((color) => (
-                <TouchableOpacity
-                  key={color}
-                  style={[
-                    styles.colorOption,
-                    { backgroundColor: color },
-                    theme.accent === color && styles.colorOptionActive
-                  ]}
-                  onPress={() => {
-                    console.log('Accent color selected:', color);
-                    theme.updateColor('accent', color);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  {theme.accent === color && (
-                    <Ionicons name="checkmark" size={18} color="#fff" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-            
-            <TouchableOpacity 
-              style={styles.resetBtn} 
-              onPress={() => {
-                console.log('Reset theme pressed');
-                theme.resetToDefault();
-              }}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="refresh" size={16} color="#6b7280" />
-              <Text style={styles.resetBtnText}>Reset to Default</Text>
-            </TouchableOpacity>
-          </View>
-        )}
 
         {/* Notifications */}
         <View style={styles.section}>
