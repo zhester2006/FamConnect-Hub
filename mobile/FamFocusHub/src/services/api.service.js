@@ -7,7 +7,7 @@ const SESSION_KEY = 'famfocus_session_token';
 class ApiService {
   constructor() {
     this.sessionToken = null;
-    this.baseUrl = 'https://famfocus-hub-1.preview.emergentagent.com/api';
+    this.baseUrl = 'https://familyapp-6.preview.emergentagent.com/api';
   }
 
   async init() {
