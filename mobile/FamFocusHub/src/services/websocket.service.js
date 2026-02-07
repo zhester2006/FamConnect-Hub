@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-const BACKEND_URL = 'https://familyapp-6.preview.emergentagent.com';
+const BACKEND_URL = 'https://home-hub-25.preview.emergentagent.com';
 const WS_URL = BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://');
 
 // NOTE: WebSocket is DEPRECATED in favor of Firebase Realtime Database

@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import biometricService from '../services/biometric.service';
 
-const API_BASE = 'https://familyapp-6.preview.emergentagent.com';
+const API_BASE = 'https://home-hub-25.preview.emergentagent.com';
 const { width } = Dimensions.get('window');
 
 WebBrowser.maybeCompleteAuthSession();
