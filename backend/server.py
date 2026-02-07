@@ -1174,6 +1174,11 @@ async def get_daily_quote(request: Request, refresh: bool = False):
 async def get_messages(request: Request):
     await get_current_user(request)
     messages = await db.messages.find({}, {"_id": 0}).sort("created_at", 1).to_list(500)
+    
+    # Sanitize user pictures to prevent large base64 data
+    for msg in messages:
+        msg['user_picture'] = sanitize_picture(msg.get('user_picture'))
+    
     return {"messages": messages}
 
 @api_router.post("/messages")
