@@ -235,17 +235,31 @@ export default function CalendarScreen({ navigation }) {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.title}>Calendar</Text>
-        <TouchableOpacity 
-          onPress={() => {
-            setEventTitle('');
-            setEventTime('');
-            setEventType('event');
-            setShowAddModal(true);
-          }}
-          style={styles.addButton}
-        >
-          <Ionicons name="add" size={24} color="#fff" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {/* Pending events button - parents only */}
+          {user?.role === 'parent' && pendingEvents.length > 0 && (
+            <TouchableOpacity 
+              onPress={() => setShowPendingModal(true)}
+              style={styles.pendingButton}
+            >
+              <Ionicons name="time" size={20} color="#f59e0b" />
+              <View style={styles.pendingBadge}>
+                <Text style={styles.pendingBadgeText}>{pendingEvents.length}</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity 
+            onPress={() => {
+              setEventTitle('');
+              setEventTime('');
+              setEventType('event');
+              setShowAddModal(true);
+            }}
+            style={styles.addButton}
+          >
+            <Ionicons name="add" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
