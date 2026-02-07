@@ -1680,3 +1680,28 @@ Update Firebase Realtime Database rules in Firebase Console to:
 - Animation conflicts
 
 **Build Required:** Yes - Mobile app changes need EAS build to verify on device
+
+### Session 41 Update - Suggestions Feature (Feb 2026) ✅
+
+**New Feature: Suggestions System**
+- Backend endpoint: `POST /api/suggestions` - Submit feature suggestions
+- Backend endpoint: `GET /api/suggestions` - View suggestions (parent only)
+- Frontend: New "Share a Suggestion" menu item in Settings with modal
+- Categories: New Feature, Improvement, Other
+
+**Email Integration (Resend):**
+- All bug reports and suggestions forwarded to admin email
+- Automated thank-you emails sent to users with nicely styled HTML
+- Resend API integration configured in backend/.env
+
+**Key Files Modified:**
+- `/app/backend/server.py` - Added suggestions endpoints, email sending
+- `/app/mobile/FamFocusHub/src/screens/SettingsScreen.js` - Added suggestion modal
+- `/app/backend/requirements.txt` - Added resend>=2.0.0
+
+**Environment Variables Added:**
+- RESEND_API_KEY - Resend API key for emails
+- SENDER_EMAIL - Email sender address
+- ADMIN_EMAIL - Admin email for receiving submissions
+
+**Note:** Email sending requires a valid Resend API key. Placeholder key will skip sending.
