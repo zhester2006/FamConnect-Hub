@@ -15,20 +15,27 @@ export default function LeaderboardScreen({ navigation }) {
   const [leaderboard, setLeaderboard] = useState([]);
   const [timeframe, setTimeframe] = useState('all-time');
 
-  const fetchLeaderboard = useCallback(async () => {
+  const fetchLeaderboard = useCallback(async (selectedTimeframe = timeframe) => {
     try {
-      const data = await apiService.getLeaderboard();
+      const data = await apiService.getLeaderboard(selectedTimeframe);
       setLeaderboard(data.leaderboard || []);
     } catch (error) {
       console.error('Failed to fetch leaderboard:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [timeframe]);
 
   useEffect(() => {
     fetchLeaderboard();
   }, [fetchLeaderboard]);
+
+  // Re-fetch when timeframe changes
+  useEffect(() => {
+    if (!loading) {
+      fetchLeaderboard(timeframe);
+    }
+  }, [timeframe]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
