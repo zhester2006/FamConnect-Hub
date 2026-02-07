@@ -66,14 +66,20 @@ async def get_current_user(request: Request):
     return user
 
 # Helper function to sanitize picture data (prevent large base64 from bloating responses)
-def sanitize_picture(picture_data, max_len=500):
+def sanitize_picture(picture_data, max_len=500, fallback_name=None):
     if not picture_data:
+        if fallback_name:
+            # Generate avatar URL based on name
+            return f"https://api.dicebear.com/7.x/avataaars/svg?seed={fallback_name.replace(' ', '_')}"
         return None
     if picture_data.startswith('http'):
         return picture_data
     if len(picture_data) <= max_len:
         return picture_data
-    return None  # Skip large base64 images
+    # For large base64, generate avatar URL
+    if fallback_name:
+        return f"https://api.dicebear.com/7.x/avataaars/svg?seed={fallback_name.replace(' ', '_')}"
+    return None
 
 # Helper function to generate unique family code
 def generate_family_code():
