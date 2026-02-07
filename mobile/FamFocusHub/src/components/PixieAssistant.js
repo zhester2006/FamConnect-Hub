@@ -132,6 +132,17 @@ export default function PixieAssistant() {
     setIsOpen(false);
   };
 
+  const handleBackToMenu = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Reset to initial state with welcome message
+    setMessages([{
+      role: 'pixie',
+      content: `Hi${user?.name ? ` ${user.name}` : ''}! 🧚‍♀️ I'm Pixie, your family assistant! I can help you with:\n\n• 🍽️ Meal suggestions\n• 📅 Activity ideas\n• 🧹 Chore tips\n• 📚 Homework help\n• 🎮 Fun family activities\n\nWhat can I help you with today?`,
+      timestamp: new Date(),
+    }]);
+    setShowQuickPrompts(true);
+  };
+
   const handleSend = async (customPrompt) => {
     const messageText = customPrompt || input.trim();
     if (!messageText || loading) return;
