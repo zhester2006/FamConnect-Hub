@@ -490,13 +490,12 @@ export default function ChoresScreen({ navigation }) {
                       <View style={styles.choreMetaRow}>
                         {chore.assignee_name && (
                           <View style={styles.assigneeBadge}>
-                            {chore.assignee_picture ? (
-                              <Image source={{ uri: chore.assignee_picture }} style={styles.assigneeAvatar} />
-                            ) : (
-                              <View style={[styles.assigneeAvatarPlaceholder, { backgroundColor: primaryColor }]}>
-                                <Text style={styles.assigneeAvatarText}>{chore.assignee_name?.charAt(0)}</Text>
-                              </View>
-                            )}
+                            <ProfileAvatar 
+                              picture={chore.assignee_picture}
+                              name={chore.assignee_name}
+                              size="small"
+                              showMedal={false}
+                            />
                             <Text style={styles.assigneeName}>
                               {chore.claimed_by_child ? `Secured by ${chore.assignee_name}` : chore.assignee_name}
                             </Text>
