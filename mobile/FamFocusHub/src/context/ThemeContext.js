@@ -1,302 +1,220 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useColorScheme, Appearance } from 'react-native';
-import apiService from '../services/api.service';
 
-// Light theme colors
-const LIGHT_THEME = {
-  mode: 'light',
-  primary: '#6366f1',
-  secondary: '#818cf8',
-  accent: '#a5b4fc',
-  background: '#f8fafc',
-  surface: '#ffffff',
-  text: '#1e293b',
-  textSecondary: '#64748b',
-  success: '#10b981',
-  warning: '#f59e0b',
-  error: '#ef4444',
-  gradientStart: '#f1f5f9',
-  gradientEnd: '#e2e8f0',
+// Pre-defined theme presets
+const THEME_PRESETS = {
+  violet: {
+    name: 'Violet',
+    primary: '#6366f1',
+    accent: '#a5b4fc',
+    background: '#0f0d1a',
+    surface: '#1e1b4b',
+  },
+  ocean: {
+    name: 'Ocean',
+    primary: '#06b6d4',
+    accent: '#67e8f9',
+    background: '#0c1929',
+    surface: '#164e63',
+  },
+  rose: {
+    name: 'Rose',
+    primary: '#ec4899',
+    accent: '#f9a8d4',
+    background: '#1a0d14',
+    surface: '#4a1d3a',
+  },
+  emerald: {
+    name: 'Emerald',
+    primary: '#10b981',
+    accent: '#6ee7b7',
+    background: '#0d1a14',
+    surface: '#1d4a3a',
+  },
+  amber: {
+    name: 'Amber',
+    primary: '#f59e0b',
+    accent: '#fcd34d',
+    background: '#1a150d',
+    surface: '#4a3a1d',
+  },
+  coral: {
+    name: 'Coral',
+    primary: '#f43f5e',
+    accent: '#fda4af',
+    background: '#1a0d10',
+    surface: '#4a1d25',
+  },
 };
 
-// Dark theme colors (default)
-const DARK_THEME = {
-  mode: 'dark',
-  primary: '#6366f1',
-  secondary: '#818cf8',
-  accent: '#a5b4fc',
-  background: '#0f0d1a',
-  surface: '#1e1b4b',
+// Base colors that don't change
+const BASE_COLORS = {
   text: '#ffffff',
   textSecondary: '#9ca3af',
   success: '#10b981',
   warning: '#f59e0b',
   error: '#ef4444',
-  gradientStart: '#1e1b4b',
-  gradientEnd: '#0f0d1a',
+  secondary: '#818cf8',
 };
 
-// Default theme - Standard violet/purple palette
-const DEFAULT_THEME = DARK_THEME;
-
-// Standard theme (non-editable baseline)
-const STANDARD_THEME = { ...DEFAULT_THEME, mode: 'standard' };
+const STORAGE_KEY = 'famfocus_theme';
 
 const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
-  const systemColorScheme = useColorScheme();
-  const [theme, setTheme] = useState(DEFAULT_THEME);
+  const [selectedPreset, setSelectedPreset] = useState('violet');
+  const [customPrimary, setCustomPrimary] = useState(null);
+  const [customAccent, setCustomAccent] = useState(null);
   const [isCustomMode, setIsCustomMode] = useState(false);
-  const [autoMode, setAutoMode] = useState(false); // Auto dark/light mode
   const [loading, setLoading] = useState(true);
 
-  // Listen for system color scheme changes
-  useEffect(() => {
-    let subscription = null;
-    try {
-      subscription = Appearance.addChangeListener(({ colorScheme }) => {
-        if (autoMode) {
-          applyAutoTheme(colorScheme);
-        }
-      });
-    } catch (error) {
-      console.warn('Appearance listener not available:', error);
-    }
-
-    return () => {
-      if (subscription && subscription.remove) {
-        subscription.remove();
-      }
-    };
-  }, [autoMode]);
-
-  // Apply theme based on system preference
-  const applyAutoTheme = (colorScheme) => {
-    try {
-      if (colorScheme === 'dark') {
-        setTheme(prev => ({ ...prev, ...DARK_THEME, mode: prev.mode }));
-      } else {
-        setTheme(prev => ({ ...prev, ...LIGHT_THEME, mode: prev.mode }));
-      }
-    } catch (error) {
-      console.warn('Failed to apply auto theme:', error);
-    }
-  };
-
-  // Load saved theme on mount
+  // Load theme on mount
   useEffect(() => {
     loadTheme();
   }, []);
 
   const loadTheme = async () => {
     try {
-      const savedTheme = await AsyncStorage.getItem('familyTheme');
-      const savedMode = await AsyncStorage.getItem('themeMode');
-      const savedAutoMode = await AsyncStorage.getItem('autoThemeMode');
-      
-      // Check if auto mode is enabled
-      if (savedAutoMode === 'true') {
-        setAutoMode(true);
-        let currentScheme = 'dark'; // Default to dark
-        try {
-          currentScheme = Appearance.getColorScheme() || 'dark';
-        } catch (e) {
-          console.warn('Could not get color scheme:', e);
-        }
-        const baseTheme = currentScheme === 'light' ? LIGHT_THEME : DARK_THEME;
-        setTheme({ ...baseTheme, mode: 'auto' });
-        setIsCustomMode(false);
-      } else if (savedMode === 'custom' && savedTheme) {
-        const parsed = JSON.parse(savedTheme);
-        setTheme({ ...DEFAULT_THEME, ...parsed, mode: 'custom' });
-        setIsCustomMode(true);
-      } else {
-        setTheme(STANDARD_THEME);
-        setIsCustomMode(false);
+      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const data = JSON.parse(stored);
+        setSelectedPreset(data.preset || 'violet');
+        setIsCustomMode(data.isCustomMode || false);
+        setCustomPrimary(data.customPrimary || null);
+        setCustomAccent(data.customAccent || null);
       }
     } catch (error) {
       console.error('Failed to load theme:', error);
-      setTheme(STANDARD_THEME);
     } finally {
       setLoading(false);
     }
   };
 
-  // Save theme changes (local and server)
-  const saveTheme = async (newTheme) => {
+  const saveTheme = async (data) => {
     try {
-      // Save locally first
-      await AsyncStorage.setItem('familyTheme', JSON.stringify(newTheme));
-      await AsyncStorage.setItem('themeMode', newTheme.mode || 'custom');
-      
-      // Try to save to server (non-blocking)
-      const userId = await AsyncStorage.getItem('userId');
-      if (userId) {
-        apiService.updateProfile(userId, {
-          settings: {
-            theme: newTheme.mode === 'custom' ? 'custom' : newTheme.mode,
-            custom_theme: newTheme.mode === 'custom' ? newTheme : undefined,
-          }
-        }).catch(err => console.log('Theme save to server failed:', err));
-      }
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
       console.error('Failed to save theme:', error);
     }
   };
 
-  // Toggle auto dark/light mode
-  const toggleAutoMode = async (enabled) => {
-    try {
-      setAutoMode(enabled);
-      await AsyncStorage.setItem('autoThemeMode', enabled ? 'true' : 'false');
-      
-      if (enabled) {
-        setIsCustomMode(false);
-        let currentScheme = 'dark';
-        try {
-          currentScheme = Appearance.getColorScheme() || 'dark';
-        } catch (e) {
-          console.warn('Could not get color scheme:', e);
-        }
-        const baseTheme = currentScheme === 'light' ? LIGHT_THEME : DARK_THEME;
-        setTheme({ ...baseTheme, mode: 'auto' });
-      }
-    } catch (error) {
-      console.error('Failed to toggle auto mode:', error);
-    }
-  };
-
-  // Update a single color
-  const updateColor = (colorKey, value) => {
-    console.log('updateColor called:', colorKey, value, 'isCustomMode:', isCustomMode, 'theme.mode:', theme.mode);
-    
-    // Allow color update if we're in custom mode OR if the theme mode is custom
-    if (!isCustomMode && theme.mode !== 'custom') {
-      console.log('Cannot update color - not in custom mode');
-      return;
-    }
-    
-    const newTheme = { ...theme, [colorKey]: value, mode: 'custom' };
-    setTheme(newTheme);
-    setIsCustomMode(true); // Ensure custom mode is set
-    saveTheme(newTheme);
-    console.log('Theme updated:', newTheme);
-  };
-
-  // Update multiple colors at once
-  const updateColors = (colors) => {
-    if (!isCustomMode && theme.mode !== 'custom') return;
-    
-    const newTheme = { ...theme, ...colors, mode: 'custom' };
-    setTheme(newTheme);
-    setIsCustomMode(true);
-    saveTheme(newTheme);
-  };
-
-  // Switch to custom mode
-  const enableCustomMode = async () => {
-    console.log('enableCustomMode called');
-    setIsCustomMode(true);
-    setAutoMode(false);
-    const customTheme = { ...theme, mode: 'custom' };
-    setTheme(customTheme);
-    
-    // Save immediately
-    try {
-      await AsyncStorage.setItem('themeMode', 'custom');
-      await AsyncStorage.setItem('autoThemeMode', 'false');
-      await AsyncStorage.setItem('familyTheme', JSON.stringify(customTheme));
-      console.log('Custom mode saved successfully');
-    } catch (error) {
-      console.error('Failed to save custom mode:', error);
-    }
-    console.log('Custom mode enabled, theme:', customTheme);
-  };
-
-  // Switch to standard mode
-  const enableStandardMode = async () => {
-    console.log('enableStandardMode called');
+  // Select a preset theme
+  const selectPreset = (presetKey) => {
+    setSelectedPreset(presetKey);
     setIsCustomMode(false);
-    setAutoMode(false);
-    setTheme(STANDARD_THEME);
-    try {
-      await AsyncStorage.setItem('themeMode', 'standard');
-      await AsyncStorage.setItem('autoThemeMode', 'false');
-      await AsyncStorage.setItem('familyTheme', JSON.stringify(STANDARD_THEME));
-      console.log('Standard mode saved');
-    } catch (error) {
-      console.error('Failed to save standard mode:', error);
-    }
-    console.log('Standard mode enabled');
+    setCustomPrimary(null);
+    setCustomAccent(null);
+    saveTheme({ preset: presetKey, isCustomMode: false });
   };
 
-  // Reset to default colors (only in custom mode)
-  const resetToDefault = () => {
-    if (isCustomMode) {
-      const resetTheme = { ...DEFAULT_THEME, mode: 'custom' };
-      setTheme(resetTheme);
-      saveTheme(resetTheme);
-    }
+  // Enable custom mode with current preset as base
+  const enableCustomMode = () => {
+    const preset = THEME_PRESETS[selectedPreset];
+    setIsCustomMode(true);
+    setCustomPrimary(preset.primary);
+    setCustomAccent(preset.accent);
+    saveTheme({
+      preset: selectedPreset,
+      isCustomMode: true,
+      customPrimary: preset.primary,
+      customAccent: preset.accent,
+    });
   };
 
-  // Get computed styles for common elements
-  const getButtonStyle = (variant = 'primary') => {
-    switch (variant) {
-      case 'primary':
-        return { backgroundColor: theme.primary };
-      case 'secondary':
-        return { backgroundColor: theme.secondary };
-      case 'success':
-        return { backgroundColor: theme.success };
-      case 'warning':
-        return { backgroundColor: theme.warning };
-      case 'error':
-        return { backgroundColor: theme.error };
-      case 'outline':
-        return { borderColor: theme.primary, borderWidth: 1, backgroundColor: 'transparent' };
-      default:
-        return { backgroundColor: theme.primary };
-    }
+  // Update custom primary color
+  const setPrimaryColor = (color) => {
+    if (!isCustomMode) return;
+    setCustomPrimary(color);
+    saveTheme({
+      preset: selectedPreset,
+      isCustomMode: true,
+      customPrimary: color,
+      customAccent: customAccent,
+    });
   };
 
-  const getCardStyle = () => ({
-    backgroundColor: `${theme.surface}99`, // with transparency
-    borderColor: `${theme.primary}33`,
-  });
+  // Update custom accent color
+  const setAccentColor = (color) => {
+    if (!isCustomMode) return;
+    setCustomAccent(color);
+    saveTheme({
+      preset: selectedPreset,
+      isCustomMode: true,
+      customPrimary: customPrimary,
+      customAccent: color,
+    });
+  };
+
+  // Get current theme colors
+  const getTheme = () => {
+    const preset = THEME_PRESETS[selectedPreset] || THEME_PRESETS.violet;
+    
+    return {
+      ...BASE_COLORS,
+      primary: isCustomMode && customPrimary ? customPrimary : preset.primary,
+      accent: isCustomMode && customAccent ? customAccent : preset.accent,
+      background: preset.background,
+      surface: preset.surface,
+      gradientStart: preset.surface,
+      gradientEnd: preset.background,
+    };
+  };
+
+  const theme = getTheme();
+
+  // Available colors for custom picker
+  const availablePrimaryColors = [
+    '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e',
+    '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e',
+    '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1',
+  ];
+
+  const availableAccentColors = [
+    '#a5b4fc', '#c4b5fd', '#d8b4fe', '#f0abfc', '#f9a8d4', '#fda4af',
+    '#fca5a5', '#fdba74', '#fcd34d', '#fde047', '#bef264', '#86efac',
+    '#6ee7b7', '#5eead4', '#67e8f9', '#7dd3fc', '#93c5fd', '#a5b4fc',
+  ];
 
   const value = {
-    // Current theme colors
+    // Current theme colors (spread for easy access)
     ...theme,
     
     // Theme state
+    selectedPreset,
     isCustomMode,
     loading,
-    autoMode,
-    isDarkMode: theme.mode === 'dark' || (autoMode && Appearance.getColorScheme() === 'dark'),
     
-    // Actions
-    updateColor,
-    updateColors,
+    // Preset management
+    presets: THEME_PRESETS,
+    selectPreset,
+    
+    // Custom mode
     enableCustomMode,
-    enableStandardMode,
-    resetToDefault,
-    toggleAutoMode,
+    disableCustomMode: () => selectPreset(selectedPreset),
+    setPrimaryColor,
+    setAccentColor,
     
-    // Utility functions
-    getButtonStyle,
-    getCardStyle,
+    // Available colors for pickers
+    availablePrimaryColors,
+    availableAccentColors,
     
-    // Constants for pickers
-    availableColors: {
-      primary: ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6'],
-      accent: ['#a5b4fc', '#c4b5fd', '#f9a8d4', '#fca5a5', '#fdba74', '#fde047', '#86efac', '#5eead4', '#7dd3fc'],
-    },
+    // Utility for button styles
+    getButtonStyle: (variant = 'primary') => ({
+      backgroundColor: variant === 'primary' ? theme.primary :
+                       variant === 'accent' ? theme.accent :
+                       variant === 'success' ? theme.success :
+                       variant === 'error' ? theme.error :
+                       theme.primary
+    }),
+    
+    getCardStyle: () => ({
+      backgroundColor: `${theme.surface}ee`,
+      borderColor: `${theme.primary}33`,
+    }),
   };
 
   if (loading) {
-    return null; // Or a loading spinner
+    return null;
   }
 
   return (
@@ -309,8 +227,19 @@ export function ThemeProvider({ children }) {
 export function useTheme() {
   const context = useContext(ThemeContext);
   if (!context) {
-    console.warn('useTheme must be used within a ThemeProvider');
-    return DEFAULT_THEME;
+    // Return default theme if context not available
+    return {
+      primary: '#6366f1',
+      accent: '#a5b4fc',
+      background: '#0f0d1a',
+      surface: '#1e1b4b',
+      text: '#ffffff',
+      textSecondary: '#9ca3af',
+      success: '#10b981',
+      warning: '#f59e0b',
+      error: '#ef4444',
+      secondary: '#818cf8',
+    };
   }
   return context;
 }
