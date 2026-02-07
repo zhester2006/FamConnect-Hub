@@ -7,15 +7,12 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import MapView, { Marker, Circle, PROVIDER_DEFAULT } from 'react-native-maps';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
 import locationService from '../services/location.service';
 import batteryService from '../services/battery.service';
 import MedalEmblem from '../components/MedalEmblem';
-
-// Maps disabled for Expo Go compatibility
-// To enable maps, build with: npx expo run:android
-const mapsAvailable = false;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
