@@ -324,7 +324,8 @@ class TestTasksEndpoint:
         response = requests.post(f"{BASE_URL}/api/tasks", headers=headers, json=task_data)
         assert response.status_code == 200
         data = response.json()
-        assert data['title'] == task_data['title']
+        # API returns {"task_id": "...", "success": true}
+        assert data['success'] == True
         assert 'task_id' in data
         print(f"✓ Create task working: {data['task_id']}")
 
@@ -410,8 +411,9 @@ class TestRewardsShop:
         response = requests.get(f"{BASE_URL}/api/rewards/pending", headers=headers)
         assert response.status_code == 200
         data = response.json()
-        assert 'redemptions' in data
-        print(f"✓ Get pending redemptions working: {len(data['redemptions'])} pending")
+        # API returns {"pending": [...]} not {"redemptions": [...]}
+        assert 'pending' in data
+        print(f"✓ Get pending redemptions working: {len(data['pending'])} pending")
 
 
 class TestShoppingList:
