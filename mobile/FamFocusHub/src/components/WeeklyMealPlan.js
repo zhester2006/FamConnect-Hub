@@ -116,10 +116,61 @@ export default function WeeklyMealPlan({ planText, onRegenerateDay }) {
     const ingredientWords = ['chicken', 'beef', 'pork', 'fish', 'salmon', 'shrimp', 'tofu',
       'rice', 'pasta', 'bread', 'potato', 'potatoes', 'salad', 'vegetables', 'veggies',
       'tomato', 'onion', 'garlic', 'pepper', 'cheese', 'eggs', 'milk', 'butter',
-      'broccoli', 'carrots', 'spinach', 'lettuce', 'corn', 'beans', 'mushrooms'];
+      'broccoli', 'carrots', 'spinach', 'lettuce', 'corn', 'beans', 'mushrooms',
+      'noodles', 'tortilla', 'avocado', 'bacon', 'sausage', 'ham', 'turkey',
+      'lime', 'lemon', 'cilantro', 'parsley', 'basil', 'oregano', 'cumin',
+      'soy sauce', 'olive oil', 'cream', 'yogurt', 'cucumber', 'zucchini'];
     
     const lowerDesc = desc.toLowerCase();
     return ingredientWords.filter(ing => lowerDesc.includes(ing));
+  };
+
+  // Open ingredient picker for individual selection
+  const openIngredientPicker = (day, meal) => {
+    const allIngredients = meal.ingredients.length > 0 
+      ? meal.ingredients 
+      : extractIngredients(meal.description);
+    
+    // Add the meal name itself as an option
+    const mealItems = [meal.description, ...allIngredients];
+    
+    setCurrentMealForPicker({ day, meal, items: [...new Set(mealItems)] });
+    setSelectedIngredients({});
+    setShowIngredientPicker(true);
+  };
+
+  // Toggle individual ingredient selection
+  const toggleIngredient = (ingredient) => {
+    setSelectedIngredients(prev => ({
+      ...prev,
+      [ingredient]: !prev[ingredient]
+    }));
+  };
+
+  // Add selected ingredients to shopping list
+  const addSelectedToList = async () => {
+    const selected = Object.entries(selectedIngredients)
+      .filter(([_, isSelected]) => isSelected)
+      .map(([item]) => item);
+    
+    if (selected.length === 0) {
+      Alert.alert('No Items Selected', 'Please select at least one item to add');
+      return;
+    }
+
+    try {
+      for (const item of selected) {
+        await apiService.addShoppingItem({ 
+          name: item,
+          category: 'meal-plan'
+        });
+      }
+      
+      Alert.alert('Added!', `${selected.length} item(s) added to shopping list`);
+      setShowIngredientPicker(false);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add items');
+    }
   };
 
   const handleAddMealToList = async (day, meal) => {
