@@ -612,4 +612,17 @@ const styles = StyleSheet.create({
   
   // Version
   versionText: { color: '#4b5563', fontSize: 12, textAlign: 'center' },
+
+  // Bug Report Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#1e1b4b', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '85%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+  modalSubtext: { color: '#9ca3af', fontSize: 14, marginBottom: 20, lineHeight: 20 },
+  inputLabel: { color: '#a5b4fc', fontSize: 14, fontWeight: '600', marginBottom: 8 },
+  textInput: { backgroundColor: 'rgba(15, 13, 26, 0.5)', borderRadius: 12, padding: 14, color: '#fff', fontSize: 15, minHeight: 80, textAlignVertical: 'top', marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  infoText: { color: '#6b7280', fontSize: 12, fontStyle: 'italic', marginBottom: 20, textAlign: 'center' },
+  submitButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#6366f1', borderRadius: 12, paddingVertical: 16 },
+  submitButtonDisabled: { opacity: 0.6 },
+  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });
