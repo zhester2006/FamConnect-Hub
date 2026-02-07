@@ -937,9 +937,8 @@ const styles = StyleSheet.create({
   availableChoreTitle: { fontSize: 11, fontWeight: '600', color: '#fff', textAlign: 'center', marginBottom: 4 },
   availableChorePoints: { fontSize: 10, color: '#f59e0b', fontWeight: '600' },
 
-  filterRow: { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 12 },
-  filterChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(30, 27, 75, 0.6)', marginRight: 6 },
-  filterText: { fontSize: 11, color: '#9ca3af', fontWeight: '500' },
+  filterRow: { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 12, gap: 8 },
+  filterIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(30, 27, 75, 0.6)', justifyContent: 'center', alignItems: 'center' },
 
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: 16 },
