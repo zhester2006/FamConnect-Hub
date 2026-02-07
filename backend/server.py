@@ -2369,9 +2369,15 @@ async def report_gps_disabled(request: Request, data: dict):
 @api_router.get("/notifications")
 async def get_notifications(request: Request):
     current_user = await get_current_user(request)
-    parent_id = current_user.get('parent_id', current_user['user_id'])
+    # Get notifications for the current user (by user_id OR family-wide notifications)
+    user_id = current_user['user_id']
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
     notifications = await db.notifications.find(
-        {"family_id": parent_id}, 
+        {"$or": [
+            {"user_id": user_id},  # Direct notifications to this user
+            {"family_id": family_id, "user_id": {"$exists": False}},  # Family-wide notifications
+        ]}, 
         {"_id": 0}
     ).sort("created_at", -1).limit(50).to_list(50)
     return {"notifications": notifications}
