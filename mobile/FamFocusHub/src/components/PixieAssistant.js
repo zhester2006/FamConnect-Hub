@@ -265,13 +265,16 @@ export default function PixieAssistant() {
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={styles.modalContent}
           >
-            {/* Header */}
+            {/* Header with Back Button */}
             <LinearGradient
               colors={['#8b5cf6', '#ec4899']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.header}
             >
+              <TouchableOpacity onPress={handleClose} style={styles.backButton}>
+                <Ionicons name="arrow-back" size={24} color="#fff" />
+              </TouchableOpacity>
               <View style={styles.headerInfo}>
                 <View style={styles.pixieHeaderAvatar}>
                   <Text style={styles.pixieHeaderEmoji}>🧚‍♀️</Text>
