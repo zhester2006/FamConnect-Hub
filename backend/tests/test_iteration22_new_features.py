@@ -321,7 +321,9 @@ class TestPantryEndpoints:
             json=item_data
         )
         assert response.status_code == 200, f"Create pantry item failed: {response.text}"
-        item = response.json()
+        data = response.json()
+        # Pantry POST returns {"item": {...}}
+        item = data.get("item", data)
         assert "item_id" in item, "No item_id in response"
         item_id = item["item_id"]
         print(f"✓ Pantry item created: {item_id}")
