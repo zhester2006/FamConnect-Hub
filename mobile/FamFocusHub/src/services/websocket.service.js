@@ -36,6 +36,19 @@ class WebSocketService {
     this.sessionToken = token;
   }
 
+  // Enable WebSocket service (for backward compatibility only)
+  // NOTE: This is deprecated - use Firebase Chat instead
+  enable() {
+    console.warn('WebSocket service is deprecated. Please use Firebase Chat service instead.');
+    this.isEnabled = true;
+  }
+
+  // Disable WebSocket service
+  disable() {
+    this.isEnabled = false;
+    this.disconnect();
+  }
+
   // NOTE: This method is deprecated - use Firebase Chat instead
   // Connect to WebSocket
   async connect() {
