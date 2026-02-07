@@ -9,6 +9,7 @@ import { useTheme } from '../context/ThemeContext';
 import apiService from '../services/api.service';
 import AnimatedBackground from '../components/AnimatedBackground';
 import MedalEmblem from '../components/MedalEmblem';
+import ProfileAvatar from '../components/ProfileAvatar';
 
 // Default chore types that can be quickly assigned
 const CHORE_TYPES = [
