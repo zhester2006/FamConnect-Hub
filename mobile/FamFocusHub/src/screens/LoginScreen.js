@@ -13,7 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import biometricService from '../services/biometric.service';
 import firebaseAuthService from '../services/firebase.auth.service';
 
-const API_BASE = 'https://homeconnect-19.preview.emergentagent.com';
+const API_BASE = 'https://famfocus.preview.emergentagent.com';
 const { width, height } = Dimensions.get('window');
 
 WebBrowser.maybeCompleteAuthSession();
