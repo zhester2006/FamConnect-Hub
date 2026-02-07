@@ -5623,6 +5623,73 @@ async def update_shortcuts(request: Request, data: dict):
     
     return {"shortcuts": shortcuts}
 
+# ==================== BUG REPORTS ====================
+
+@api_router.post("/bug-reports")
+async def submit_bug_report(request: Request, data: dict):
+    """Submit a bug report from the mobile app with device info and logs"""
+    try:
+        current_user = await get_current_user(request)
+        user_id = current_user['user_id']
+        user_role = current_user.get('role', 'unknown')
+    except:
+        # Allow anonymous bug reports if user is not authenticated
+        user_id = data.get('user_id', 'anonymous')
+        user_role = data.get('user_role', 'unknown')
+    
+    report_id = f"bug_{uuid.uuid4().hex[:12]}"
+    
+    report_doc = {
+        "report_id": report_id,
+        "user_id": user_id,
+        "user_role": user_role,
+        "description": data.get('description', ''),
+        "steps_to_reproduce": data.get('steps_to_reproduce', ''),
+        "device_info": data.get('device_info', {}),
+        "logs": data.get('logs', []),
+        "app_version": data.get('app_version', '1.0.0'),
+        "status": "new",  # new, investigating, resolved, closed
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.bug_reports.insert_one(report_doc)
+    
+    return {"report_id": report_id, "message": "Bug report submitted successfully"}
+
+@api_router.get("/bug-reports")
+async def get_bug_reports(request: Request, status: Optional[str] = None):
+    """Get bug reports (parent/admin only)"""
+    current_user = await get_current_user(request)
+    
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can view bug reports")
+    
+    query = {}
+    if status:
+        query["status"] = status
+    
+    reports = await db.bug_reports.find(query, {"_id": 0, "logs": 0}).sort("created_at", -1).to_list(100)
+    return {"reports": reports}
+
+@api_router.put("/bug-reports/{report_id}")
+async def update_bug_report(report_id: str, request: Request, data: dict):
+    """Update bug report status (parent/admin only)"""
+    current_user = await get_current_user(request)
+    
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can update bug reports")
+    
+    update_data = {}
+    if 'status' in data:
+        update_data['status'] = data['status']
+    if 'notes' in data:
+        update_data['admin_notes'] = data['notes']
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    update_data['updated_by'] = current_user['user_id']
+    
+    await db.bug_reports.update_one({"report_id": report_id}, {"$set": update_data})
+    return await db.bug_reports.find_one({"report_id": report_id}, {"_id": 0})
+
 # Sample data endpoint
 @api_router.post("/dev/populate-sample-data")
 async def populate_sample_data(request: Request):
