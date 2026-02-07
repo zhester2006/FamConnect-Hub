@@ -5,9 +5,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import apiService from '../services/api.service';
 import AnimatedBackground from '../components/AnimatedBackground';
 import AIMealCard from '../components/AIMealCard';
+import WeeklyMealPlan from '../components/WeeklyMealPlan';
 
 const QUICK_MEALS = [
   { name: 'Pasta Night', icon: '🍝', pref: 'Italian pasta dishes' },
