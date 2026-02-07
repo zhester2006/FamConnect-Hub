@@ -24,7 +24,7 @@ export default function RewardsScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('shop');
   const [newReward, setNewReward] = useState({ name: '', description: '', points_required: '' });
   const [newTask, setNewTask] = useState({ title: '', points: '10', deadline: '' });
-  const [awardData, setAwardData] = useState({ child_id: '', points: '', reason: '' });
+  const [awardData, setAwardData] = useState({ child_id: '', points: '', reason: '', isDeduction: false });
   const [processing, setProcessing] = useState(false);
 
   const fetchData = useCallback(async () => {
