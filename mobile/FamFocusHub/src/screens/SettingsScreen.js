@@ -108,7 +108,10 @@ export default function SettingsScreen({ navigation }) {
       title: 'Account',
       items: [
         { icon: 'person', label: 'Profile', screen: 'Profile', color: '#6366f1' },
-        ...(user?.role === 'parent' ? [{ icon: 'people', label: 'Family', screen: 'Family', color: '#06b6d4' }] : []),
+        ...(user?.role === 'parent' ? [
+          { icon: 'people', label: 'Family', screen: 'Family', color: '#06b6d4' },
+          { icon: 'settings', label: 'Manage Family', screen: 'FamilyManagement', color: '#a855f7' },
+        ] : []),
       ],
     },
     {
