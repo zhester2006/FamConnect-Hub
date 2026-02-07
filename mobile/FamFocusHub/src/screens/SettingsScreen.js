@@ -762,4 +762,12 @@ const styles = StyleSheet.create({
   submitButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#6366f1', borderRadius: 12, paddingVertical: 16 },
   submitButtonDisabled: { opacity: 0.6 },
   submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+
+  // Suggestion Modal
+  categoryRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  categoryOption: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 10, borderWidth: 1, borderColor: '#10b981', backgroundColor: 'transparent' },
+  categoryOptionActive: { backgroundColor: '#10b981', borderColor: '#10b981' },
+  categoryText: { color: '#10b981', fontSize: 12, fontWeight: '600' },
+  categoryTextActive: { color: '#fff' },
+  suggestionSubmitButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#10b981', borderRadius: 12, paddingVertical: 16 },
 });
