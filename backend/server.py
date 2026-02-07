@@ -1823,6 +1823,57 @@ async def create_event(request: Request, data: dict):
     await db.events.insert_one(event_doc)
     return await db.events.find_one({"event_id": event_id}, {"_id": 0})
 
+# Approve/Deny calendar event (parent only)
+@api_router.put("/events/{event_id}/approve")
+async def approve_event(event_id: str, request: Request, data: dict):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can approve events")
+    
+    approved = data.get('approved', True)
+    status = "approved" if approved else "denied"
+    
+    update_data = {
+        "status": status,
+        "reviewed_at": datetime.now(timezone.utc).isoformat(),
+        "reviewed_by": current_user['user_id']
+    }
+    
+    await db.events.update_one({"event_id": event_id}, {"$set": update_data})
+    
+    event = await db.events.find_one({"event_id": event_id}, {"_id": 0})
+    
+    # Send notification to event creator
+    if event and event.get('created_by'):
+        notification_doc = {
+            "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+            "user_id": event['created_by'],
+            "type": "event_approved" if approved else "event_denied",
+            "title": f"Event {'Approved' if approved else 'Denied'}",
+            "message": f"Your event '{event.get('title', 'Event')}' was {'approved' if approved else 'not approved'} by a parent.",
+            "data": {"event_id": event_id, "approved": approved},
+            "read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.notifications.insert_one(notification_doc)
+    
+    return event
+
+# Get pending events (parent only)
+@api_router.get("/events/pending")
+async def get_pending_events(request: Request):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        return {"events": []}
+    
+    family_id = current_user['user_id']
+    pending = await db.events.find(
+        {"family_id": family_id, "status": "pending"},
+        {"_id": 0}
+    ).sort("event_date", 1).to_list(50)
+    
+    return {"events": pending}
+
 # Work Schedule endpoint
 @api_router.post("/events/work-schedule")
 async def create_work_schedule(request: Request, data: dict):
