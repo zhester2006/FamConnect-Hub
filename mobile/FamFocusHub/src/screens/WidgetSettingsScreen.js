@@ -116,7 +116,7 @@ export default function WidgetSettingsScreen({ navigation }) {
           )}
         </View>
         <Switch
-          value={isEnabled}
+          value={!!isEnabled}
           onValueChange={() => toggleWidget(widget.id)}
           disabled={!isPlatformSupported}
           trackColor={{ false: '#4b5563', true: widget.color + '80' }}
