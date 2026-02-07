@@ -530,6 +530,11 @@ async def get_family_members(request: Request):
         members = await db.users.find({"$or": [{"user_id": current_user['user_id']}, {"parent_id": current_user['user_id']}]}, {"_id": 0}).to_list(100)
     else:
         members = await db.users.find({"user_id": {"$in": [current_user['user_id'], current_user.get('parent_id')]}}, {"_id": 0}).to_list(100)
+    
+    # Sanitize pictures to prevent large base64 data in responses
+    for member in members:
+        member['picture'] = sanitize_picture(member.get('picture'))
+    
     return {"members": members}
 
 @api_router.post("/users/child")
