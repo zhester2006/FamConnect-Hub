@@ -1594,3 +1594,49 @@ Update Firebase Realtime Database rules in Firebase Console to:
 - Family join: ✅ Working (validates code, assigns role)
 - Member management: ✅ Working (role change, remove)
 - Invite sharing: ✅ Working (copy code, share text)
+
+### Session 40 - Major Feature Update (Feb 2026) ✅
+
+**Key Fixes:**
+
+1. **Profile Pictures Now Always Visible:**
+   - Updated `sanitize_picture()` to generate fallback avatar URLs using DiceBear
+   - All users now have profile pictures (either their uploaded pic or auto-generated avatar)
+   - Applied to: family members, chat messages, family wall posts, chores
+
+2. **Family Wall Fixed:**
+   - Fixed Firebase initialization only happening once (not on every user object change)
+   - Using `useRef` to prevent re-initialization
+   - Like/vote now updates in place without navigation
+
+3. **Pixie AI Enhancements:**
+   - Now uses user's nickname if available
+   - Knows all family members and can reference them by nickname
+   - More personalized responses
+
+4. **Bible Quotes Added:**
+   - New `quote_type=bible` parameter for daily-quote endpoint
+   - AI generates relevant Bible verses for family inspiration
+
+5. **Compact Category Icons:**
+   - Pantry and Recipes screens now use icon-only tabs (40x40px circles)
+   - Cleaner, more compact UI
+
+**Backend Changes:**
+- `sanitize_picture(picture_data, max_len=500, fallback_name=None)` - New fallback_name parameter
+- `GET /family-wall/daily-quote?quote_type=bible` - Bible verse support
+- Pixie endpoint now fetches family members for personalized responses
+
+**Pending Features (User Requests):**
+1. Points auto-update on chore approval/reward redemption
+2. Child task claiming from Earn tab
+3. Children shopping list restrictions (only from pantry)
+4. Pantry quick-add items synced to shopping list
+5. Saved recipes linked to quick meal ideas
+6. Pantry sync with dinner planner
+7. AI meal suggestions based on pantry inventory
+8. Calendar approval for children
+9. Shopping list approval for children
+10. Advanced AI chore scheduler with exclusions
+11. Parent-editable chores list with AI icons
+12. Onboarding update with new features
