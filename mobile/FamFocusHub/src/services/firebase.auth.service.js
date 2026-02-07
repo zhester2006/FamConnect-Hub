@@ -1,8 +1,23 @@
 // Firebase Auth Service for FamFocus Hub
-// Note: Full Firebase Auth requires a development build, not Expo Go
-// In Expo Go, authentication uses the backend API instead
+// Handles Firebase Authentication with email/password and Google Sign-In
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
+import { 
+  initializeAuth,
+  getReactNativePersistence,
+  getAuth,
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithCredential,
+  sendPasswordResetEmail,
+  updateProfile,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword
+} from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
 import firebaseConfig from './firebase.config';
@@ -22,7 +37,7 @@ class FirebaseAuthService {
   // Initialize Firebase Auth
   async initialize() {
     try {
-      if (this.isInitialized) {
+      if (this.isInitialized && this.auth) {
         return true;
       }
 
@@ -33,15 +48,41 @@ class FirebaseAuthService {
         this.app = getApp();
       }
 
-      // Skip Firebase Auth in Expo Go - use backend API instead
-      // Firebase Auth with persistence requires native modules not available in Expo Go
-      console.log('Firebase Auth: Using backend API for authentication (Expo Go mode)');
+      // Initialize Auth with AsyncStorage persistence for React Native
+      try {
+        this.auth = initializeAuth(this.app, {
+          persistence: getReactNativePersistence(AsyncStorage)
+        });
+      } catch (error) {
+        // Auth might already be initialized
+        if (error.code === 'auth/already-initialized') {
+          this.auth = getAuth(this.app);
+        } else {
+          console.warn('Auth init warning:', error.message);
+          this.auth = getAuth(this.app);
+        }
+      }
+      
       this.isInitialized = true;
+
+      // Listen for auth state changes
+      this.unsubscribe = onAuthStateChanged(this.auth, (user) => {
+        this.currentUser = user;
+        this.notifyListeners(user);
+        
+        if (user) {
+          this.persistSession(user);
+        } else {
+          this.clearPersistedSession();
+        }
+      });
+
+      console.log('Firebase Auth initialized');
       return true;
     } catch (error) {
-      console.log('Firebase Auth initialization skipped:', error.message);
+      console.error('Firebase Auth initialization error:', error);
       this.isInitialized = true;
-      return true; // Don't block the app
+      return false;
     }
   }
 
@@ -63,56 +104,148 @@ class FirebaseAuthService {
     this.authStateListeners.forEach(listener => listener(user));
   }
 
-  // Sign in with email and password - Not available in Expo Go
+  // Sign in with email and password
   async signInWithEmail(email, password) {
-    console.log('Firebase Auth not available in Expo Go - use backend API');
-    return {
-      success: false,
-      error: 'Firebase Auth requires a development build. Use Dev Login instead.',
-    };
+    if (!this.auth) {
+      await this.initialize();
+    }
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
+      return {
+        success: true,
+        user: this.formatUser(userCredential.user),
+      };
+    } catch (error) {
+      console.error('Email sign in error:', error);
+      return {
+        success: false,
+        error: this.getErrorMessage(error.code),
+      };
+    }
   }
 
-  // Create account with email and password - Not available in Expo Go
+  // Create account with email and password
   async signUpWithEmail(email, password, displayName) {
-    console.log('Firebase Auth not available in Expo Go - use backend API');
-    return {
-      success: false,
-      error: 'Firebase Auth requires a development build. Use Dev Login instead.',
-    };
+    if (!this.auth) {
+      await this.initialize();
+    }
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
+      
+      if (displayName) {
+        await updateProfile(userCredential.user, { displayName });
+      }
+
+      return {
+        success: true,
+        user: this.formatUser(userCredential.user),
+      };
+    } catch (error) {
+      console.error('Email sign up error:', error);
+      return {
+        success: false,
+        error: this.getErrorMessage(error.code),
+      };
+    }
   }
 
-  // Sign in with Google - Not available in Expo Go
+  // Sign in with Google
   async signInWithGoogle(idToken) {
-    console.log('Firebase Auth not available in Expo Go - use backend API');
-    return {
-      success: false,
-      error: 'Google Sign-In requires a development build.',
-    };
+    if (!this.auth) {
+      await this.initialize();
+    }
+
+    try {
+      const credential = GoogleAuthProvider.credential(idToken);
+      const userCredential = await signInWithCredential(this.auth, credential);
+      
+      return {
+        success: true,
+        user: this.formatUser(userCredential.user),
+      };
+    } catch (error) {
+      console.error('Google sign in error:', error);
+      return {
+        success: false,
+        error: this.getErrorMessage(error.code),
+      };
+    }
   }
 
   // Sign out
   async signOut() {
-    this.currentUser = null;
-    await this.clearPersistedSession();
-    return { success: true };
+    try {
+      if (this.auth) {
+        await firebaseSignOut(this.auth);
+      }
+      await this.clearPersistedSession();
+      return { success: true };
+    } catch (error) {
+      console.error('Sign out error:', error);
+      return { success: false, error: error.message };
+    }
   }
 
-  // Send password reset email - Not available in Expo Go
+  // Send password reset email
   async sendPasswordReset(email) {
-    return {
-      success: false,
-      error: 'Password reset requires a development build.',
-    };
+    if (!this.auth) {
+      await this.initialize();
+    }
+
+    try {
+      await sendPasswordResetEmail(this.auth, email);
+      return { success: true };
+    } catch (error) {
+      console.error('Password reset error:', error);
+      return {
+        success: false,
+        error: this.getErrorMessage(error.code),
+      };
+    }
   }
 
-  // Change password - Not available in Expo Go
+  // Change password
   async changePassword(currentPassword, newPassword) {
-    return { success: false, error: 'Not available in Expo Go' };
+    if (!this.auth || !this.auth.currentUser) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    try {
+      const credential = EmailAuthProvider.credential(
+        this.auth.currentUser.email,
+        currentPassword
+      );
+      await reauthenticateWithCredential(this.auth.currentUser, credential);
+      await updatePassword(this.auth.currentUser, newPassword);
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Change password error:', error);
+      return {
+        success: false,
+        error: this.getErrorMessage(error.code),
+      };
+    }
   }
 
-  // Update user profile - Not available in Expo Go
+  // Update user profile
   async updateUserProfile(updates) {
-    return { success: false, error: 'Not available in Expo Go' };
+    if (!this.auth || !this.auth.currentUser) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    try {
+      await updateProfile(this.auth.currentUser, updates);
+      return { success: true };
+    } catch (error) {
+      console.error('Update profile error:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
   }
 
   // Get current user
@@ -125,22 +258,31 @@ class FirebaseAuthService {
     return !!this.currentUser;
   }
 
-  // Get ID token - Not available in Expo Go
+  // Get ID token for backend authentication
   async getIdToken() {
-    return null;
+    if (!this.currentUser) {
+      return null;
+    }
+
+    try {
+      return await this.currentUser.getIdToken();
+    } catch (error) {
+      console.error('Get ID token error:', error);
+      return null;
+    }
   }
 
-  // Format user object
-  formatUser(user) {
-    if (!user) return null;
+  // Format Firebase user to app user format
+  formatUser(firebaseUser) {
     return {
-      uid: user.uid || user.user_id,
-      email: user.email,
-      displayName: user.displayName || user.name,
-      photoURL: user.photoURL || user.picture,
-      user_id: user.uid || user.user_id,
-      name: user.displayName || user.name,
-      picture: user.photoURL || user.picture,
+      uid: firebaseUser.uid,
+      email: firebaseUser.email,
+      displayName: firebaseUser.displayName,
+      photoURL: firebaseUser.photoURL,
+      emailVerified: firebaseUser.emailVerified,
+      user_id: firebaseUser.uid,
+      name: firebaseUser.displayName || firebaseUser.email?.split('@')[0],
+      picture: firebaseUser.photoURL,
     };
   }
 
@@ -156,7 +298,7 @@ class FirebaseAuthService {
       };
       await AsyncStorage.setItem('@firebase_session', JSON.stringify(sessionData));
     } catch (error) {
-      console.log('Persist session error:', error);
+      console.error('Persist session error:', error);
     }
   }
 
@@ -165,7 +307,7 @@ class FirebaseAuthService {
     try {
       await AsyncStorage.removeItem('@firebase_session');
     } catch (error) {
-      console.log('Clear session error:', error);
+      console.error('Clear session error:', error);
     }
   }
 
@@ -175,6 +317,7 @@ class FirebaseAuthService {
       const session = await AsyncStorage.getItem('@firebase_session');
       return session ? JSON.parse(session) : null;
     } catch (error) {
+      console.error('Get persisted session error:', error);
       return null;
     }
   }
@@ -190,7 +333,10 @@ class FirebaseAuthService {
       'auth/weak-password': 'Password should be at least 6 characters',
       'auth/network-request-failed': 'Network error. Please check your connection',
       'auth/too-many-requests': 'Too many attempts. Please try again later',
+      'auth/operation-not-allowed': 'This sign-in method is not enabled',
+      'auth/requires-recent-login': 'Please sign in again to perform this action',
     };
+
     return errorMessages[errorCode] || 'An error occurred. Please try again.';
   }
 
