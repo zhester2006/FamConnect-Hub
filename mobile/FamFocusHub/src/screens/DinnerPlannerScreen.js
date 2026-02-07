@@ -331,6 +331,23 @@ export default function DinnerPlannerScreen({ navigation }) {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Structured AI Meal Modal */}
+      <Modal visible={showMealModal} animationType="slide" transparent>
+        <View style={styles.mealModalOverlay}>
+          <View style={styles.mealModalContent}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <AIMealCard 
+                meal={structuredMeal} 
+                onClose={() => {
+                  setShowMealModal(false);
+                  setStructuredMeal(null);
+                }}
+              />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </AnimatedBackground>
   );
 }
