@@ -250,13 +250,24 @@ export default function FamilyWallScreen({ navigation }) {
 
   const handleLike = async (postId) => {
     try {
+      // Find the post to check if already liked
+      const post = posts.find(p => p.post_id === postId);
+      const isLiked = post?.liked_by?.includes(user?.user_id) || 
+                      (post?.likes && post.likes[user?.user_id]);
+      
       // Try Firebase first
       if (firebaseConnected) {
-        const success = await firebaseFamilyWallService.likePost(postId);
+        const success = isLiked 
+          ? await firebaseFamilyWallService.unlikePost(postId)
+          : await firebaseFamilyWallService.likePost(postId);
         if (success) return; // Firebase will update via real-time listener
       }
       // Fallback to REST API
-      await apiService.likePost(postId);
+      if (isLiked) {
+        await apiService.unlikePost(postId);
+      } else {
+        await apiService.likePost(postId);
+      }
       fetchPosts();
     } catch (error) {
       console.error('Failed to like:', error);
