@@ -129,6 +129,47 @@ export default function SettingsScreen({ navigation }) {
     }
   };
 
+  const handleSubmitSuggestion = async () => {
+    if (!suggestionTitle.trim() || !suggestionDescription.trim()) {
+      Alert.alert('Error', 'Please provide a title and description for your suggestion');
+      return;
+    }
+
+    setSubmittingSuggestion(true);
+    try {
+      const deviceInfo = await getDeviceInfo();
+      
+      const suggestion = {
+        title: suggestionTitle.trim(),
+        description: suggestionDescription.trim(),
+        category: suggestionCategory,
+        user_id: user?.user_id,
+        user_role: user?.role,
+        email: user?.email,
+        name: user?.nickname || user?.name,
+        app_version: deviceInfo.appVersion || '1.0.0',
+      };
+
+      await apiService.post('/suggestions', suggestion);
+      
+      Alert.alert(
+        'Suggestion Submitted! 💡',
+        'Thank you for sharing your idea! We love hearing from our users and will consider your suggestion for future updates.',
+        [{ text: 'Awesome!', onPress: () => {
+          setShowSuggestion(false);
+          setSuggestionTitle('');
+          setSuggestionDescription('');
+          setSuggestionCategory('feature');
+        }}]
+      );
+    } catch (error) {
+      console.error('Failed to submit suggestion:', error);
+      Alert.alert('Error', 'Failed to submit suggestion. Please try again later.');
+    } finally {
+      setSubmittingSuggestion(false);
+    }
+  };
+
   const handleShowTutorial = async () => {
     try {
       await apiService.resetTutorial();
