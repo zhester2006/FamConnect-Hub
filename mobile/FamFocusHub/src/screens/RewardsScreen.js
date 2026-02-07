@@ -363,6 +363,18 @@ export default function RewardsScreen({ navigation }) {
                 ))
               )}
             </View>
+            
+            {/* Link to Earn tab from Shop */}
+            {user?.role === 'child' && (
+              <TouchableOpacity 
+                style={styles.earnMoreLink}
+                onPress={() => setActiveTab('earn')}
+              >
+                <Ionicons name="trophy" size={20} color="#10b981" />
+                <Text style={styles.earnMoreLinkText}>Need more points? Go to Earn tab</Text>
+                <Ionicons name="chevron-forward" size={16} color="#10b981" />
+              </TouchableOpacity>
+            )}
           </>
         )}
 
