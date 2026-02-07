@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Modal, TextInput,
   ScrollView, ActivityIndicator, Animated, KeyboardAvoidingView,
-  Platform, Dimensions, Image
+  Platform, Dimensions, Image, PanResponder
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +14,14 @@ import apiService from '../services/api.service';
 import { useAuth } from '../context/AuthContext';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Safe bounds for draggable button
+const BUTTON_SIZE = 56;
+const SAFE_MARGIN = 16;
+const MIN_X = SAFE_MARGIN;
+const MAX_X = SCREEN_WIDTH - BUTTON_SIZE - SAFE_MARGIN;
+const MIN_Y = 100; // Below status bar
+const MAX_Y = SCREEN_HEIGHT - 180; // Above tab bar
 
 // Pixie's personality and capabilities
 const PIXIE_INTRO = "Hi! I'm Pixie, your family's AI helper! 🧚‍♀️ I can help with meal ideas, activities, homework tips, and more!";
