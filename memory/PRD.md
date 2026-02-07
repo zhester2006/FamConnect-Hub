@@ -1404,3 +1404,40 @@ All 64 backend API endpoints tested and verified working:
 **Important Note:**
 User's mobile app build is connecting to old backend URL (`familyhq-1` instead of `famfocus-hub-1`). 
 User MUST delete the app and run `npx expo run:android` to create fresh build with correct configuration.
+
+### Session 37 - Backend Stability Fixes (Feb 2026) ✅
+
+**P0 Bug Fix - Maximum Call Stack Size Exceeded:**
+The agent identified that large base64 image strings in API responses were causing call stack overflow errors on the mobile app. Applied the `sanitize_picture()` helper function to all endpoints that return user picture data.
+
+**Endpoints Updated:**
+1. `GET /api/family/members` - Member pictures now sanitized
+2. `GET /api/chores` - assignee_picture and completed_by_picture sanitized
+3. `GET /api/family-wall` - author_picture sanitized
+4. `GET /api/messages` - user_picture sanitized
+5. `GET /api/events` - created_by_picture and assignee_picture sanitized (was already done)
+6. `GET /api/tasks` - assignee_picture, completed_by_picture sanitized
+7. `GET /api/leaderboard` - User pictures sanitized
+
+**sanitize_picture() Behavior:**
+- Returns `null` for large base64 strings (>500 chars)
+- Passes through HTTP URLs unchanged
+- Handles null values correctly
+
+**Testing Results:**
+- All 24 backend tests passed (100%)
+- Test report: `/app/test_reports/iteration_23.json`
+- No performance degradation observed
+- All endpoints respond within 5 seconds
+
+**Key Files Modified:**
+- `/app/backend/server.py` - Applied sanitize_picture to 7 endpoints
+
+**Remaining P0 Issues (Mobile App - Require User Build):**
+1. **Map not rendering** - Code fix applied (PROVIDER_DEFAULT), requires mobile rebuild
+2. **Theme colors not applying** - Fix applied in ThemeContext.js, requires mobile rebuild
+3. **Family Wall Firebase permission_denied** - Firebase Security Rules issue (user must configure in Firebase Console)
+
+**Next Steps:**
+- User needs to rebuild the mobile app with `npx expo run:android` to test all frontend fixes
+- Firebase Security Rules need to be updated for the Family Wall to work (user action required on Firebase Console)
