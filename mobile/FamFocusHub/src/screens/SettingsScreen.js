@@ -360,7 +360,7 @@ export default function SettingsScreen({ navigation }) {
               </View>
             </View>
             <Switch
-              value={notificationsEnabled}
+              value={!!notificationsEnabled}
               onValueChange={handleToggleNotifications}
               trackColor={{ false: '#4b5563', true: theme.primary }}
               thumbColor={notificationsEnabled ? '#fff' : '#9ca3af'}
