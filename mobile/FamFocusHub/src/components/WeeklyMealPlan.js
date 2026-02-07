@@ -385,6 +385,84 @@ export default function WeeklyMealPlan({ planText, onRegenerateDay }) {
         <Ionicons name="cart" size={20} color="#fff" />
         <Text style={styles.addAllButtonText}>Add Week to Shopping List</Text>
       </TouchableOpacity>
+
+      {/* Ingredient Picker Modal */}
+      <Modal visible={showIngredientPicker} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Items to Add</Text>
+              <TouchableOpacity onPress={() => setShowIngredientPicker(false)}>
+                <Ionicons name="close" size={24} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
+            
+            {currentMealForPicker && (
+              <>
+                <Text style={styles.modalSubtitle}>
+                  {currentMealForPicker.day} - {currentMealForPicker.meal.type}
+                </Text>
+                
+                <ScrollView style={styles.ingredientList}>
+                  {currentMealForPicker.items.map((item, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.ingredientOption,
+                        selectedIngredients[item] && styles.ingredientOptionSelected
+                      ]}
+                      onPress={() => toggleIngredient(item)}
+                    >
+                      <View style={[
+                        styles.checkbox,
+                        selectedIngredients[item] && styles.checkboxSelected
+                      ]}>
+                        {selectedIngredients[item] && (
+                          <Ionicons name="checkmark" size={14} color="#fff" />
+                        )}
+                      </View>
+                      <Text style={[
+                        styles.ingredientOptionText,
+                        selectedIngredients[item] && styles.ingredientOptionTextSelected
+                      ]}>
+                        {item}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+                
+                <View style={styles.modalActions}>
+                  <TouchableOpacity 
+                    style={styles.selectAllBtn}
+                    onPress={() => {
+                      const allSelected = currentMealForPicker.items.every(i => selectedIngredients[i]);
+                      const newSelection = {};
+                      currentMealForPicker.items.forEach(i => {
+                        newSelection[i] = !allSelected;
+                      });
+                      setSelectedIngredients(newSelection);
+                    }}
+                  >
+                    <Text style={styles.selectAllText}>
+                      {currentMealForPicker.items.every(i => selectedIngredients[i]) ? 'Deselect All' : 'Select All'}
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={styles.addSelectedBtn}
+                    onPress={addSelectedToList}
+                  >
+                    <Ionicons name="cart" size={18} color="#fff" />
+                    <Text style={styles.addSelectedBtnText}>
+                      Add {Object.values(selectedIngredients).filter(Boolean).length} Items
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
