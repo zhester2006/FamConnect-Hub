@@ -354,6 +354,116 @@ async def dev_login(response: Response, data: dict = None):
     
     return {"user": user, "session_token": session_token}
 
+# Firebase Auth endpoints for mobile app
+class FirebaseAuthRequest(BaseModel):
+    idToken: Optional[str] = None
+    user: Optional[dict] = None
+    displayName: Optional[str] = None
+
+@api_router.post("/auth/firebase-login")
+async def firebase_login(response: Response, data: FirebaseAuthRequest):
+    """Handle Firebase Authentication login from mobile app"""
+    if not data.user:
+        raise HTTPException(status_code=400, detail="User data required")
+    
+    firebase_user = data.user
+    email = firebase_user.get('email')
+    
+    if not email:
+        raise HTTPException(status_code=400, detail="Email required")
+    
+    # Find or create user
+    user = await db.users.find_one({"email": email}, {"_id": 0})
+    if not user:
+        user_id = f"user_{uuid.uuid4().hex[:12]}"
+        user = {
+            "user_id": user_id,
+            "email": email,
+            "name": firebase_user.get('displayName') or firebase_user.get('name') or email.split('@')[0],
+            "picture": firebase_user.get('photoURL') or firebase_user.get('picture'),
+            "role": "parent",
+            "points": 0,
+            "badges": [],
+            "settings": {"theme": "cosmic_explorer", "notifications_enabled": True},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "online_status": True,
+            "last_seen": datetime.now(timezone.utc).isoformat(),
+            "firebase_uid": firebase_user.get('uid')
+        }
+        await db.users.insert_one(user)
+        user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    else:
+        # Update last seen and firebase_uid
+        await db.users.update_one(
+            {"user_id": user['user_id']},
+            {"$set": {
+                "online_status": True,
+                "last_seen": datetime.now(timezone.utc).isoformat(),
+                "firebase_uid": firebase_user.get('uid')
+            }}
+        )
+    
+    # Create session token
+    session_token = f"session_{uuid.uuid4().hex}"
+    await db.user_sessions.insert_one({
+        "user_id": user['user_id'],
+        "session_token": session_token,
+        "expires_at": datetime.now(timezone.utc) + timedelta(days=30),
+        "created_at": datetime.now(timezone.utc),
+        "auth_method": "firebase"
+    })
+    
+    return {"session_token": session_token, "user": user}
+
+@api_router.post("/auth/firebase-signup")
+async def firebase_signup(response: Response, data: FirebaseAuthRequest):
+    """Handle Firebase Authentication signup from mobile app"""
+    if not data.user:
+        raise HTTPException(status_code=400, detail="User data required")
+    
+    firebase_user = data.user
+    email = firebase_user.get('email')
+    display_name = data.displayName or firebase_user.get('displayName') or email.split('@')[0]
+    
+    if not email:
+        raise HTTPException(status_code=400, detail="Email required")
+    
+    # Check if user already exists
+    existing = await db.users.find_one({"email": email})
+    if existing:
+        raise HTTPException(status_code=400, detail="User already exists with this email")
+    
+    # Create new user
+    user_id = f"user_{uuid.uuid4().hex[:12]}"
+    user = {
+        "user_id": user_id,
+        "email": email,
+        "name": display_name,
+        "picture": firebase_user.get('photoURL'),
+        "role": "parent",
+        "points": 0,
+        "badges": [],
+        "settings": {"theme": "cosmic_explorer", "notifications_enabled": True},
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "online_status": True,
+        "last_seen": datetime.now(timezone.utc).isoformat(),
+        "firebase_uid": firebase_user.get('uid')
+    }
+    await db.users.insert_one(user)
+    user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    
+    # Create session token
+    session_token = f"session_{uuid.uuid4().hex}"
+    await db.user_sessions.insert_one({
+        "user_id": user_id,
+        "session_token": session_token,
+        "expires_at": datetime.now(timezone.utc) + timedelta(days=30),
+        "created_at": datetime.now(timezone.utc),
+        "auth_method": "firebase"
+    })
+    
+    return {"session_token": session_token, "user": user}
+
 # Push notification device registration
 @api_router.post("/notifications/register-device")
 async def register_device_for_push(request: Request, data: dict):
