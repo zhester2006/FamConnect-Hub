@@ -188,19 +188,34 @@ export default function RewardsScreen({ navigation }) {
       return;
     }
 
+    const pointsValue = parseInt(awardData.points);
+    if (isNaN(pointsValue) || pointsValue <= 0) {
+      Alert.alert('Error', 'Please enter a valid positive number');
+      return;
+    }
+
+    // Calculate the amount (negative for deduction, positive for award)
+    const amount = awardData.isDeduction ? -pointsValue : pointsValue;
+
     setProcessing(true);
     try {
-      await apiService.post('/users/award-points', {
-        user_id: awardData.child_id,
-        points: parseInt(awardData.points),
-        reason: awardData.reason || 'Parent bonus',
+      // Use the points modification endpoint that supports both add/remove
+      await apiService.post(`/users/${awardData.child_id}/points`, {
+        amount: amount,
+        reason: awardData.reason || (awardData.isDeduction ? 'Points deducted by parent' : 'Parent bonus'),
       });
       setShowAwardModal(false);
-      setAwardData({ child_id: '', points: '', reason: '' });
+      setAwardData({ child_id: '', points: '', reason: '', isDeduction: false });
       fetchData();
-      Alert.alert('🎉 Points Awarded!', `Successfully awarded ${awardData.points} points!`);
+      
+      if (awardData.isDeduction) {
+        Alert.alert('📉 Points Deducted', `Successfully deducted ${pointsValue} points.`);
+      } else {
+        Alert.alert('🎉 Points Awarded!', `Successfully awarded ${pointsValue} points!`);
+      }
     } catch (error) {
-      Alert.alert('Error', 'Failed to award points');
+      console.error('Points operation failed:', error);
+      Alert.alert('Error', awardData.isDeduction ? 'Failed to deduct points' : 'Failed to award points');
     } finally {
       setProcessing(false);
     }
