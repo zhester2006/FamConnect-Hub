@@ -926,7 +926,7 @@ export default function LocationScreen({ navigation }) {
               <MapView
                 ref={mapRef}
                 style={styles.map}
-                provider={PROVIDER_DEFAULT}
+                provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT}
                 initialRegion={{
                   latitude: selectedLocation?.latitude || currentLocation?.latitude || 37.78825,
                   longitude: selectedLocation?.longitude || currentLocation?.longitude || -122.4324,
