@@ -1213,3 +1213,38 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - [ ] Location map picker image display - native maps work, static image fallback in place
 - [ ] Native module errors (crypto, SQLITE_FULL) - device-level issues, added better error handling
 
+### Session 35 - P2 Final Fixes: Map Picker & Error Handling (Feb 2026) ✅
+
+**Issues Resolved:**
+
+1. **Location Map Picker Image Display**
+   - Added `onMapReady` and `onError` handlers to MapView
+   - Static map image fallback when MapView fails to render
+   - "Use Current Location" button as primary action
+   - File: `/app/mobile/FamFocusHub/src/screens/LocationScreen.js`
+
+2. **Native Module Errors (crypto, SQLITE_FULL)**
+   - Created centralized ErrorHandler utility
+   - Handles: crypto errors, SQLITE_FULL, network errors
+   - Auto-cleanup of cache when storage is full
+   - LogBox suppression for known device-level warnings
+   - Files:
+     - `/app/mobile/FamFocusHub/src/utils/errorHandler.js` - NEW
+     - `/app/mobile/FamFocusHub/App.js` - Global error handling
+
+3. **Clear Cache Option**
+   - Added "Clear Cache" in Settings → App Settings
+   - Preserves login and settings, clears temporary data
+   - File: `/app/mobile/FamFocusHub/src/screens/SettingsScreen.js`
+
+**ErrorHandler Features:**
+- `handleCryptoError()` - Falls back gracefully when crypto module unavailable
+- `handleStorageError()` - Shows warning, auto-attempts cleanup
+- `clearAppCache()` - User-triggered cache clear
+- `getStorageStats()` - Debugging utility for storage usage
+
+**Testing Results:**
+- All 24 backend tests passed (100%)
+- Test report: `/app/test_reports/iteration_17.json`
+- Note: Native mobile features require building the app to test
+
