@@ -44,19 +44,75 @@ export default function PixieAssistant() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [showQuickPrompts, setShowQuickPrompts] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
   const scrollRef = useRef(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
+  
+  // Position for draggable button - start at bottom right
+  const pan = useRef(new Animated.ValueXY({ x: MAX_X, y: MAX_Y - 50 })).current;
 
-  // Floating animation for the button
+  // Pan responder for drag functionality
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // Only capture if moving more than 5 pixels (to allow taps)
+        return Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5;
+      },
+      onPanResponderGrant: () => {
+        setIsDragging(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        pan.setOffset({
+          x: pan.x._value,
+          y: pan.y._value,
+        });
+        pan.setValue({ x: 0, y: 0 });
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: pan.x, dy: pan.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: (_, gestureState) => {
+        pan.flattenOffset();
+        setIsDragging(false);
+        
+        // Clamp to screen bounds
+        let newX = pan.x._value;
+        let newY = pan.y._value;
+        
+        newX = Math.max(MIN_X, Math.min(MAX_X, newX));
+        newY = Math.max(MIN_Y, Math.min(MAX_Y, newY));
+        
+        // Snap to nearest edge (left or right)
+        const snapToLeft = newX < SCREEN_WIDTH / 2;
+        const finalX = snapToLeft ? MIN_X : MAX_X;
+        
+        Animated.spring(pan, {
+          toValue: { x: finalX, y: newY },
+          useNativeDriver: false,
+          friction: 7,
+        }).start();
+        
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      },
+    })
+  ).current;
+
+  // Floating animation for the button (only when not dragging)
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(floatAnim, { toValue: -5, duration: 1500, useNativeDriver: true }),
-        Animated.timing(floatAnim, { toValue: 0, duration: 1500, useNativeDriver: true }),
-      ])
-    ).start();
-  }, []);
+    if (!isDragging) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(floatAnim, { toValue: -5, duration: 1500, useNativeDriver: true }),
+          Animated.timing(floatAnim, { toValue: 0, duration: 1500, useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      floatAnim.stopAnimation();
+      floatAnim.setValue(0);
+    }
+  }, [isDragging]);
 
   // Pulse animation when there's a new response
   const triggerPulse = () => {
