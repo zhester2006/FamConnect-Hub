@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
 import firebaseChatService from '../services/firebase.chat.service';
 import AnimatedBackground from '../components/AnimatedBackground';
+import ProfileAvatar from '../components/ProfileAvatar';
 import MedalEmblem from '../components/MedalEmblem';
 import { formatTime } from '../utils/dateUtils';
 
