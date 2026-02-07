@@ -1264,22 +1264,16 @@ async def get_events(request: Request, start_date: Optional[str] = None, end_dat
     current_user = await get_current_user(request)
     family_id = current_user.get('parent_id', current_user['user_id'])
     
-    # Get all family members for creator lookup - exclude large picture data
+    # Get all family members for creator lookup
     family_members = await db.users.find(
         {"$or": [{"user_id": family_id}, {"parent_id": family_id}]},
         {"_id": 0, "user_id": 1, "name": 1, "nickname": 1, "picture": 1, "role": 1}
     ).to_list(100)
     
-    # Truncate picture data to prevent stack overflow
+    # Build member map with sanitized pictures
     member_map = {}
     for m in family_members:
-        pic = m.get('picture', '')
-        # Only keep picture URLs or very short base64 (thumbnails)
-        if pic and len(pic) > 500:
-            if pic.startswith('http'):
-                m['picture'] = pic
-            else:
-                m['picture'] = None  # Skip large base64 images
+        m['picture'] = sanitize_picture(m.get('picture'))
         member_map[m['user_id']] = m
     
     query = {"family_id": family_id}
