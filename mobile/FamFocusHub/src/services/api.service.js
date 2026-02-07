@@ -448,6 +448,27 @@ class ApiService {
     return this.post(`/users/${userId}/points`, { amount, reason });
   }
 
+  // AI-Powered Features
+  async generateAiSchedule(data) {
+    return this.post('/chores/ai-schedule', data);
+  }
+
+  async getAiMealSuggestion(preferences = '', servings = 4) {
+    return this.post('/ai/meal-plan', { preferences, servings });
+  }
+
+  async getAiChoreTips(title, childAge = 10) {
+    return this.post('/ai/chore-tips', { title, child_age: childAge });
+  }
+
+  async getAiFamilyActivity(data = {}) {
+    return this.post('/ai/family-activity', data);
+  }
+
+  async askPixie(message, userName = 'Friend', userRole = 'child', context = []) {
+    return this.post('/ai/pixie', { message, user_name: userName, user_role: userRole, context });
+  }
+
   // Check pending sync actions
   async getPendingSyncCount() {
     const pending = await offlineService.getPendingActions();
