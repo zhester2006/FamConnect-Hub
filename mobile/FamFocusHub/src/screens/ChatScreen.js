@@ -206,30 +206,13 @@ export default function ChatScreen({ navigation }) {
     setSelectedMessage(null);
   };
 
-  // Voice recording functions
+  // Voice recording functions - Not available in Expo Go
   const startRecording = async () => {
-    try {
-      await Audio.requestPermissionsAsync();
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      
-      setRecording(recording);
-      setIsRecording(true);
-      setRecordingDuration(0);
-      
-      recordingTimer.current = setInterval(() => {
-        setRecordingDuration(prev => prev + 1);
-      }, 1000);
-    } catch (err) {
-      console.error('Failed to start recording:', err);
-      Alert.alert('Error', 'Could not start recording');
-    }
+    Alert.alert(
+      'Not Available', 
+      'Voice recording requires a development build. This feature is not available in Expo Go.',
+      [{ text: 'OK' }]
+    );
   };
 
   const stopRecording = async () => {
