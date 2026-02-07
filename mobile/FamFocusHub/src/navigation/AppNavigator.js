@@ -163,64 +163,66 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!isAuthenticated ? (
-          <Stack.Screen name="Login" component={LoginScreen} />
-        ) : (
-          <>
-            {user?.role === 'parent' ? (
-              <>
-                <Stack.Screen name="ParentMain">
-                  {() => (
-                    <OnboardingWrapper onComplete={() => setOnboardingComplete(true)}>
-                      <ParentTabs />
-                    </OnboardingWrapper>
-                  )}
-                </Stack.Screen>
-                <Stack.Screen name="Family" component={FamilyScreen} />
-                <Stack.Screen name="FamilyWall" component={FamilyWallScreen} />
-                <Stack.Screen name="Shopping" component={ShoppingListScreen} />
-                <Stack.Screen name="DinnerPlanner" component={DinnerPlannerScreen} />
-                <Stack.Screen name="Location" component={LocationScreen} />
-                <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
-                <Stack.Screen name="Settings" component={SettingsScreen} />
-                <Stack.Screen name="ReadingLogs" component={ReadingLogsScreen} />
-                <Stack.Screen name="Profile" component={ProfileScreen} />
-                <Stack.Screen name="HomeHub" component={HomeHubScreen} />
-                <Stack.Screen name="ChildSpace" component={ChildSpace} />
-                <Stack.Screen name="Rewards" component={RewardsScreen} />
-                <Stack.Screen name="Achievements" component={AchievementsScreen} />
-                <Stack.Screen name="WidgetSettings" component={WidgetSettingsScreen} />
-              </>
-            ) : (
-              <>
-                <Stack.Screen name="ChildMain">
-                  {() => (
-                    <OnboardingWrapper onComplete={() => setOnboardingComplete(true)}>
-                      <ChildTabs />
-                    </OnboardingWrapper>
-                  )}
-                </Stack.Screen>
-                <Stack.Screen name="FamilyWall" component={FamilyWallScreen} />
-                <Stack.Screen name="Shopping" component={ShoppingListScreen} />
-                <Stack.Screen name="Location" component={LocationScreen} />
-                <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
-                <Stack.Screen name="Settings" component={SettingsScreen} />
-                <Stack.Screen name="ReadingLogs" component={ReadingLogsScreen} />
-                <Stack.Screen name="Profile" component={ProfileScreen} />
-                <Stack.Screen name="HomeHub" component={HomeHubScreen} />
-                <Stack.Screen name="Calendar" component={CalendarScreen} />
-                <Stack.Screen name="DinnerPlanner" component={DinnerPlannerScreen} />
-                <Stack.Screen name="Achievements" component={AchievementsScreen} />
-                <Stack.Screen name="WidgetSettings" component={WidgetSettingsScreen} />
-              </>
-            )}
-          </>
-        )}
-      </Stack.Navigator>
-      
-      {/* Pixie AI Assistant - appears on all authenticated screens */}
-      {isAuthenticated && <PixieAssistant />}
+      <View style={{ flex: 1 }}>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {!isAuthenticated ? (
+            <Stack.Screen name="Login" component={LoginScreen} />
+          ) : (
+            <>
+              {user?.role === 'parent' ? (
+                <>
+                  <Stack.Screen name="ParentMain">
+                    {() => (
+                      <OnboardingWrapper onComplete={() => setOnboardingComplete(true)}>
+                        <ParentTabs />
+                      </OnboardingWrapper>
+                    )}
+                  </Stack.Screen>
+                  <Stack.Screen name="Family" component={FamilyScreen} />
+                  <Stack.Screen name="FamilyWall" component={FamilyWallScreen} />
+                  <Stack.Screen name="Shopping" component={ShoppingListScreen} />
+                  <Stack.Screen name="DinnerPlanner" component={DinnerPlannerScreen} />
+                  <Stack.Screen name="Location" component={LocationScreen} />
+                  <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
+                  <Stack.Screen name="Settings" component={SettingsScreen} />
+                  <Stack.Screen name="ReadingLogs" component={ReadingLogsScreen} />
+                  <Stack.Screen name="Profile" component={ProfileScreen} />
+                  <Stack.Screen name="HomeHub" component={HomeHubScreen} />
+                  <Stack.Screen name="ChildSpace" component={ChildSpace} />
+                  <Stack.Screen name="Rewards" component={RewardsScreen} />
+                  <Stack.Screen name="Achievements" component={AchievementsScreen} />
+                  <Stack.Screen name="WidgetSettings" component={WidgetSettingsScreen} />
+                </>
+              ) : (
+                <>
+                  <Stack.Screen name="ChildMain">
+                    {() => (
+                      <OnboardingWrapper onComplete={() => setOnboardingComplete(true)}>
+                        <ChildTabs />
+                      </OnboardingWrapper>
+                    )}
+                  </Stack.Screen>
+                  <Stack.Screen name="FamilyWall" component={FamilyWallScreen} />
+                  <Stack.Screen name="Shopping" component={ShoppingListScreen} />
+                  <Stack.Screen name="Location" component={LocationScreen} />
+                  <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
+                  <Stack.Screen name="Settings" component={SettingsScreen} />
+                  <Stack.Screen name="ReadingLogs" component={ReadingLogsScreen} />
+                  <Stack.Screen name="Profile" component={ProfileScreen} />
+                  <Stack.Screen name="HomeHub" component={HomeHubScreen} />
+                  <Stack.Screen name="Calendar" component={CalendarScreen} />
+                  <Stack.Screen name="DinnerPlanner" component={DinnerPlannerScreen} />
+                  <Stack.Screen name="Achievements" component={AchievementsScreen} />
+                  <Stack.Screen name="WidgetSettings" component={WidgetSettingsScreen} />
+                </>
+              )}
+            </>
+          )}
+        </Stack.Navigator>
+        
+        {/* Pixie AI Assistant - appears on all authenticated screens */}
+        {isAuthenticated && <PixieAssistant />}
+      </View>
     </NavigationContainer>
   );
 }

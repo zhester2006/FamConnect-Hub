@@ -925,8 +925,8 @@ const styles = StyleSheet.create({
   availableChorePoints: { fontSize: 10, color: '#f59e0b', fontWeight: '600' },
 
   filterRow: { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 12 },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: 'rgba(30, 27, 75, 0.6)', marginRight: 8 },
-  filterText: { fontSize: 12, color: '#9ca3af', fontWeight: '500' },
+  filterChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(30, 27, 75, 0.6)', marginRight: 6 },
+  filterText: { fontSize: 11, color: '#9ca3af', fontWeight: '500' },
 
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: 16 },

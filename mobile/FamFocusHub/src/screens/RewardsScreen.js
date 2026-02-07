@@ -416,16 +416,24 @@ export default function RewardsScreen({ navigation }) {
               )}
             </View>
 
-            {/* Quick link to Chores */}
+            {/* Quick link to more ways to earn - switches to Earn tab */}
             <TouchableOpacity 
               style={styles.choreLink}
               onPress={() => {
-                // Navigate to Chores tab within the current tabs navigator
-                navigation.navigate('Chores');
+                // Switch to the Earn tab (already on it, but this provides confirmation)
+                // If user is on Shop tab and wants more ways to earn, switch to Earn
+                if (activeTab !== 'earn') {
+                  setActiveTab('earn');
+                } else {
+                  // Already on Earn tab, navigate to Chores screen for more options
+                  navigation.navigate('Chores');
+                }
               }}
             >
               <Ionicons name="checkbox" size={24} color="#a855f7" />
-              <Text style={styles.choreLinkText}>Go to Chores</Text>
+              <Text style={styles.choreLinkText}>
+                {activeTab === 'earn' ? 'Go to Chores for more tasks' : 'View all ways to earn'}
+              </Text>
             </TouchableOpacity>
           </>
         )}
