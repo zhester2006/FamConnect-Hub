@@ -415,6 +415,8 @@ const styles = StyleSheet.create({
   resultHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   resultTitle: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   resultText: { color: '#e2e8f0', fontSize: 14, lineHeight: 22 },
+  updatePlanButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(236, 72, 153, 0.5)', backgroundColor: 'rgba(236, 72, 153, 0.1)' },
+  updatePlanButtonText: { color: '#ec4899', fontSize: 14, fontWeight: '500' },
   
   // Quick Meals
   quickMealsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 },
