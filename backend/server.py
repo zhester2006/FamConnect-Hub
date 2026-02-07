@@ -1587,7 +1587,7 @@ async def get_messages(request: Request):
     
     # Sanitize user pictures to prevent large base64 data
     for msg in messages:
-        msg['user_picture'] = sanitize_picture(msg.get('user_picture'))
+        msg['user_picture'] = sanitize_picture(msg.get('user_picture'), fallback_name=msg.get('user_name'))
     
     return {"messages": messages}
 
@@ -1596,13 +1596,14 @@ async def send_message(request: Request, data: dict):
     current_user = await get_current_user(request)
     message_id = f"msg_{uuid.uuid4().hex[:12]}"
     family_id = current_user.get('parent_id', current_user['user_id'])
+    user_name = current_user.get('nickname') or current_user.get('name')
     
     message_doc = {
         "message_id": message_id,
         "family_id": family_id,
         "user_id": current_user['user_id'],
-        "user_name": current_user['name'],
-        "user_picture": sanitize_picture(current_user.get('picture')),
+        "user_name": user_name,
+        "user_picture": sanitize_picture(current_user.get('picture'), fallback_name=user_name),
         "content": data['content'],
         "encrypted_content": data.get('encrypted_content'),  # E2E encrypted content
         "media_url": data.get('media_url'),
