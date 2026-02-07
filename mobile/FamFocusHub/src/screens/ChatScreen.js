@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ActivityIndicator, Animated, Alert, Modal, Image 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
@@ -11,16 +12,6 @@ import firebaseChatService from '../services/firebase.chat.service';
 import AnimatedBackground from '../components/AnimatedBackground';
 import MedalEmblem from '../components/MedalEmblem';
 import { formatTime } from '../utils/dateUtils';
-
-// Audio not available in Expo Go - stub it
-const Audio = {
-  requestPermissionsAsync: async () => ({ granted: false }),
-  setAudioModeAsync: async () => {},
-  Recording: {
-    createAsync: async () => { throw new Error('Audio not available in Expo Go'); }
-  },
-  RecordingOptionsPresets: { HIGH_QUALITY: {} }
-};
 
 const EMOJI_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🎉'];
 
