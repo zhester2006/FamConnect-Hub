@@ -2060,6 +2060,8 @@ async def create_checkin(request: Request, data: dict):
     current_user = await get_current_user(request)
     checkin_id = f"checkin_{uuid.uuid4().hex[:12]}"
     
+    location_name = data.get('address') or data.get('location_name') or 'Unknown location'
+    
     checkin_doc = {
         "checkin_id": checkin_id,
         "user_id": current_user['user_id'],
@@ -2067,7 +2069,7 @@ async def create_checkin(request: Request, data: dict):
         "family_id": current_user.get('parent_id', current_user['user_id']),
         "latitude": data['latitude'],
         "longitude": data['longitude'],
-        "address": data.get('address'),
+        "address": location_name,
         "is_offline_update": data.get('is_offline_update', False),
         "created_at": datetime.now(timezone.utc).isoformat()
     }
@@ -2075,6 +2077,21 @@ async def create_checkin(request: Request, data: dict):
     
     # Check geofences
     await check_geofences(current_user, data['latitude'], data['longitude'])
+    
+    # Notify parent of child check-in
+    parent_id = current_user.get('parent_id')
+    if current_user['role'] == 'child' and parent_id:
+        notification_doc = {
+            "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+            "user_id": parent_id,
+            "type": "checkin",
+            "title": "Child Check-in",
+            "message": f"{current_user.get('nickname') or current_user.get('name', 'Child')} checked in at {location_name}",
+            "data": {"checkin_id": checkin_id, "child_id": current_user['user_id'], "latitude": data['latitude'], "longitude": data['longitude']},
+            "read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.notifications.insert_one(notification_doc)
     
     return await db.checkins.find_one({"checkin_id": checkin_id}, {"_id": 0})
 
