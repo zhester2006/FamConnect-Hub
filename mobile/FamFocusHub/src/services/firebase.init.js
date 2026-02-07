@@ -2,11 +2,6 @@
 // This module ensures Firebase is initialized properly with Auth persistence
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { 
-  initializeAuth, 
-  getAuth,
-  getReactNativePersistence 
-} from 'firebase/auth';
 import { getDatabase } from 'firebase/database';
 import { getStorage } from 'firebase/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -17,6 +12,7 @@ let auth = null;
 let database = null;
 let storage = null;
 let isInitialized = false;
+let authInitialized = false;
 
 export function initializeFirebase() {
   if (isInitialized) {
@@ -28,32 +24,11 @@ export function initializeFirebase() {
     if (!getApps().length) {
       app = initializeApp(firebaseConfig);
       console.log('Firebase app initialized');
-      
-      // Initialize Auth with AsyncStorage persistence IMMEDIATELY after app init
-      try {
-        auth = initializeAuth(app, {
-          persistence: getReactNativePersistence(AsyncStorage)
-        });
-        console.log('Firebase Auth initialized with AsyncStorage persistence');
-      } catch (authError) {
-        if (authError.code === 'auth/already-initialized') {
-          auth = getAuth(app);
-          console.log('Firebase Auth already initialized, using existing instance');
-        } else {
-          console.error('Firebase Auth initialization error:', authError);
-          auth = getAuth(app);
-        }
-      }
     } else {
       app = getApp();
-      try {
-        auth = getAuth(app);
-      } catch (e) {
-        console.warn('Could not get auth:', e);
-      }
     }
 
-    // Initialize other services
+    // Initialize other services first (they don't have the same race condition)
     try {
       database = getDatabase(app);
     } catch (e) {
@@ -74,6 +49,47 @@ export function initializeFirebase() {
   }
 }
 
+// Initialize auth separately with a slight delay to ensure module registration
+export async function initializeFirebaseAuth() {
+  if (authInitialized && auth) {
+    return auth;
+  }
+  
+  if (!app) {
+    initializeFirebase();
+  }
+
+  try {
+    // Dynamic import to ensure module is fully loaded
+    const { initializeAuth, getReactNativePersistence, getAuth } = await import('firebase/auth');
+    
+    try {
+      auth = initializeAuth(app, {
+        persistence: getReactNativePersistence(AsyncStorage)
+      });
+      console.log('Firebase Auth initialized with AsyncStorage persistence');
+    } catch (authError) {
+      if (authError.code === 'auth/already-initialized') {
+        auth = getAuth(app);
+        console.log('Firebase Auth already initialized, using existing instance');
+      } else {
+        console.warn('Auth init warning:', authError.message);
+        try {
+          auth = getAuth(app);
+        } catch (e) {
+          console.warn('Could not get auth:', e);
+        }
+      }
+    }
+    
+    authInitialized = true;
+    return auth;
+  } catch (error) {
+    console.error('Firebase Auth initialization error:', error);
+    return null;
+  }
+}
+
 export function getFirebaseApp() {
   if (!isInitialized) {
     initializeFirebase();
@@ -82,9 +98,6 @@ export function getFirebaseApp() {
 }
 
 export function getFirebaseAuth() {
-  if (!isInitialized) {
-    initializeFirebase();
-  }
   return auth;
 }
 
@@ -102,11 +115,12 @@ export function getFirebaseStorage() {
   return storage;
 }
 
-// Initialize immediately when this module is imported
+// Initialize basic Firebase immediately (not auth)
 initializeFirebase();
 
 export default { 
   initializeFirebase, 
+  initializeFirebaseAuth,
   getFirebaseApp, 
   getFirebaseAuth, 
   getFirebaseDatabase, 
