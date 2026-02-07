@@ -429,6 +429,21 @@ const styles = StyleSheet.create({
   resetBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 16, padding: 12 },
   resetBtnText: { color: '#6b7280', fontSize: 13 },
   
+  // Theme Presets Grid
+  themePresetsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 8 },
+  themePresetCard: { width: '30%', alignItems: 'center', padding: 10, borderRadius: 14, backgroundColor: 'rgba(15, 13, 26, 0.5)', borderWidth: 2, borderColor: 'transparent', position: 'relative' },
+  themePresetActive: { borderWidth: 2 },
+  themePresetPreview: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  themePresetDot: { width: 24, height: 24, borderRadius: 12, position: 'absolute' },
+  themePresetDotSmall: { width: 14, height: 14, borderRadius: 7, position: 'absolute', bottom: 4, right: 4 },
+  themePresetName: { color: '#9ca3af', fontSize: 11, fontWeight: '600', marginTop: 8 },
+  themeCheckmark: { position: 'absolute', top: 6, right: 6, width: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center' },
+  
+  // Custom Mode Header
+  customModeHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  customModeToggle: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, backgroundColor: 'rgba(15, 13, 26, 0.5)' },
+  customModeToggleText: { color: '#6b7280', fontSize: 12, fontWeight: '700' },
+  
   // Logout
   logoutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 16, padding: 16, marginBottom: 16 },
   logoutText: { color: '#ef4444', fontSize: 16, fontWeight: '600' },
