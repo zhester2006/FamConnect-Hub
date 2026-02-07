@@ -125,6 +125,7 @@ export default function SettingsScreen({ navigation }) {
         { icon: 'trophy', label: 'Leaderboard', screen: 'Leaderboard', color: '#eab308' },
         { icon: 'chatbubbles', label: 'Family Wall', screen: 'FamilyWall', color: '#ec4899' },
         { icon: 'location', label: 'Location', screen: 'Location', color: '#ef4444' },
+        ...(user?.role === 'parent' ? [{ icon: 'time', label: 'Check-in Log', screen: 'CheckinLog', color: '#06b6d4' }] : []),
       ],
     },
     {
