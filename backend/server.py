@@ -1534,14 +1534,14 @@ async def vote_on_poll(post_id: str, request: Request, data: dict):
 
 # AI Daily Quote
 @api_router.get("/family-wall/daily-quote")
-async def get_daily_quote(request: Request, refresh: bool = False):
+async def get_daily_quote(request: Request, refresh: bool = False, quote_type: str = "inspiration"):
     await get_current_user(request)
     
     today = datetime.now(timezone.utc).date().isoformat()
     
     # Check for existing quote if not forcing refresh
     if not refresh:
-        existing_quote = await db.daily_quotes.find_one({"date": today}, {"_id": 0})
+        existing_quote = await db.daily_quotes.find_one({"date": today, "type": quote_type}, {"_id": 0})
         if existing_quote:
             return existing_quote
     
@@ -1552,26 +1552,43 @@ async def get_daily_quote(request: Request, refresh: bool = False):
         system_message="You are a warm, encouraging motivational assistant for families. Create quotes that inspire togetherness, love, and positive action."
     ).with_model("openai", "gpt-5.2")
     
-    themes = [
-        "family bonding", "teamwork", "gratitude", "kindness", 
-        "perseverance", "love", "growth", "joy", "togetherness"
-    ]
     import random
-    theme = random.choice(themes)
+    
+    if quote_type == "bible":
+        # Bible verse themes
+        themes = [
+            "family love", "children", "patience", "gratitude", "faith", 
+            "kindness", "forgiveness", "peace", "hope", "unity"
+        ]
+        theme = random.choice(themes)
+        prompt = f"Share an uplifting Bible verse about {theme} that's appropriate for a family setting. Include the verse reference (book, chapter:verse). Format: 'Verse text' - Book Chapter:Verse"
+    else:
+        themes = [
+            "family bonding", "teamwork", "gratitude", "kindness", 
+            "perseverance", "love", "growth", "joy", "togetherness"
+        ]
+        theme = random.choice(themes)
+        prompt = f"Generate a short, heartfelt inspirational quote for a family about {theme}. Make it uplifting and actionable. Return only the quote text, no quotation marks or attribution."
     
     response = await chat.send_message(UserMessage(
-        text=f"Generate a short, heartfelt inspirational quote for a family about {theme}. Make it uplifting and actionable. Return only the quote text, no quotation marks or attribution."
+        text=prompt
     ))
     
     # Ensure response is a string and clean it
     quote_text = str(response).strip().strip('"').strip("'")
     
     # If refreshing, update existing quote; otherwise insert new
-    quote_doc = {"date": today, "quote": quote_text, "theme": theme, "created_at": datetime.now(timezone.utc).isoformat()}
+    quote_doc = {
+        "date": today, 
+        "quote": quote_text, 
+        "theme": theme, 
+        "type": quote_type,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
     
     if refresh:
         await db.daily_quotes.update_one(
-            {"date": today},
+            {"date": today, "type": quote_type},
             {"$set": quote_doc},
             upsert=True
         )
