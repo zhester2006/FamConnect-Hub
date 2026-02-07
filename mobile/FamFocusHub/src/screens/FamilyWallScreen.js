@@ -38,14 +38,20 @@ export default function FamilyWallScreen({ navigation }) {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [firebaseConnected, setFirebaseConnected] = useState(false);
   const flatListRef = useRef(null);
+  const firebaseInitialized = useRef(false);
 
-  // Initialize Firebase Family Wall
+  // Initialize Firebase Family Wall - only once
   useEffect(() => {
+    if (!user || firebaseInitialized.current) return;
+    
     initializeFirebase();
+    firebaseInitialized.current = true;
+    
     return () => {
       firebaseFamilyWallService.disconnect();
+      firebaseInitialized.current = false;
     };
-  }, [user]);
+  }, [user?.user_id]); // Only re-run if user_id changes (login/logout)
 
   const initializeFirebase = async () => {
     try {
