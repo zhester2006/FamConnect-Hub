@@ -514,7 +514,7 @@ export default function LocationScreen({ navigation }) {
               </View>
             </View>
             <Switch
-              value={foregroundTracking}
+              value={!!foregroundTracking}
               onValueChange={handleToggleForegroundTracking}
               trackColor={{ false: '#374151', true: '#10b981' }}
               thumbColor="#fff"
