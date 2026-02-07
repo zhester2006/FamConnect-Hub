@@ -225,20 +225,36 @@ export default function PixieAssistant() {
 
   return (
     <>
-      {/* Floating Button */}
-      <Animated.View style={[styles.floatingButton, { transform: [{ translateY: floatAnim }] }]}>
-        <TouchableOpacity onPress={handleOpen} activeOpacity={0.9}>
+      {/* Floating Draggable Button */}
+      <Animated.View 
+        style={[
+          styles.floatingButton, 
+          { 
+            transform: [
+              { translateX: pan.x },
+              { translateY: Animated.add(pan.y, floatAnim) }
+            ],
+            opacity: isDragging ? 0.8 : 1,
+          }
+        ]}
+        {...panResponder.panHandlers}
+      >
+        <TouchableOpacity 
+          onPress={() => !isDragging && handleOpen()} 
+          activeOpacity={0.9}
+          delayPressIn={100}
+        >
           <LinearGradient
             colors={['#ec4899', '#8b5cf6']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.buttonGradient}
+            style={[styles.buttonGradient, isDragging && styles.buttonDragging]}
           >
             <Text style={styles.buttonEmoji}>🧚‍♀️</Text>
           </LinearGradient>
         </TouchableOpacity>
         <View style={styles.buttonLabel}>
-          <Text style={styles.buttonLabelText}>Pixie</Text>
+          <Text style={styles.buttonLabelText}>{isDragging ? '📍 Drop' : 'Pixie'}</Text>
         </View>
       </Animated.View>
 
