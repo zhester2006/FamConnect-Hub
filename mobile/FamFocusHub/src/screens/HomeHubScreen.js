@@ -395,6 +395,11 @@ export default function HomeHubScreen({ navigation }) {
           </View>
         </View>
 
+        {/* Quick Actions Widget (Parents Only) */}
+        {user?.role === 'parent' && (
+          <QuickActionsWidget onRefresh={fetchData} />
+        )}
+
         {/* Main Content Grid */}
         <View style={styles.contentGrid}>
           {/* Left Column: Calendar + Today's Events */}
