@@ -6,217 +6,206 @@ The user wants to create a comprehensive, family-oriented, mobile-friendly app c
 -   **Dashboards:** Child-specific dashboards and a Parent dashboard for management. A main Home Hub for large screens.
 -   **Core Features:**
     -   **Calendar:** Shared family calendar with event popups and categories.
-    -   **Chores:** AI-assisted chore scheduling with parent override, assignments, and approval. Profile photos and names for each assigned child should be visible on all tasks, events, and chores across the app. Add ability to choose/edit dates and add descriptions.
-    -   **Live Chat:** Real-time messenger, migrated to Firebase Realtime Database.
-    -   **Family Wall:** A shared social space for posts, photos, interactive polls, and GIFs, migrated to Firebase.
+    -   **Chores:** AI-assisted chore scheduling with parent override, assignments, and approval. Profile photos on tasks. Ability to edit dates/descriptions.
+    -   **Live Chat:** Real-time messenger on Firebase.
+    -   **Family Wall:** A shared social space for posts, photos, polls, and GIFs on Firebase.
     -   **Shopping List:** Collaborative list with parent approval.
-    -   **Points & Rewards:** Gamified system with parent approval and custom tasks. Parents should be able to add/deduct points.
+    -   **Points & Rewards:** Gamified system with parent approval and custom tasks.
     -   **Reading Log:** Children submit book summaries for parent approval.
-    -   **Dinner Planner:** AI-suggested weekly meals with an intuitive, graphical UI and ability to add ingredients to the shopping list.
-    -   **Leaderboard:** Ranking based on points, with medal emblems displayed on profiles throughout the app.
-    -   **Location:** Safe zones with Google Maps integration; location updates should work correctly and sync weather.
+    -   **Dinner Planner:** AI-suggested weekly meals with an interactive UI, ability to add ingredients to the shopping list, and AI memory of past meals.
+    -   **Leaderboard:** Ranking based on points.
+    -   **Location & Check-ins:** Safe zones with Google Maps, location updates, and a check-in log for parents.
+    -   **Pantry:** An inventory of food at home, integrated with the dinner planner and shopping list.
+    -   **Personal Recipes:** A section for users to add, manage, import, and export their own recipes.
 -   **Technical & UX Requirements:**
-    -   **Authentication:** Dev login for testing. User requested full Firebase Authentication integration.
-    -   **AI Assistant:** An app-wide AI assistant (Pixie) to provide help, suggestions, and answer questions.
-    -   **UI:** Vibrant, mobile-friendly, animated UI. Profile pictures should show as icons throughout the app.
-    -   **Themes:** A user-customizable theme that applies app-wide and persists across sessions.
-    -   **Onboarding:** A tutorial for first-time users, including a prompt for all necessary mobile permissions after login.
-    -   **Offline Support:** Caching and graceful error handling for device-level issues.
-    -   **Notifications:** Firebase Cloud Messaging for notifications.
-    -   **Widgets:** Home screen widgets for quick actions.
+    -   **Authentication:** Full Firebase Authentication.
+    -   **AI Assistant (Pixie):** An app-wide, draggable assistant for help and suggestions, integrated with weather data.
+    -   **UI:** Vibrant, mobile-friendly, animated UI with a user-customizable theme.
+    -   **Onboarding:** A tutorial for first-time users.
+    -   **Offline Support:** Caching and graceful error handling.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The agent has fixed a large number of UI/UX bugs on the mobile app based on user feedback. A significant portion of the session was dedicated to user support, guiding the user through the complex process of setting up a local development environment on their Windows machine to build and run the native Android app. This involved troubleshooting command-line issues, managing dependencies, and correctly configuring the project for a full native build with Android Studio, including integrating the user's specific Firebase credentials. The agent successfully used its testing subagent to verify all code fixes, which passed. The project is now fully configured for a native build, but the user is facing environment-specific errors on their local machine.
+After successfully guiding the user to fix their local Android build environment, the agent has implemented a very large set of features and bug fixes based on a long list of user requests. The app is now running on the user's device, but it is unstable, exhibiting several critical bugs. The agent has added major new features including a Pantry system, a Check-in Log, a Personal Recipes section (with import/export), and made the Dinner Planner more interactive. Additionally, Firebase Authentication UI has been fully integrated, the Pixie AI assistant was enhanced, and a critical  API error was partially addressed. The backend has been extensively tested with a testing agent, with all tests passing. However, the user's latest logs reveal that critical bugs persist, including the stack overflow error, map rendering issues, non-functional themes, and Family Wall permission errors.
 
 **Last working item**:
-    - Last item agent was working: Troubleshooting the user's local Android build, which is failing to start. The last error indicates that the  module cannot be found by the Metro bundler. The agent was about to instruct the user on how to fix this dependency issue.
-    - Status: BLOCKED
-    - Agent Testing Done: Y (for code changes, via testing agent)
-    - Which testing method agent to use? The agent must guide the user through manual command-line steps to fix their local environment. The next step is 
-added 289 packages, and audited 376 packages in 17s
-
-23 packages are looking for funding
-  run `npm fund` for details
-
-found 0 vulnerabilities. No automated testing tool is applicable here.
+    - Last item agent was working: Implementing recipe import/export functionality on the backend and updating the  component to allow users to select individual ingredients from a suggested meal to add to the shopping list.
+    - Status: IN PROGRESS
+    - Agent Testing Done: Y (Backend endpoints were tested via  and the testing agent).
+    - Which testing method agent to use? Frontend testing agent to conduct a full UI/UX and integration test of all the new features and fixes, paying close attention to the bug list provided by the user.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1:  (P0) User's local native Android build is crashing on startup.
-  - Issue 2:  (P1) In Rewards Earn tab, new tasks are pre-marked and do not show which child claimed them.
-  - Issue 3:  (P2) The user reported the chore scheduler drag and drop feature does not work, but the agent's tests on the web app showed it was functional. Awaiting more details from the user.
-  - Issue 4:  (P2) All features fixed in this session are pending user verification once the mobile app is running.
+  - Issue 1:  (P0)  error crashes multiple screens (Calendar, Family Wall).
+  - Issue 2:  (P0) The map screen loads but shows no map image.
+  - Issue 3:  (P0) Theme color changes are not visually applied in the UI, even though custom mode is selected and logs show the theme state updating.
+  - Issue 4:  (P0) Family Wall is not working due to Firebase  errors.
+  - Issue 5:  (P1) General complaint that Chores, Rewards, and Tasks features are not working or syncing properly.
+  - Issue 6:  (P1)  error in logs, indicating an animation conflict.
+  - Issue 7:  (P1) Firebase Auth initialization warnings ( not provided) and errors ().
   
   Issues Detail:
   - Issue 1: 
-     - Attempted fixes: The agent guided the user through numerous steps: cloning the repo, installing dependencies, troubleshooting PowerShell vs. Command Prompt, generating the native  project, and configuring Firebase. The last error indicates a missing native module dependency in the user's local .
+     - Attempted fixes: The agent identified that large base64 image strings in API responses were a likely cause and created a helper function () on the backend to shorten them. This was applied to the  endpoint. However, the error persists in user logs, indicating the fix is incomplete or there's another root cause.
      - Next debug checklist: 
-        1. Instruct the user to run 
-up to date, audited 376 packages in 2s
-
-23 packages are looking for funding
-  run `npm fund` for details
-
-found 0 vulnerabilities in the  directory.
-        2. Instruct the user to restart the Metro bundler with .
-        3. Ask the user to reload the app on their phone.
-     - Why fix this issue and what will be achieved with the fix? This is the final blocker preventing the user from running and testing the mobile app with all its native features.
+        1. Review all endpoints that return user/family member data and apply the  helper to them (e.g., in , , etc.).
+        2. Analyze the   method and the  caching logic for any potential recursion loops when handling cached data.
+        3. View  and  to see how data is fetched and processed in  hooks to ensure there are no dependency-array-induced loops.
+     - Why fix this issue and what will be achieved with the fix? This is a critical, app-breaking bug that makes core features unusable. Fixing it will restore access to the calendar and family wall.
      - Status:  IN PROGRESS
      - Is recurring issue? Y
-     - Should Test frontend/backend/both after fix? Frontend (manual by user).
-     - Blocked on other issue: None. This is the main blocker.
+     - Should Test frontend/backend/both after fix? Both.
+     - Blocked on other issue: None. This is a top-priority blocker.
   - Issue 2: 
-     - Attempted fixes: None in this session.
+     - Attempted fixes: None.
      - Next debug checklist: 
-        1. View  to understand how earned tasks are rendered.
-        2. Check the API response for tasks to see if they include claim information.
-        3. Modify the component to display the claimant's name/avatar and ensure the initial state is not claimed.
-     - Why fix this issue and what will be achieved with the fix? Improves the usability and clarity of the Rewards feature.
+        1. Verify the  is correctly set in the mobile app's environment.
+        2. Check  and ensure the  component from  is being rendered with the correct props and API key.
+        3. Check the user's Android build configuration () to ensure the Google Maps SDK metadata and API key are correctly included.
+     - Why fix this issue and what will be achieved with the fix? Fixes the core functionality of the location tracking feature.
      - Status:  NOT STARTED
      - Is recurring issue? N
      - Should Test frontend/backend/both after fix? Frontend.
-     - Blocked on other issue: Issue 1.
+     - Blocked on other issue: None.
   - Issue 3: 
-     - Attempted fixes: Agent investigated the web-based  and confirmed via screenshots that drag-and-drop was working correctly. The agent asked the user for clarification.
-     - Next debug checklist: Wait for user to provide more specific details (e.g., is it on mobile or web, what exactly happens).
-     - Why fix this issue and what will be achieved with the fix? Resolve a user-reported bug.
-     - Status:  BLOCKED
-     - Is recurring issue? N
+     - Attempted fixes: The agent investigated  and various screens (, ). It was confirmed via logs that the theme state *is* updating correctly, but the new colors are not reflected in the UI. The agent suspected a component re-rendering issue but could not find the root cause.
+     - Next debug checklist: 
+        1. Review  and the  wrapper. Ensure there is no memoization blocking context updates.
+        2. In a key component like , add a  inside the render function to confirm it re-renders with new values.
+        3. Systematically check how styles are created. Styles created with  are static; ensure styles depending on the theme are created inline or within the component body to be recalculated on re-render.
+     - Why fix this issue and what will be achieved with the fix? Fixes a major UI customization feature.
+     - Status:  IN PROGRESS
+     - Is recurring issue? Y
      - Should Test frontend/backend/both after fix? Frontend.
-     - Blocked on other issue: User feedback.
+     - Blocked on other issue: None.
 
 **In progress Task List**:
-  - Task 1:  (P0) Guide user to get a stable, working native build of the mobile app running on their Android device.
+  - Task 1:  (P0) Comprehensive App Stabilization and Enhancement
  Task Detail:
   - Task 1: 
-     - Where to resume: The user's build is failing because of a missing  dependency. The agent needs to provide the command to install it.
-     - What will be achieved with this? The user will finally be able to test the application and verify all the bug fixes implemented in this and previous sessions.
+     - Where to resume: The agent has a long list of user-requested features and bug fixes. The immediate priority is to address the critical bugs (Issue #1, #2, #3, #4) that are making the app unstable and unusable. After stabilizing the app, the agent should continue with the feature list.
+     - What will be achieved with this? A stable, functional mobile app that incorporates all the newly added features and meets the user's requirements.
      - Status:  IN PROGRESS
-     - Should Test frontend/backend/both after fix? Frontend.
-     - Blocked on something: This task is unblocking all user-facing verification.
+     - Should Test frontend/backend/both after fix? Both.
+     - Blocked on something: The critical bugs listed above are blocking all other progress and user verification.
 
 **Upcoming and Future Tasks**
--   **Upcoming Tasks:**
-    -   (P1) Complete Firebase Authentication Integration: Integrate the existing  into the  UI to provide email/password sign-in and sign-up flows, replacing the dev login.
-    -   (P1) Propagate : Integrate the  component into , , and other areas to ensure user profile pictures are displayed consistently.
--   **Future Tasks:**
-    -   (P2) Complete backend  refactoring into a  directory structure.
-    -   (P2) Add voice commands to Pixie using a text-to-speech library.
-    -   (P3) Trigger a final, stable EAS build for user distribution once all major issues are resolved and verified.
+- **Upcoming Tasks:**
+    - (P1) **Interactive AI Chore List:** The AI-generated chore list UI needs to be updated to be interactive, similar to the  component, not just plain text.
+    - (P1) **AI Meal Memory:** Enhance the dinner planner AI to learn from previously generated/eaten meals to provide better recommendations.
+    - (P1) **AI Pantry Integration:** Fully integrate the new Pantry system with the Dinner Planner AI to suggest meals based on available ingredients and generate shopping lists for missing items.
+    - (P2) **Pantry Quick Select:** Add a feature to the Pantry for quickly adding frequently purchased items, with AI assistance to manage this list.
+- **Future Tasks:**
+    - (P2) Refactor the monolithic  into a  directory structure for better organization and scalability.
+    - (P2) Add voice command capabilities to the Pixie assistant.
+    - (P3) Trigger a final, stable EAS build for user distribution once all features are complete and verified.
 
 **Completed work in this session**
--   **P0/P1 Bug Fixes (Mobile App):**
-    -   Fixed Pixie assistant button visibility ().
-    -   Reduced size of chore filter tabs ().
-    -   Corrected navigation on the Rewards screen ().
-    -   Fixed theme saving and persistence logic ().
-    -   Fixed location coordinate mismatch ().
-    -   Added an Update Plan button to the dinner planner ().
-    -   Fixed leaderboard time filtering on both frontend and backend (, ).
-    -   Added explicit boolean casting to all  components to prevent a native Android crash.
--   **Native Build & User Support:**
-    -   Guided user through a complete local setup on Windows for building the native Android app.
-    -   Generated the native Android project using .
-    -   Configured  and  for Firebase.
-    -   Successfully integrated the user's  into the project, enabling full Firebase services for the native build.
-    -   Temporarily implemented, then reverted, compatibility fixes for Expo Go to pivot to a full native build strategy.
--   **Testing:**
-    -   Successfully ran backend and frontend tests via , confirming all code fixes were correct and passing.
+-   **User Environment Fix:** Successfully guided the user to resolve their local Android native build issues ( dependency,  environment variable).
+-   **Critical Bug Fix (Partial):** Addressed a  error by implementing a backend helper to truncate base64 image data in the  response.
+-   **Feature - Firebase Auth UI:** Fully integrated email/password sign-in and sign-up forms into , replacing the old dev login buttons.
+-   **Feature - Pantry System:** Implemented a full Pantry feature, including the  UI, backend CRUD endpoints (), and navigation integration.
+-   **Feature - Check-in Log:** Created the  for parents to view child location history and integrated it into the navigation.
+-   **Feature - Personal Recipes:** Implemented a  and corresponding backend endpoints for CRUD operations, including recipe import and export.
+-   **UI/UX Enhancements:**
+    -   **Interactive Dinner Planner:** Created a  component to display weekly meal plans as an interactive list with individual ingredient selection for the shopping list.
+    -   **Pixie Assistant:** Made the assistant draggable and added a back button for better navigation.
+    -   **Component Integration:** Propagated  into  and .
+    -   **API Robustness:** Improved  with more robust error handling for non-JSON API responses.
+-   **Testing:** Performed multiple comprehensive backend test runs using the testing agent ( through ), all of which passed, verifying all new backend endpoints.
+-   **Documentation:** Consistently updated  to reflect all completed features and fixes.
 
 **Earlier issues found/mentioned but not fixed**
-   - Issue 1: chore scheduler drag and drop feature does not work
-     - Debug checklist: Agent tested this on the web app and it worked. Awaiting clarification from user on where the issue is occurring (web vs. mobile).
-     - Why to solve this issue and what will be achieved with this? To fix a core piece of functionality for chore management.
-     - Should Test frontend/backend/both after fix: Frontend
-     - Is recurring issue? N
-   - Issue 2: In Rewards Earn tab, new tasks are pre-marked and do not show which child claimed them.
-     - Debug checklist: Review  and the associated API call to correctly display task state and claimant.
-     - Why to solve this issue and what will be achieved with this? To ensure the rewards system is clear and functions correctly for users.
-     - Should Test frontend/backend/both after fix: Frontend
-     - Is recurring issue? N
+   - Issue 1: chore scheduler drag and drop feature does not work. This was from a previous session and is now superseded by the user's more recent, broader feedback.
+   - Issue 2: In the Rewards Earn tab, new tasks are pre-marked. The agent attempted a fix, but this falls under the new, more general Chores/Rewards not working issue and needs re-verification.
 
 **Known issue recurrence from previous fork**
   - Issue recurrence in previous fork: Mobile App Stability and Connectivity.
   - Recurrence count: High
-  - Status: IN PROGRESS. The issue has been escalated to fixing the user's local build environment, which is the root cause. All code is now prepared for a stable native build.
+  - Status: IN PROGRESS. The user is now able to build the app, but it is highly unstable, with API call stack overflows and other critical errors, confirming this remains the primary problem area.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Frontend (Mobile):** React Native, Expo, React Navigation.
+-   **Frontend (Mobile):** React Native, Expo, React Navigation, React Native Gesture Handler.
 -   **Backend:** FastAPI (Python).
 -   **Database:** MongoDB.
--   **Key Integrations:** Firebase (Realtime Database, Auth, Storage, Cloud Messaging), OpenAI GPT-5.2.
--   **Build Process:** Expo Prebuild for generating native Android/iOS projects, local builds with Android Studio, Gradle configuration.
+-   **Key Integrations:** Firebase (Realtime Database, Auth, Storage), OpenAI GPT-5.2, Google Maps.
 
 **key DB schema**
-  - No changes in this session.
+- **New Collections Implied:**
+  - : { , , ,  }
+  - : { , , , ,  }
 
 **changes in tech stack**
-  - No changes in this session.
+  - No changes.
 
 **All files of reference**
--   
--   
--   
--   
--   
--   
--   
--   
--   
--   
--   
--    (New)
--    (New)
--    (New)
--    (New)
+-    (Heavily modified)
+-    (Heavily modified)
+-    (Modified)
+-    (Modified)
+-    (Modified)
+-    (Modified)
+-    (Modified)
+-    (Modified)
+-    (Modified)
+-    (Modified)
+-    (Created)
+-    (Created)
+-    (Created)
+-    (Created)
+-    (Modified)
 
 **Areas that need refactoring**:
--    remains a large monolith and should be broken down into a  directory structure.
--    needs to be refactored to fully utilize  and phase out the dev login buttons.
+-    is a large monolith that should be broken down into a  directory for maintainability.
+-   The theme application logic needs a complete review. Components are not responding to  updates, and a robust, scalable solution is needed.
 
 **key api endpoints**
--   **Modified:**
-    -   : Now accepts a  query parameter (, , ).
+- **New Endpoints:**
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+- **Modified Endpoints:**
+  -  (Now includes weather context)
+  -  (Response payload optimized)
+  -  (New)
 
 **Critical Info for New Agent**
--   **The user is a non-developer.** Provide very simple, copy-pasteable commands for their Windows Command Prompt (). Do not assume any technical knowledge. Be patient and guide them one step at a time.
--   **The focus is on a local native build.** The app is no longer being tested on Expo Go. All native features (Maps, Notifications, Firebase Auth) have been restored and are expected to work in the user's build.
--   **The immediate blocker is a missing dependency.** The user's build is failing because  isn't installed in their local . Your first action should be to guide them to run 
-up to date, audited 376 packages in 1s
-
-23 packages are looking for funding
-  run `npm fund` for details
-
-found 0 vulnerabilities.
--   After fixing the dependency, you must guide them to restart the development server using .
+-   **The app is unstable.** Prioritize fixing the critical bugs from the user's logs before implementing any new features. The  error is the top priority as it breaks multiple screens.
+-   **Parse user requests carefully.** The user provides long, detailed messages containing multiple bug reports and feature requests mixed together. You must break these down into a prioritized list of action items.
+-   **Theme is broken.** The agent confirmed the theme state updates in  but the UI does not visually change. This requires a deeper investigation into how components consume context and how styles are applied.
+-   **Backend is likely stable, Frontend is not.** The backend has passed numerous automated tests. The primary source of bugs is now within the React Native mobile app code and its integration with the backend. Focus your debugging efforts on the frontend first.
+-   **User has a working local build.** You can now give the user instructions to run commands like  and expect them to work. However, always provide simple, copy-pasteable commands.
 
 **documents and test reports created in this job**
 -   
+-   
+-   
+-   
 -    (Updated)
--    (Created)
--    (Created)
--   The  directory was generated.
 
 **Last 10 User Messages and any pending HUMAN messages** 
-10. **User:** Provided a screenshot showing the app crashing on their phone with a  module not found error. (PENDING)
-9. **Agent:** Advised user to use  instead of . (COMPLETED)
-8. **User:**  command gave a warning about a missing dependency. (COMPLETED)
-7. **Agent:** Instructed user to run Metro bundler and . (COMPLETED)
-6. **User:** Provided a screenshot from Android Studio showing the app crashing with a SIGSEGV error. (COMPLETED)
-5. **Agent:** Instructed the user to generate fresh Android project files. (COMPLETED)
-4. **User:** Asked agent to apply the necessary edits for Android Studio build. (COMPLETED)
-3. **User:** Asked which Gradle dependency to use. (COMPLETED)
-2. **User:** Provided the  file. (COMPLETED)
-1. **User:** Agreed to use a local build with Android Studio and asked the agent to restore all native features. (COMPLETED)
+10. **User:** Asked for recipe import/export, interactive dinner ingredients, and a full app-wide check/sync. (IN PROGRESS)
+9. **User:** Replied continue to agent's plan. (COMPLETED)
+8. **User:** Provided a very long list of new feature requests and critical bug reports with logs showing , map issues, theme issues, and Family Wall errors. (PENDING - This is the primary work driver now).
+7. **User:** Reported a warning about URI schemes. (COMPLETED - Agent clarified it's not an error).
+6. **User:** Asked how to get the latest code. (COMPLETED - Agent provided options).
+5. **User:** Replied continue to agent's plan. (COMPLETED)
+4. **User:** Replied continue to agent's plan. (COMPLETED)
+3. **User:** Replied continue to agent's plan. (COMPLETED)
+2. **User:** Stated the backend connection is healthy and asked the agent to fix the mobile app and continue with all pending tasks and improvements. (IN PROGRESS)
+1. **User:** Requested a comprehensive improvement of all UI, backend, features, and integrations. (IN PROGRESS)
 
 **Project Health Check:**
--   **Broken:** The user's local development environment is not functional. They cannot build or run the mobile app on their device.
--   **Mocked:** Authentication still relies on Dev Login buttons in the UI, as the full Firebase Auth sign-in/sign-up flow has not been implemented on the .
+-   **Broken:** The mobile app is highly unstable. Key features like the Calendar, Maps, Family Wall, and Theme Customization are confirmed broken by user logs and feedback. The  error is causing widespread crashes.
+-   **Mocked:** Firebase authentication UI is implemented, but initialization warnings in the logs suggest it may not persist sessions correctly.
 
 **3rd Party Integrations**
 -   OpenWeatherMap (User API Key)
@@ -224,21 +213,22 @@ found 0 vulnerabilities.
 -   Tenor (Free-tier API Key)
 -   Expo (React Native, EAS)
 -   **Firebase (Fully Integrated):**
-    -   Realtime Database (for Chat, Family Wall) — Configured with user's .
-    -   Authentication (Service fully implemented, UI integration pending) — Configured.
-    -   Storage (Service exists) — Configured.
-    -   Cloud Messaging (Service exists, requires native build) — Configured.
+    -   Realtime Database (Chat, Family Wall) — Configured but has permission errors.
+    -   Authentication — Configured but has initialization warnings.
+    -   Storage — Configured.
+    -   Cloud Messaging — Configured but has token errors.
 -   **OpenAI GPT-5.2:** — uses  library for backend AI features.
 
 **Testing status**
-  - Testing agent used after significant changes: YES. All code changes were verified and passed in .
+  - Testing agent used after significant changes: YES. The backend has been tested extensively ( to ), with over 80 tests passing cumulatively.
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None
-  - Known regressions: None from a code perspective. All regressions reported by the user at the start of the session were fixed.
+  - Known regressions: Calendar, Maps, and Family Wall were previously working but are now broken according to user logs.
 
 **Credentials to test flow:**
--   **Mobile App:** Use the Dev: Parent Login or Dev: Child Login buttons on the login screen.
--   **Firebase:** Credentials have been fully integrated from the user's  file and are present in  and .
+-   **Mobile App:** The login screen now has fully functional Email/Password fields powered by Firebase Auth. Use test credentials or the sign-up flow. The old Dev Login buttons may still exist but should be considered deprecated.
 
 **What agent forgot to execute**
-- The agent did not address the P1 issue from the previous handoff: In Rewards Earn tab, new tasks are pre-marked and do not show which child claimed them. This needs to be prioritized after the build issue is resolved.</analysis>
+- The agent's fix for the  error was incomplete. It was applied to one endpoint (), but the error persists, meaning other endpoints returning large image payloads were missed.
+- The agent did not find the root cause of the theme system failure. Despite confirming the state was updating, the visual UI was not, and the investigation was inconclusive.
+- The agent did not address the Firebase  error for the Family Wall, which is a backend configuration issue (Firebase Security Rules).</analysis>
