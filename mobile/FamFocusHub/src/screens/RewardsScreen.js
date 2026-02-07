@@ -116,6 +116,8 @@ export default function RewardsScreen({ navigation }) {
           ? `${redemption.child_name}'s reward has been approved!` 
           : 'Redemption request has been denied.'
       );
+      // Refresh user data to update points display
+      await refreshUser();
       fetchData();
     } catch (error) {
       Alert.alert('Error', 'Failed to process approval');
