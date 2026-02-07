@@ -579,6 +579,15 @@ FamFocus Hub is a comprehensive, family-oriented, mobile-friendly application de
 - [ ] Notification preferences granularity
 - [ ] Video welcome tutorial
 
+### Session 19 - UI/UX Improvements & Bug Fixes (Feb 2026) ✅
+- [x] **Pixie Assistant Now Draggable**: Can be moved anywhere on screen, snaps to edges
+- [x] **Chore Filters as Icons**: Converted text tabs to compact icon toggles
+- [x] **Rewards Earn Tab Fixed**: Task status now properly shows completed/pending/claimed
+- [x] **Task Claimant Display**: Shows who claimed each task with their name
+- [x] **Backend Tasks Endpoint Enhanced**: Now returns full task history with claimant info
+- [x] **API Service Updated**: Added AI methods (generateAiSchedule, getAiMealSuggestion, askPixie)
+- [x] **Visual Status Indicators**: Distinct styling for approved, pending review, and available tasks
+
 ## Notes
 - **Weather**: Uses OpenWeatherMap API (fallback to simulated if no key)
 - **GPS**: Uses browser geolocation API
