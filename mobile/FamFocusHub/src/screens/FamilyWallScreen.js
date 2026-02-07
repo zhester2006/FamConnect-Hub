@@ -262,13 +262,31 @@ export default function FamilyWallScreen({ navigation }) {
           : await firebaseFamilyWallService.likePost(postId);
         if (success) return; // Firebase will update via real-time listener
       }
-      // Fallback to REST API
+      
+      // Fallback to REST API with optimistic UI update
+      const updatedPosts = posts.map(p => {
+        if (p.post_id === postId) {
+          const currentLikes = p.liked_by || [];
+          return {
+            ...p,
+            liked_by: isLiked 
+              ? currentLikes.filter(id => id !== user?.user_id)
+              : [...currentLikes, user?.user_id],
+            likes_count: isLiked 
+              ? Math.max(0, (p.likes_count || 0) - 1) 
+              : (p.likes_count || 0) + 1
+          };
+        }
+        return p;
+      });
+      setPosts(updatedPosts);
+      
+      // Make API call in background (don't wait or refresh)
       if (isLiked) {
-        await apiService.unlikePost(postId);
+        apiService.unlikePost(postId).catch(console.error);
       } else {
-        await apiService.likePost(postId);
+        apiService.likePost(postId).catch(console.error);
       }
-      fetchPosts();
     } catch (error) {
       console.error('Failed to like:', error);
     }
@@ -281,9 +299,29 @@ export default function FamilyWallScreen({ navigation }) {
         const success = await firebaseFamilyWallService.voteOnPoll(postId, optionIndex);
         if (success) return; // Firebase will update via real-time listener
       }
-      // Fallback to REST API
-      await apiService.votePoll(postId, optionIndex);
-      fetchPosts();
+      
+      // Fallback to REST API with optimistic UI update
+      const updatedPosts = posts.map(p => {
+        if (p.post_id === postId && p.poll_options) {
+          const updatedOptions = p.poll_options.map((opt, idx) => {
+            if (idx === optionIndex) {
+              const currentVotes = opt.votes || {};
+              return {
+                ...opt,
+                votes: { ...currentVotes, [user?.user_id]: true },
+                vote_count: (opt.vote_count || 0) + 1
+              };
+            }
+            return opt;
+          });
+          return { ...p, poll_options: updatedOptions };
+        }
+        return p;
+      });
+      setPosts(updatedPosts);
+      
+      // Make API call in background (don't wait or refresh)
+      apiService.votePoll(postId, optionIndex).catch(console.error);
     } catch (error) {
       console.error('Failed to vote:', error);
     }
