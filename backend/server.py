@@ -25,6 +25,32 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
+# Resend email setup
+resend.api_key = os.environ.get('RESEND_API_KEY', '')
+SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', '')
+
+# Email helper function
+async def send_email_async(to_email: str, subject: str, html_content: str) -> dict:
+    """Send email using Resend API (non-blocking)"""
+    if not resend.api_key or resend.api_key == 're_placeholder_key':
+        logging.warning("Resend API key not configured, skipping email")
+        return {"status": "skipped", "reason": "API key not configured"}
+    
+    try:
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [to_email],
+            "subject": subject,
+            "html": html_content
+        }
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logging.info(f"Email sent to {to_email}: {result.get('id', 'unknown')}")
+        return {"status": "sent", "email_id": result.get("id")}
+    except Exception as e:
+        logging.error(f"Failed to send email to {to_email}: {str(e)}")
+        return {"status": "error", "error": str(e)}
+
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
