@@ -15,10 +15,10 @@ class FirebaseService {
     this.isInitialized = false;
   }
 
-  // Initialize all Firebase services
+  // Initialize all Firebase services (except auth - that's handled separately in AuthContext)
   async initialize() {
     if (this.isInitialized) {
-      console.log('Firebase already initialized');
+      console.log('Firebase services already initialized');
       return true;
     }
 
@@ -30,19 +30,22 @@ class FirebaseService {
         this.app = getApp();
       }
 
-      // Initialize all services
-      const results = await Promise.all([
+      // Initialize services (auth is initialized separately via firebase.init.js)
+      const results = await Promise.allSettled([
         firebaseChatService.initialize(),
         firebaseStorageService.initialize(),
+        // Auth is initialized in AuthContext first, but we can call it here as a no-op if already done
         firebaseAuthService.initialize(),
         firebaseNotificationService.initialize(),
         firebaseFamilyWallService.initialize(),
       ]);
 
-      this.isInitialized = results.every(r => r !== false);
+      // Check results
+      const successCount = results.filter(r => r.status === 'fulfilled' && r.value !== false).length;
+      this.isInitialized = successCount > 0;
       
       if (this.isInitialized) {
-        console.log('All Firebase services initialized successfully');
+        console.log(`Firebase services initialized: ${successCount}/${results.length}`);
       } else {
         console.warn('Some Firebase services failed to initialize');
       }
