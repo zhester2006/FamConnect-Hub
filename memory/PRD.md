@@ -1441,3 +1441,77 @@ The agent identified that large base64 image strings in API responses were causi
 **Next Steps:**
 - User needs to rebuild the mobile app with `npx expo run:android` to test all frontend fixes
 - Firebase Security Rules need to be updated for the Family Wall to work (user action required on Firebase Console)
+
+### Session 38 - Comprehensive Bug Fixes and Notifications (Feb 2026) ✅
+
+**Major Changes:**
+
+1. **Theme System Overhaul:**
+   - Completely rewrote `ThemeContext.js` with a simpler, more reliable approach
+   - Added 6 pre-defined theme presets: Violet, Ocean, Rose, Emerald, Amber, Coral
+   - Custom color mode allows users to override primary and accent colors
+   - Theme selection persists across app restarts via AsyncStorage
+   - Updated `SettingsScreen.js` with new theme preset grid UI
+
+2. **Notification System Enhancement:**
+   - Added notifications for all key family events:
+     - Parent notified when child completes a chore (needs approval)
+     - Parent notified when child checks in
+     - Child notified when chore is approved/denied (with points if approved)
+     - All family members notified of new chat messages
+     - All family members notified of new Family Wall posts
+   - Fixed notification query to properly filter by user_id
+   - Enhanced notification service with new methods in `firebase.notification.service.js`
+
+3. **Pixie AI Assistant:**
+   - Added "New Chat" button (refresh icon) to reset conversation to main menu
+   - Added `handleBackToMenu` function to clear messages and show welcome
+   - Back button now properly closes the assistant
+
+4. **Login Improvements:**
+   - Enhanced error handling with descriptive error messages
+   - Added console logging for debugging
+   - Better network error detection
+
+5. **Backend Fixes:**
+   - All notification-triggering endpoints now create proper notifications
+   - Fixed chore approval to set status to "denied" instead of "pending" when not approved
+   - Added `approved_at` timestamp to chore approvals
+
+**Files Modified:**
+- `/app/mobile/FamFocusHub/src/context/ThemeContext.js` - Complete rewrite
+- `/app/mobile/FamFocusHub/src/screens/SettingsScreen.js` - New theme UI
+- `/app/mobile/FamFocusHub/src/components/PixieAssistant.js` - New chat button
+- `/app/mobile/FamFocusHub/src/screens/LoginScreen.js` - Better error handling
+- `/app/mobile/FamFocusHub/src/services/firebase.notification.service.js` - New methods
+- `/app/backend/server.py` - Notification triggers added to multiple endpoints
+
+**Firebase Rules (User Action Required):**
+Update Firebase Realtime Database rules in Firebase Console to:
+```json
+{
+  "rules": {
+    "chats": {
+      "$familyId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "family-wall": {
+      "$familyId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "presence": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}
+```
+
+**Testing Results:**
+- All notification triggers verified working via curl
+- Backend health check passing
+- Notifications correctly routed to appropriate users
