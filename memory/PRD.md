@@ -1515,3 +1515,82 @@ Update Firebase Realtime Database rules in Firebase Console to:
 - All notification triggers verified working via curl
 - Backend health check passing
 - Notifications correctly routed to appropriate users
+
+### Session 39 - Family Code System & Management (Feb 2026) ✅
+
+**New Features:**
+
+1. **Family Code System:**
+   - Auto-generated 8-character unique family code when parent creates family
+   - Code uses uppercase letters and numbers (excludes confusing chars like 0/O, I/1/L)
+   - Code never changes and is permanent for the family
+   - Anyone with the code can join the family
+
+2. **Family Management Screen (FamilyManagementScreen.js):**
+   - View all family members with role badges
+   - Parents can change member roles (parent/member/child)
+   - Parents can remove members from family
+   - Send invite with shareable family code
+   - Copy code to clipboard
+   - Role legend explaining permissions
+
+3. **Signup/Join Flow:**
+   - Parent creates family → gets unique code
+   - Members/children join using code → choose role (member or child)
+   - Parent role only available during family creation
+   - Parents can promote other members to parent role
+
+4. **Firebase Initialization Fix:**
+   - Created centralized `firebase.init.js` for proper initialization order
+   - Auth now initialized with AsyncStorage persistence first
+   - Shared Firebase instances across all services
+
+**New Backend Endpoints:**
+- `POST /api/family/create` - Create new family with auto-generated code
+- `POST /api/family/join` - Join family using code
+- `GET /api/family/info` - Get family info including code (parents only see code)
+- `GET /api/family/members/detailed` - Detailed member list for management
+- `PUT /api/family/members/{id}/role` - Change member role
+- `DELETE /api/family/members/{id}` - Remove member from family
+- `POST /api/family/invite` - Generate shareable invite text
+- `PUT /api/family/name` - Update family name
+
+**Files Created:**
+- `/app/mobile/FamFocusHub/src/screens/FamilyManagementScreen.js`
+- `/app/mobile/FamFocusHub/src/services/firebase.init.js`
+
+**Files Modified:**
+- `/app/backend/server.py` - Added Family model and management endpoints
+- `/app/mobile/FamFocusHub/src/navigation/AppNavigator.js` - Added FamilyManagement route
+- `/app/mobile/FamFocusHub/src/screens/SettingsScreen.js` - Added "Manage Family" menu item
+- `/app/mobile/FamFocusHub/src/services/firebase.auth.service.js` - Use shared init
+- `/app/mobile/FamFocusHub/src/services/firebase.chat.service.js` - Use shared init
+
+**Correct Firebase Rules:**
+```json
+{
+  "rules": {
+    "chats": {
+      "$familyId": {
+        ".read": true, ".write": true,
+        "messages": { ".read": true, ".write": true },
+        "typing": { ".read": true, ".write": true },
+        "presence": { ".read": true, ".write": true }
+      }
+    },
+    "family-wall": {
+      "$familyId": {
+        ".read": true, ".write": true,
+        "posts": { ".read": true, ".write": true }
+      }
+    },
+    "presence": { ".read": true, ".write": true }
+  }
+}
+```
+
+**Testing Results:**
+- Family creation: ✅ Working (generates unique code)
+- Family join: ✅ Working (validates code, assigns role)
+- Member management: ✅ Working (role change, remove)
+- Invite sharing: ✅ Working (copy code, share text)
