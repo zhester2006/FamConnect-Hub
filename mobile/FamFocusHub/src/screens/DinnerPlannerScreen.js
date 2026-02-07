@@ -96,6 +96,23 @@ export default function DinnerPlannerScreen({ navigation }) {
     }
   };
 
+  const handleQuickMeal = async (meal) => {
+    setPreferences(meal.pref);
+    setLoading(true);
+    try {
+      const response = await apiService.post('/dinner/suggest', {
+        ingredients: [],
+        preferences: meal.pref,
+      });
+      setSuggestion(response.suggestion || 'No suggestion available');
+    } catch (error) {
+      console.error('Failed to get suggestion:', error);
+      Alert.alert('Error', 'Failed to get dinner suggestion');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AnimatedBackground page="dinner">
       {/* Header */}
