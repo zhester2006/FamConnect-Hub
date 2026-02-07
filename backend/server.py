@@ -709,23 +709,39 @@ async def approve_chore(chore_id: str, request: Request, data: dict):
         raise HTTPException(status_code=403, detail="Only parents can approve chores")
     
     approved = data.get('approved', True)
-    status = "approved" if approved else "pending"
+    status = "approved" if approved else "denied"
     modified_points = data.get('points')  # Allow parent to modify points
     
-    update_data = {"status": status}
+    update_data = {"status": status, "approved_at": datetime.now(timezone.utc).isoformat()}
     if modified_points is not None:
         update_data["points"] = modified_points
     
-    if approved:
-        chore = await db.chores.find_one({"chore_id": chore_id}, {"_id": 0})
-        if chore and chore.get('completed_by'):
-            points_to_award = modified_points if modified_points is not None else chore.get('points', 10)
-            await db.users.update_one(
-                {"user_id": chore['completed_by']},
-                {"$inc": {"points": points_to_award}}
-            )
+    chore = await db.chores.find_one({"chore_id": chore_id}, {"_id": 0})
+    points_awarded = 0
+    
+    if approved and chore and chore.get('completed_by'):
+        points_awarded = modified_points if modified_points is not None else chore.get('points', 10)
+        await db.users.update_one(
+            {"user_id": chore['completed_by']},
+            {"$inc": {"points": points_awarded}}
+        )
     
     await db.chores.update_one({"chore_id": chore_id}, {"$set": update_data})
+    
+    # Create notification for the child
+    if chore and chore.get('completed_by'):
+        notification_doc = {
+            "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+            "user_id": chore['completed_by'],
+            "type": "chore_approval",
+            "title": f"Chore {'Approved' if approved else 'Denied'}",
+            "message": f"Your chore '{chore.get('title', 'Chore')}' was {'approved' if approved else 'denied'}{f' (+{points_awarded} points!)' if approved and points_awarded else ''}",
+            "data": {"chore_id": chore_id, "approved": approved, "points": points_awarded},
+            "read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.notifications.insert_one(notification_doc)
+    
     return await db.chores.find_one({"chore_id": chore_id}, {"_id": 0})
 
 # Update chore points (parent only)
