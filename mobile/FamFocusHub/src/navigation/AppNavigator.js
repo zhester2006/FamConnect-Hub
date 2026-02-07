@@ -222,6 +222,7 @@ export default function AppNavigator() {
                   <Stack.Screen name="WidgetSettings" component={WidgetSettingsScreen} />
                   <Stack.Screen name="Pantry" component={PantryScreen} />
                   <Stack.Screen name="CheckinLog" component={CheckinLogScreen} />
+                  <Stack.Screen name="Recipes" component={RecipesScreen} />
                 </>
               )}
             </>
