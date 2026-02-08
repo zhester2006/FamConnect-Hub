@@ -340,9 +340,16 @@ export default function HomeHubScreen({ navigation }) {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.title}>Home Hub</Text>
-        <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
-          <Ionicons name="refresh" size={20} color="#a5b4fc" />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          {user?.role === 'parent' && (
+            <TouchableOpacity onPress={() => setShowSettings(true)} style={styles.settingsButton}>
+              <Ionicons name="settings-outline" size={20} color="#a5b4fc" />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
+            <Ionicons name="refresh" size={20} color="#a5b4fc" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
