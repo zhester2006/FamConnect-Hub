@@ -16,12 +16,21 @@ const ROLE_COLORS = {
   parent: '#6366f1',
   member: '#10b981',
   child: '#f59e0b',
+  homehub: '#06b6d4',
 };
 
 const ROLE_ICONS = {
   parent: 'shield-checkmark',
   member: 'person',
   child: 'happy',
+  homehub: 'tv',
+};
+
+const ROLE_DESCRIPTIONS = {
+  parent: 'Full control & management',
+  member: 'Standard family member',
+  child: 'With points & rewards',
+  homehub: 'Family display device',
 };
 
 export default function FamilyManagementScreen({ navigation }) {
