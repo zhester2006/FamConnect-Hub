@@ -1921,3 +1921,84 @@ Features:
 **Key Files Modified:**
 - `/app/backend/server.py` - Receipt scanning endpoints
 - `/app/mobile/FamFocusHub/src/screens/PantryScreen.js` - Full scanner UI
+
+### Session 42 - Parent Management UI & Bug Fixes (Feb 2026) ✅
+
+**Parent Management Screen for Goals/Achievements/Badges:**
+- Created `/app/mobile/FamFocusHub/src/screens/ParentManagementScreen.js`
+- Full CRUD for custom achievements:
+  - Add new achievements with name, description, icon, points, requirement, category
+  - Edit existing achievements
+  - Delete achievements with confirmation
+  - Award achievements to family members
+- Goal management:
+  - Create personal/family goals
+  - Edit goal targets
+  - Delete goals
+  - Track progress
+- AI-powered achievement suggestions:
+  - Get 5 creative suggestions based on family context
+  - One-tap to add suggestion as new achievement
+- Icon picker with 16 emoji options
+- Category selector (milestone, streak, special, family, seasonal)
+- Added "Goals & Achievements" to Settings menu (parent only)
+- Added route to AppNavigator.js
+
+**Bug Fixes:**
+
+1. **Poll Voting Redirect Fix (FamilyWallScreen.js):**
+   - Fixed touch events bubbling up and causing navigation
+   - Added `onStartShouldSetResponder={() => true}` to poll container
+   - Added `e.stopPropagation()` to poll option and like button presses
+   - Fixed vote count calculation for both object and array formats
+   - Fixed timestamp handling for Firebase posts
+
+2. **Quick Meal Ideas CRUD (DinnerPlannerScreen.js):**
+   - Added ability to add new meal ideas with custom name, icon, AI prompt
+   - Added long-press to edit or delete existing meals
+   - Meals persist to AsyncStorage
+   - 16 food emoji icons available
+
+3. **Camera/Photo Upload for AI Assistant (PixieAssistant.js):**
+   - Added camera button to capture photos
+   - Added photo library button to select images
+   - Image preview with remove option before sending
+   - Photos displayed in chat history
+   - AI can analyze and respond to images
+
+4. **View Mode Tabs Size Reduction (ChoresScreen.js):**
+   - Reduced padding from 10 to 8
+   - Reduced icon size from 18 to 16
+   - Reduced font size from 12 to 11
+   - More compact appearance
+
+5. **Firebase Auth Improvements (firebase.init.js):**
+   - Enhanced import logic for getReactNativePersistence
+   - Tries multiple import paths for compatibility
+   - Better error handling with informative console messages
+
+6. **API Config Updates (api.config.js):**
+   - Added FAMILY_MEMBERS_DETAILED endpoint
+   - Added FAMILY_INFO endpoint
+   - Added all custom achievements endpoints
+
+**Backend Fix by Testing Agent:**
+- Fixed AI Pixie endpoint context handling (server.py line 2235)
+- Now handles both dict and string context formats
+
+**End-to-End Testing Results:**
+- All 51 backend API tests passed (100%)
+- Tested: health check, authentication, family members, custom achievements CRUD, goals CRUD, chores, shopping, pantry, rewards, family wall, calendar, AI Pixie, dinner planner, AI suggestions, recipes, leaderboard, notifications, messages, reading logs
+- Test report: `/app/test_reports/iteration_24.json`
+
+**Key Files Modified:**
+- `/app/mobile/FamFocusHub/src/screens/ParentManagementScreen.js` (NEW)
+- `/app/mobile/FamFocusHub/src/screens/FamilyWallScreen.js`
+- `/app/mobile/FamFocusHub/src/screens/DinnerPlannerScreen.js`
+- `/app/mobile/FamFocusHub/src/components/PixieAssistant.js`
+- `/app/mobile/FamFocusHub/src/screens/ChoresScreen.js`
+- `/app/mobile/FamFocusHub/src/services/firebase.init.js`
+- `/app/mobile/FamFocusHub/src/services/api.config.js`
+- `/app/mobile/FamFocusHub/src/navigation/AppNavigator.js`
+- `/app/mobile/FamFocusHub/src/screens/SettingsScreen.js`
+- `/app/backend/server.py`
