@@ -1215,23 +1215,29 @@ async def delete_chore(chore_id: str, request: Request):
 @api_router.get("/chores/types")
 async def get_chore_types(request: Request):
     current_user = await get_current_user(request)
-    chore_types = await db.chore_types.find({}, {"_id": 0}).to_list(100)
-    if not chore_types:
-        # Return default chore types
-        default_types = [
-            {"name": "Dishes", "points": 10, "description": "Wash and put away dishes"},
-            {"name": "Vacuum", "points": 15, "description": "Vacuum the floors"},
-            {"name": "Laundry", "points": 15, "description": "Wash, dry and fold laundry"},
-            {"name": "Take out trash", "points": 5, "description": "Take trash to the bins"},
-            {"name": "Clean room", "points": 10, "description": "Clean and organize bedroom"},
-            {"name": "Feed pets", "points": 5, "description": "Feed and water pets"},
-            {"name": "Set table", "points": 5, "description": "Set the table for meals"},
-            {"name": "Sweep floors", "points": 10, "description": "Sweep all floors"},
-            {"name": "Wipe counters", "points": 5, "description": "Clean kitchen counters"},
-            {"name": "Make bed", "points": 5, "description": "Make your bed each morning"}
-        ]
-        return {"chore_types": default_types}
-    return {"chore_types": chore_types}
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    # Get custom chore types for this family
+    custom_types = await db.chore_types.find({"family_id": family_id}, {"_id": 0}).to_list(100)
+    
+    # Default chore types (always available)
+    default_types = [
+        {"type_id": "default_dishes", "name": "Dishes", "icon": "🍽️", "points": 10, "frequency": "daily", "description": "Wash and put away dishes"},
+        {"type_id": "default_vacuum", "name": "Vacuum", "icon": "🧹", "points": 15, "frequency": "weekly", "description": "Vacuum the floors"},
+        {"type_id": "default_laundry", "name": "Laundry", "icon": "👕", "points": 15, "frequency": "weekly", "description": "Wash, dry and fold laundry"},
+        {"type_id": "default_trash", "name": "Take out trash", "icon": "🗑️", "points": 5, "frequency": "daily", "description": "Take trash to the bins"},
+        {"type_id": "default_room", "name": "Clean room", "icon": "🛏️", "points": 10, "frequency": "weekly", "description": "Clean and organize bedroom"},
+        {"type_id": "default_pets", "name": "Feed pets", "icon": "🐕", "points": 5, "frequency": "daily", "description": "Feed and water pets"},
+        {"type_id": "default_table", "name": "Set table", "icon": "🍴", "points": 5, "frequency": "daily", "description": "Set the table for meals"},
+        {"type_id": "default_sweep", "name": "Sweep floors", "icon": "🧹", "points": 10, "frequency": "weekly", "description": "Sweep all floors"},
+        {"type_id": "default_counters", "name": "Wipe counters", "icon": "✨", "points": 5, "frequency": "daily", "description": "Clean kitchen counters"},
+        {"type_id": "default_bed", "name": "Make bed", "icon": "🛏️", "points": 5, "frequency": "daily", "description": "Make your bed each morning"}
+    ]
+    
+    # Combine default and custom types (custom types come first)
+    all_types = custom_types + default_types
+    
+    return {"chore_types": all_types}
 
 # Add new chore type with AI-generated icon
 @api_router.post("/chores/types")
