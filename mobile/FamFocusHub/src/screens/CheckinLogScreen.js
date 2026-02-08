@@ -100,12 +100,14 @@ export default function CheckinLogScreen({ navigation }) {
 
   // Filter check-ins for selected child
   const childCheckins = selectedChild 
-    ? checkins.filter(c => c.user_id === selectedChild.user_id)
+    ? (checkins || []).filter(c => c && c.user_id === selectedChild.user_id)
     : [];
 
   // Group check-ins by date
   const groupedCheckins = childCheckins.reduce((groups, checkin) => {
+    if (!checkin) return groups;
     const date = formatDate(checkin.timestamp || checkin.created_at);
+    if (!date) return groups;
     if (!groups[date]) {
       groups[date] = [];
     }
@@ -115,7 +117,7 @@ export default function CheckinLogScreen({ navigation }) {
 
   // Get child's recent alerts
   const childAlerts = selectedChild
-    ? alerts.filter(a => a.user_id === selectedChild.user_id).slice(0, 5)
+    ? (alerts || []).filter(a => a && a.user_id === selectedChild.user_id).slice(0, 5)
     : [];
 
   if (loading) {
