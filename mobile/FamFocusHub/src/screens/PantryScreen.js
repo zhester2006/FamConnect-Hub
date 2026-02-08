@@ -69,6 +69,7 @@ export default function PantryScreen({ navigation }) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showQuickSelect, setShowQuickSelect] = useState(false);
   const [showAiAssist, setShowAiAssist] = useState(false);
+  const [showReceiptScanner, setShowReceiptScanner] = useState(false);
   
   // New item form
   const [newItemName, setNewItemName] = useState('');
@@ -78,6 +79,13 @@ export default function PantryScreen({ navigation }) {
   // AI assist
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState([]);
+  
+  // Receipt Scanner
+  const [receiptImage, setReceiptImage] = useState(null);
+  const [scanningReceipt, setScanningReceipt] = useState(false);
+  const [scannedItems, setScannedItems] = useState([]);
+  const [showScannedItems, setShowScannedItems] = useState(false);
+  const [submittingScanned, setSubmittingScanned] = useState(false);
 
   const fetchPantryItems = useCallback(async () => {
     try {
