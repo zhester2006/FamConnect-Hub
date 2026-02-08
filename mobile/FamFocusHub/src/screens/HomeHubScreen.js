@@ -783,4 +783,15 @@ const styles = StyleSheet.create({
   dayEventTitle: { color: '#fff', fontSize: 15, fontWeight: '600' },
   dayEventTime: { color: '#a5b4fc', fontSize: 12, marginTop: 2 },
   dayEventType: { color: '#6b7280', fontSize: 11, marginTop: 2, textTransform: 'capitalize' },
+  // Settings styles
+  settingsSection: { marginTop: 10 },
+  settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' },
+  settingInfo: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
+  settingTextContainer: { flex: 1 },
+  settingLabel: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  settingDescription: { color: '#9ca3af', fontSize: 12, marginTop: 2 },
+  toggle: { width: 50, height: 28, borderRadius: 14, backgroundColor: 'rgba(75, 85, 99, 0.8)', justifyContent: 'center', padding: 2 },
+  toggleActive: { backgroundColor: '#10b981' },
+  toggleKnob: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#fff' },
+  toggleKnobActive: { marginLeft: 'auto' },
 });
