@@ -33,6 +33,7 @@ import PantryScreen from '../screens/PantryScreen';
 import CheckinLogScreen from '../screens/CheckinLogScreen';
 import RecipesScreen from '../screens/RecipesScreen';
 import FamilyManagementScreen from '../screens/FamilyManagementScreen';
+import ParentManagementScreen from '../screens/ParentManagementScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
