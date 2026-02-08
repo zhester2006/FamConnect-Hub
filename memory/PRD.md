@@ -1881,3 +1881,43 @@ Frontend (DinnerPlannerScreen):
 - `/app/backend/server.py` - Tutorial content, pantry-aware meal planning
 - `/app/mobile/FamFocusHub/src/screens/OnboardingScreen.js` - New icons/gradients
 - `/app/mobile/FamFocusHub/src/screens/DinnerPlannerScreen.js` - Pantry sync UI
+
+### Session 41 Update - AI Receipt Scanner (Feb 2026) ✅
+
+**Advanced AI Receipt Scanner Feature:**
+
+Backend endpoints:
+- `POST /api/pantry/scan-receipt` - AI-powered receipt scanning with GPT-4o vision
+  - Extracts food items from receipt images
+  - Auto-categorizes: produce, dairy, meat, grains, frozen, canned, beverages, snacks, condiments, bakery, other
+  - Standardizes item names (e.g., "BNLS CHKN BRST" → "Boneless Chicken Breast")
+  - Returns quantity and unit info
+
+- `POST /api/pantry/add-scanned-items` - Confirm and add items to pantry
+  - Adds all confirmed items to pantry
+  - Automatically removes matching items from shopping list
+  - Returns list of removed shopping items
+
+Frontend (PantryScreen):
+- Scan button in header (📷 icon)
+- Receipt Scanner modal with:
+  - Camera capture option
+  - Photo library selection option
+  - Tips for best results
+- Scanned Items Review modal:
+  - Live scanning animation
+  - Edit item names inline
+  - Adjust quantities (+/- buttons)
+  - Change categories with icon chips
+  - Remove unwanted items
+  - Confirm button to add all to pantry
+
+Features:
+- Items must be reviewed and can be edited before adding
+- Shopping list sync - auto-removes purchased items
+- Haptic feedback on interactions
+- Success message with removed shopping items count
+
+**Key Files Modified:**
+- `/app/backend/server.py` - Receipt scanning endpoints
+- `/app/mobile/FamFocusHub/src/screens/PantryScreen.js` - Full scanner UI
