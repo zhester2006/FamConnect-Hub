@@ -143,29 +143,23 @@ export default function CheckinLogScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Child Selector */}
+      {/* Child Selector - Icon Only */}
       {children.length > 0 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.childSelector}>
           {children.map((child) => (
             <TouchableOpacity
               key={child.user_id}
               style={[
-                styles.childChip,
-                selectedChild?.user_id === child.user_id && { backgroundColor: primaryColor }
+                styles.childIconOnly,
+                selectedChild?.user_id === child.user_id && styles.childIconSelected
               ]}
               onPress={() => setSelectedChild(child)}
             >
               <ProfileAvatar
                 picture={child.picture}
                 name={child.nickname || child.name}
-                size="tiny"
+                size="small"
               />
-              <Text style={[
-                styles.childChipText,
-                selectedChild?.user_id === child.user_id && { color: '#fff' }
-              ]}>
-                {child.nickname || child.name}
-              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
