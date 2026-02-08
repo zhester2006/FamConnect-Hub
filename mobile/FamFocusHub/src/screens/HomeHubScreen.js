@@ -656,6 +656,38 @@ export default function HomeHubScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* Settings Modal (Parents Only) */}
+      <Modal visible={showSettings} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Home Hub Settings</Text>
+              <TouchableOpacity onPress={() => setShowSettings(false)}>
+                <Ionicons name="close" size={24} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.settingsSection}>
+              <View style={styles.settingRow}>
+                <View style={styles.settingInfo}>
+                  <Ionicons name="flash" size={20} color="#f59e0b" />
+                  <View style={styles.settingTextContainer}>
+                    <Text style={styles.settingLabel}>Quick Actions Panel</Text>
+                    <Text style={styles.settingDescription}>Show approval & action widgets</Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={[styles.toggle, showQuickPanel && styles.toggleActive]}
+                  onPress={() => setShowQuickPanel(!showQuickPanel)}
+                >
+                  <View style={[styles.toggleKnob, showQuickPanel && styles.toggleKnobActive]} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
