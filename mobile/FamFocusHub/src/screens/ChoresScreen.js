@@ -981,6 +981,75 @@ export default function ChoresScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* Manage Chore Types Modal */}
+      <Modal visible={showManageTypes} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Manage Chore Types</Text>
+              <TouchableOpacity onPress={() => setShowManageTypes(false)}>
+                <Ionicons name="close" size={24} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.manageHint}>
+              Add custom chores for your family. AI will generate an icon automatically!
+            </Text>
+
+            {/* Add New Chore Type */}
+            <View style={styles.addTypeRow}>
+              <TextInput
+                style={styles.addTypeInput}
+                placeholder="New chore name..."
+                placeholderTextColor="#6b7280"
+                value={newChoreType.name}
+                onChangeText={(text) => setNewChoreType({ ...newChoreType, name: text })}
+              />
+              <TextInput
+                style={styles.addTypePoints}
+                placeholder="Pts"
+                placeholderTextColor="#6b7280"
+                keyboardType="numeric"
+                value={newChoreType.points}
+                onChangeText={(text) => setNewChoreType({ ...newChoreType, points: text })}
+              />
+              <TouchableOpacity 
+                style={[styles.addTypeBtn, addingType && { opacity: 0.6 }]}
+                onPress={handleAddChoreType}
+                disabled={addingType}
+              >
+                {addingType ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="add" size={20} color="#fff" />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* Existing Chore Types */}
+            <ScrollView style={{ maxHeight: 400 }}>
+              {choreTypes.map((type) => (
+                <View key={type.type_id || type.name} style={styles.choreTypeRow}>
+                  <View style={styles.choreTypeInfo}>
+                    <Text style={styles.choreTypeIcon}>{type.icon}</Text>
+                    <View>
+                      <Text style={styles.choreTypeName}>{type.name}</Text>
+                      <Text style={styles.choreTypePoints}>{type.points} points</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.deleteTypeBtn}
+                    onPress={() => handleDeleteChoreType(type)}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </AnimatedBackground>
   );
 }
