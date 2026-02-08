@@ -4996,7 +4996,7 @@ async def remove_family_member(family_id: str, member_id: str, request: Request)
 
 @api_router.get("/tutorial/content")
 async def get_tutorial_content(request: Request):
-    """Get welcome tutorial content"""
+    """Get welcome tutorial content - updated with all new features"""
     current_user = await get_current_user(request)
     role = current_user.get('role', 'member')
     
@@ -5008,49 +5008,84 @@ async def get_tutorial_content(request: Request):
         {
             "id": 1,
             "title": "Welcome to FamFocus Hub!",
-            "description": "Your family's command center for chores, events, and rewards. Let's take a quick tour!",
+            "description": "Your family's command center for organizing tasks, events, meals, and rewards. Let's take a quick tour!",
             "image": "welcome",
             "icon": "home"
         },
         {
             "id": 2,
             "title": "Home Hub Dashboard",
-            "description": "See everything at a glance - weather, calendar, chores, and shopping list all in one place.",
+            "description": "See everything at a glance - weather, calendar, chores, shopping list, and quick actions all in one place.",
             "image": "dashboard",
             "icon": "layout-dashboard"
         },
         {
             "id": 3,
             "title": "Smart Chore Management",
-            "description": "Create chores, set points, and let AI help schedule them fairly. Kids earn points for completing tasks!",
+            "description": "Create custom chores with AI-generated icons, set points, and let AI schedule them fairly. Approve kids' completed tasks to award points!",
             "image": "chores",
             "icon": "check-circle"
         },
         {
             "id": 4,
-            "title": "Family Calendar",
-            "description": "Track events, work schedules, and appointments. Everyone stays in sync!",
+            "title": "Family Calendar & Approvals",
+            "description": "Track events and appointments. Kids can add events that need your approval before appearing on the calendar.",
             "image": "calendar",
             "icon": "calendar"
         },
         {
             "id": 5,
-            "title": "Rewards & Motivation",
-            "description": "Create rewards for kids to redeem with their earned points. Customize point values for each reward.",
+            "title": "Rewards & Task System",
+            "description": "Create rewards for kids to redeem. Kids can claim tasks from the Earn tab, complete them, and wait for your approval to earn points.",
             "image": "rewards",
             "icon": "gift"
         },
         {
             "id": 6,
-            "title": "Location Safety",
+            "title": "Dinner Planner & Pantry",
+            "description": "AI suggests weekly meals based on your pantry! Manage food inventory and add missing ingredients directly to your shopping list.",
+            "image": "chores",
+            "icon": "restaurant"
+        },
+        {
+            "id": 7,
+            "title": "Shopping List & Approvals",
+            "description": "Collaborative shopping list. Items added by kids need your approval. Add ingredients from dinner plans with one tap!",
+            "image": "dashboard",
+            "icon": "cart"
+        },
+        {
+            "id": 8,
+            "title": "Family Wall & Chat",
+            "description": "Share posts, photos, and polls on the Family Wall. Real-time chat keeps everyone connected!",
+            "image": "chat",
+            "icon": "chatbubbles"
+        },
+        {
+            "id": 9,
+            "title": "Family Management",
+            "description": "Share your family code to add members. Manage roles and permissions for each family member.",
+            "image": "dashboard",
+            "icon": "people"
+        },
+        {
+            "id": 10,
+            "title": "Location & Safety",
             "description": "Set up safe zones and get notified when kids arrive or leave important locations.",
             "image": "location",
             "icon": "map-pin"
         },
         {
-            "id": 7,
+            "id": 11,
+            "title": "Meet Pixie - AI Assistant",
+            "description": "Ask Pixie anything! Get help with meal planning, chore scheduling, or daily inspiration including Bible quotes.",
+            "image": "welcome",
+            "icon": "sparkles"
+        },
+        {
+            "id": 12,
             "title": "You're All Set!",
-            "description": "Start by adding your family members and creating some chores. Have fun organizing your family!",
+            "description": "Start by inviting family members with your family code. Have fun organizing your family life!",
             "image": "complete",
             "icon": "party-popper"
         }
@@ -5060,21 +5095,21 @@ async def get_tutorial_content(request: Request):
         {
             "id": 1,
             "title": "Welcome to FamFocus Hub!",
-            "description": "Your own space to track missions, earn points, and claim awesome rewards!",
+            "description": "Your own space to complete missions, earn points, and claim awesome rewards!",
             "image": "welcome",
             "icon": "rocket"
         },
         {
             "id": 2,
             "title": "Your Daily Missions",
-            "description": "Check your missions (chores) and mark them complete to earn points!",
+            "description": "Check your chores and mark them complete. Parents will approve and you'll earn points!",
             "image": "missions",
             "icon": "target"
         },
         {
             "id": 3,
-            "title": "Earn Points & Climb Up!",
-            "description": "Complete missions to earn points. See how you rank on the family leaderboard!",
+            "title": "Claim Tasks & Earn Points",
+            "description": "Go to Rewards → Earn tab to claim tasks. Complete them to earn bonus points!",
             "image": "points",
             "icon": "trophy"
         },
@@ -5087,15 +5122,36 @@ async def get_tutorial_content(request: Request):
         },
         {
             "id": 5,
-            "title": "Stay Connected",
-            "description": "Chat with your family, share updates, and have fun together!",
-            "image": "chat",
-            "icon": "message-circle"
+            "title": "Reading Log",
+            "description": "Submit book summaries to earn extra points. Parents will review and approve them!",
+            "image": "dashboard",
+            "icon": "book"
         },
         {
             "id": 6,
-            "title": "Ready to Go!",
-            "description": "Start completing missions and earning points. Good luck, superstar!",
+            "title": "Shopping & Calendar",
+            "description": "Add items to the shopping list or events to the calendar. They'll be sent to your parents for approval!",
+            "image": "calendar",
+            "icon": "calendar"
+        },
+        {
+            "id": 7,
+            "title": "Family Wall",
+            "description": "Share updates, photos, and vote on family polls. Stay connected with everyone!",
+            "image": "chat",
+            "icon": "chatbubbles"
+        },
+        {
+            "id": 8,
+            "title": "Ask Pixie for Help",
+            "description": "Tap the magic button to chat with Pixie, your AI helper! Get homework help, fun facts, or daily inspiration.",
+            "image": "welcome",
+            "icon": "sparkles"
+        },
+        {
+            "id": 9,
+            "title": "Ready to Go, Superstar!",
+            "description": "Start completing missions and climbing the leaderboard. Good luck! 🌟",
             "image": "complete",
             "icon": "star"
         }
