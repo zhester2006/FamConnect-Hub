@@ -112,6 +112,43 @@ function ChildTabs() {
   );
 }
 
+function HomeHubTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: '#0c4a6e',
+          borderTopColor: 'rgba(255, 255, 255, 0.1)',
+          paddingBottom: 8,
+          paddingTop: 8,
+          height: 70,
+        },
+        tabBarActiveTintColor: '#06b6d4',
+        tabBarInactiveTintColor: '#6b7280',
+        tabBarIcon: ({ focused, color }) => {
+          let iconName;
+          switch (route.name) {
+            case 'Hub': iconName = focused ? 'tv' : 'tv-outline'; break;
+            case 'Calendar': iconName = focused ? 'calendar' : 'calendar-outline'; break;
+            case 'Chores': iconName = focused ? 'checkbox' : 'checkbox-outline'; break;
+            case 'Shopping': iconName = focused ? 'cart' : 'cart-outline'; break;
+            case 'Wall': iconName = focused ? 'images' : 'images-outline'; break;
+            default: iconName = 'tv';
+          }
+          return <Ionicons name={iconName} size={24} color={color} />;
+        },
+      })}
+    >
+      <Tab.Screen name="Hub" component={HomeHubScreen} options={{ title: 'Home' }} />
+      <Tab.Screen name="Calendar" component={CalendarScreen} />
+      <Tab.Screen name="Chores" component={ChoresScreen} />
+      <Tab.Screen name="Shopping" component={ShoppingScreen} />
+      <Tab.Screen name="Wall" component={FamilyWallScreen} options={{ title: 'Family Wall' }} />
+    </Tab.Navigator>
+  );
+}
+
 function OnboardingWrapper({ children, onComplete }) {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
