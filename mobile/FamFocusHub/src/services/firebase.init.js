@@ -125,7 +125,6 @@ export function getFirebaseStorage() {
 export function resetFirebase() {
   auth = null;
   authInitialized = false;
-  authInitializing = false;
 }
 
 // Initialize basic Firebase immediately (not auth - that must be async)
