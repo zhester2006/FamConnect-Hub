@@ -2,8 +2,11 @@
 // This module ensures Firebase is initialized properly with Auth persistence
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeAuth, getAuth } from 'firebase/auth';
+import { getReactNativePersistence } from '@firebase/auth/react-native';
 import { getDatabase } from 'firebase/database';
 import { getStorage } from 'firebase/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import firebaseConfig from './firebase.config';
 
 let app = null;
@@ -12,11 +15,10 @@ let database = null;
 let storage = null;
 let isInitialized = false;
 let authInitialized = false;
-let authInitializing = false;
 
-// Initialize Firebase App synchronously
-export function initializeFirebase() {
-  if (isInitialized && app) {
+// Initialize Firebase App and Auth synchronously at startup
+function initializeAll() {
+  if (isInitialized && app && auth) {
     return { app, auth, database, storage };
   }
 
@@ -30,7 +32,35 @@ export function initializeFirebase() {
       console.log('Using existing Firebase app');
     }
 
-    // Initialize database and storage (these are less problematic)
+    // Initialize Auth with persistence - MUST be done before any auth operations
+    if (!auth) {
+      try {
+        auth = initializeAuth(app, {
+          persistence: getReactNativePersistence(AsyncStorage)
+        });
+        console.log('Firebase Auth initialized with persistence');
+        authInitialized = true;
+      } catch (authError) {
+        // If initializeAuth fails (already initialized), try getAuth
+        if (authError.code === 'auth/already-initialized') {
+          auth = getAuth(app);
+          console.log('Firebase Auth retrieved with getAuth');
+          authInitialized = true;
+        } else {
+          console.error('Firebase Auth init error:', authError.message);
+          // Last resort fallback
+          try {
+            auth = getAuth(app);
+            console.log('Firebase Auth fallback to getAuth');
+            authInitialized = true;
+          } catch (fallbackError) {
+            console.error('Firebase Auth fallback failed:', fallbackError.message);
+          }
+        }
+      }
+    }
+
+    // Initialize database and storage
     try {
       database = getDatabase(app);
       console.log('Firebase Database initialized');
@@ -53,71 +83,17 @@ export function initializeFirebase() {
   }
 }
 
-// Initialize auth separately - must be called explicitly
-export async function initializeFirebaseAuth() {
-  // Return existing auth if already initialized
-  if (authInitialized && auth) {
-    return auth;
-  }
-  
-  // Prevent concurrent initialization attempts
-  if (authInitializing) {
-    // Wait and check again
-    await new Promise(resolve => setTimeout(resolve, 200));
-    if (auth) return auth;
-  }
-  
-  authInitializing = true;
-  
-  // Ensure app is initialized first
-  if (!app) {
-    initializeFirebase();
-  }
-  
-  if (!app) {
-    console.error('Cannot initialize auth: Firebase app not available');
-    authInitializing = false;
-    return null;
-  }
+// Initialize Firebase App synchronously
+export function initializeFirebase() {
+  return initializeAll();
+}
 
-  try {
-    // Import Firebase Auth
-    const { initializeAuth, getAuth, getReactNativePersistence } = await import('firebase/auth');
-    const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-    
-    // Try to initialize with persistence first
-    if (getReactNativePersistence) {
-      try {
-        auth = initializeAuth(app, {
-          persistence: getReactNativePersistence(AsyncStorage)
-        });
-        console.log('Firebase Auth initialized with persistence');
-        authInitialized = true;
-        authInitializing = false;
-        return auth;
-      } catch (initError) {
-        console.log('initializeAuth failed, trying getAuth:', initError.message);
-      }
-    }
-    
-    // Fallback to getAuth (without persistence)
-    try {
-      auth = getAuth(app);
-      console.log('Firebase Auth initialized (no persistence)');
-      authInitialized = true;
-      authInitializing = false;
-      return auth;
-    } catch (getAuthError) {
-      console.error('getAuth failed:', getAuthError.message);
-    }
-    
-    authInitializing = false;
-    return null;
-  } catch (error) {
-    console.error('Firebase Auth initialization error:', error);
-    authInitializing = false;
-    return null;
+// Initialize auth - now synchronous since we init everything together
+export async function initializeFirebaseAuth() {
+  if (!authInitialized || !auth) {
+    initializeAll();
   }
+  return auth;
 }
 
 export function getFirebaseApp() {
