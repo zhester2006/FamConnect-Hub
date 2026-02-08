@@ -2235,7 +2235,16 @@ async def pixie_assistant(request: Request, data: dict):
     # Build context from previous messages
     context_str = ""
     if context:
-        context_str = "\n".join([f"{'User' if m['role'] == 'user' else 'Pixie'}: {m['content']}" for m in context[-3:]])
+        # Handle both dict format and string format for context
+        context_items = []
+        for m in context[-3:]:
+            if isinstance(m, dict):
+                role = 'User' if m.get('role') == 'user' else 'Pixie'
+                content = m.get('content', str(m))
+                context_items.append(f"{role}: {content}")
+            elif isinstance(m, str):
+                context_items.append(m)
+        context_str = "\n".join(context_items)
     
     chat = LlmChat(
         api_key=os.environ['EMERGENT_LLM_KEY'],
