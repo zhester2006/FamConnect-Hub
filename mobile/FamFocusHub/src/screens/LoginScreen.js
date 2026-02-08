@@ -835,45 +835,6 @@ const styles = StyleSheet.create({
     color: '#818cf8',
     fontWeight: '700',
   },
-  // Dev Section
-  devSection: {
-    width: '100%',
-    marginTop: 10,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(100, 116, 139, 0.3)',
-  },
-  devLabel: {
-    color: '#64748b',
-    fontSize: 11,
-    textAlign: 'center',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  devButtons: {
-    flexDirection: 'row',
-    width: '100%',
-    gap: 10,
-  },
-  devButton: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: 'rgba(30, 41, 59, 0.8)',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(100, 116, 139, 0.3)',
-  },
-  devButtonText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
-  },
   // Form Styles
   formContainer: {
     width: '100%',
