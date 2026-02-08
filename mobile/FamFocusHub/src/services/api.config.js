@@ -1,6 +1,6 @@
 // API Configuration for FamFocus Hub Mobile App
 // Production API URL - change this when deploying to your own server
-const API_BASE_URL = 'https://famfocushub.preview.emergentagent.com/api';
+const API_BASE_URL = 'https://family-auth-staging.preview.emergentagent.com/api';
 
 // Production mode flag - set to true for release builds
 export const IS_PRODUCTION = !__DEV__;

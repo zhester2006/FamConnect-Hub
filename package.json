@@ -3,6 +3,15 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo-clipboard": "^8.0.8",
     "firebase": "^12.9.0",
-    "react-native-maps": "^1.27.1"
+    "react-native-maps": "^1.27.1",
+    "expo": "~54.0.33",
+    "react": "19.1.0",
+    "react-native": "0.81.5"
+  },
+  "name": "app",
+  "version": "1.0.0",
+  "scripts": {
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   }
 }

@@ -1,0 +1,8 @@
+{
+  "android": {
+    "package": "com.anonymous.app"
+  },
+  "ios": {
+    "bundleIdentifier": "com.anonymous.app"
+  }
+}
