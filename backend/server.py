@@ -4267,6 +4267,138 @@ Only list items NOT already in the pantry."""
         print(f"AI shopping suggestions error: {e}")
         return {"suggestions": ["Milk", "Eggs", "Bread", "Vegetables", "Chicken"]}
 
+# ==================== RECEIPT SCANNER ====================
+
+@api_router.post("/pantry/scan-receipt")
+async def scan_receipt(request: Request, data: dict):
+    """AI-powered receipt scanner to extract food items and categorize them"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    image_base64 = data.get('image_base64', '')
+    if not image_base64:
+        raise HTTPException(status_code=400, detail="No image provided")
+    
+    # Remove data URL prefix if present
+    if ',' in image_base64:
+        image_base64 = image_base64.split(',')[1]
+    
+    from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+    
+    chat = LlmChat(
+        api_key=os.environ['EMERGENT_LLM_KEY'],
+        session_id=f"receipt_{uuid.uuid4().hex[:8]}",
+        system_message="""You are an expert receipt scanner AI. Analyze grocery receipts and extract food items.
+For each item, determine:
+1. Name (clean, standardized name)
+2. Category: produce, dairy, meat, grains, frozen, canned, beverages, snacks, condiments, bakery, other
+3. Quantity (default to 1 if unclear)
+4. Unit (each, lb, oz, pack, etc.)
+
+Return ONLY a JSON array of objects with keys: name, category, quantity, unit
+Do not include non-food items like bags, taxes, totals, etc.
+Standardize names (e.g., "BNLS CHKN BRST" → "Boneless Chicken Breast")"""
+    ).with_model("openai", "gpt-4o")
+    
+    try:
+        image_content = ImageContent(image_base64=image_base64)
+        
+        response = await chat.send_message(UserMessage(
+            text="""Analyze this grocery receipt image. Extract all food items and categorize them.
+Return a JSON array like: [{"name": "Milk", "category": "dairy", "quantity": 1, "unit": "gallon"}, ...]
+Include ONLY food and grocery items. Skip totals, taxes, store info, etc.""",
+            file_contents=[image_content]
+        ))
+        
+        # Parse the response
+        response_text = str(response).strip()
+        
+        # Extract JSON from response
+        import re
+        json_match = re.search(r'\[[\s\S]*\]', response_text)
+        if json_match:
+            items = json.loads(json_match.group())
+        else:
+            # Try parsing the whole response as JSON
+            items = json.loads(response_text)
+        
+        # Validate and clean items
+        valid_categories = ['produce', 'dairy', 'meat', 'grains', 'frozen', 'canned', 'beverages', 'snacks', 'condiments', 'bakery', 'other']
+        cleaned_items = []
+        for item in items:
+            if isinstance(item, dict) and item.get('name'):
+                cleaned_item = {
+                    "name": str(item.get('name', '')).strip().title(),
+                    "category": item.get('category', 'other').lower() if item.get('category', '').lower() in valid_categories else 'other',
+                    "quantity": int(item.get('quantity', 1)) if str(item.get('quantity', '1')).isdigit() else 1,
+                    "unit": str(item.get('unit', 'each')).lower(),
+                    "temp_id": f"temp_{uuid.uuid4().hex[:8]}"  # Temporary ID for frontend tracking
+                }
+                cleaned_items.append(cleaned_item)
+        
+        return {
+            "success": True,
+            "items": cleaned_items,
+            "count": len(cleaned_items)
+        }
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse receipt response: {e}")
+        return {"success": False, "error": "Failed to parse items from receipt", "items": []}
+    except Exception as e:
+        logger.error(f"Receipt scan error: {e}")
+        return {"success": False, "error": str(e), "items": []}
+
+@api_router.post("/pantry/add-scanned-items")
+async def add_scanned_items(request: Request, data: dict):
+    """Add confirmed scanned items to pantry and remove from shopping list"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    items = data.get('items', [])
+    if not items:
+        raise HTTPException(status_code=400, detail="No items to add")
+    
+    added_items = []
+    removed_from_shopping = []
+    
+    for item in items:
+        # Add to pantry
+        item_id = f"pantry_{uuid.uuid4().hex[:12]}"
+        pantry_doc = {
+            "item_id": item_id,
+            "family_id": family_id,
+            "name": item.get('name', '').strip(),
+            "category": item.get('category', 'other'),
+            "quantity": item.get('quantity', 1),
+            "unit": item.get('unit', 'each'),
+            "added_by": current_user['user_id'],
+            "source": "receipt_scan",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.pantry.insert_one(pantry_doc)
+        added_items.append(pantry_doc)
+        
+        # Check if item exists in shopping list and remove it
+        item_name_lower = item.get('name', '').lower().strip()
+        shopping_item = await db.shopping_items.find_one({
+            "family_id": family_id,
+            "name": {"$regex": f"^{re.escape(item_name_lower)}$", "$options": "i"},
+            "status": {"$in": ["approved", "pending"]}
+        })
+        
+        if shopping_item:
+            await db.shopping_items.delete_one({"item_id": shopping_item['item_id']})
+            removed_from_shopping.append(shopping_item.get('name'))
+    
+    return {
+        "success": True,
+        "added_count": len(added_items),
+        "removed_from_shopping": removed_from_shopping,
+        "message": f"Added {len(added_items)} items to pantry" + 
+                   (f" and removed {len(removed_from_shopping)} from shopping list" if removed_from_shopping else "")
+    }
+
 # ==================== FAMILY RECIPES ====================
 
 @api_router.get("/recipes")
