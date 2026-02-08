@@ -410,8 +410,8 @@ export default function HomeHubScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Quick Actions Widget (Parents Only) */}
-        {user?.role === 'parent' && (
+        {/* Quick Actions Widget (Parents Only - Toggleable) */}
+        {user?.role === 'parent' && showQuickPanel && (
           <QuickActionsWidget onRefresh={fetchData} />
         )}
 
