@@ -240,6 +240,20 @@ export default function AppNavigator() {
                   <Stack.Screen name="FamilyManagement" component={FamilyManagementScreen} />
                   <Stack.Screen name="ParentManagement" component={ParentManagementScreen} />
                 </>
+              ) : user?.role === 'homehub' ? (
+                <>
+                  <Stack.Screen name="HomeHubMain">
+                    {() => <HomeHubTabs />}
+                  </Stack.Screen>
+                  <Stack.Screen name="Family" component={FamilyScreen} />
+                  <Stack.Screen name="FamilyWall" component={FamilyWallScreen} />
+                  <Stack.Screen name="Shopping" component={ShoppingListScreen} />
+                  <Stack.Screen name="DinnerPlanner" component={DinnerPlannerScreen} />
+                  <Stack.Screen name="Settings" component={SettingsScreen} />
+                  <Stack.Screen name="Profile" component={ProfileScreen} />
+                  <Stack.Screen name="Pantry" component={PantryScreen} />
+                  <Stack.Screen name="Recipes" component={RecipesScreen} />
+                </>
               ) : (
                 <>
                   <Stack.Screen name="ChildMain">
