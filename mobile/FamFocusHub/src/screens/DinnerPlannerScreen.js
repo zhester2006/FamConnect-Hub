@@ -504,15 +504,35 @@ export default function DinnerPlannerScreen({ navigation, route }) {
 
         {/* Quick Meal Ideas */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Meal Ideas</Text>
-          <Text style={styles.quickMealHint}>Tap for an instant AI suggestion!</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Quick Meal Ideas</Text>
+            <TouchableOpacity 
+              style={styles.addMealButton}
+              onPress={() => openMealEditor()}
+            >
+              <Ionicons name="add-circle" size={24} color="#10b981" />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.quickMealHint}>Tap for AI suggestion • Long press to edit/delete</Text>
           <View style={styles.quickMealsGrid}>
-            {QUICK_MEALS.map((meal) => (
+            {quickMeals.map((meal) => (
               <TouchableOpacity
-                key={meal.name}
+                key={meal.id || meal.name}
                 style={[styles.quickMealCard, loading && styles.buttonDisabled]}
                 onPress={() => handleQuickMeal(meal)}
+                onLongPress={() => {
+                  Alert.alert(
+                    meal.name,
+                    'What would you like to do?',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Edit', onPress: () => openMealEditor(meal) },
+                      { text: 'Delete', style: 'destructive', onPress: () => handleDeleteMeal(meal) },
+                    ]
+                  );
+                }}
                 disabled={loading}
+                delayLongPress={500}
               >
                 <Text style={styles.quickMealIcon}>{meal.icon}</Text>
                 <Text style={styles.quickMealName}>{meal.name}</Text>
@@ -523,6 +543,66 @@ export default function DinnerPlannerScreen({ navigation, route }) {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Quick Meal Editor Modal */}
+      <Modal visible={showMealEditor} animationType="slide" transparent>
+        <View style={styles.mealEditorOverlay}>
+          <View style={styles.mealEditorContent}>
+            <View style={styles.mealEditorHeader}>
+              <Text style={styles.mealEditorTitle}>
+                {editingMeal ? 'Edit Meal Idea' : 'Add Meal Idea'}
+              </Text>
+              <TouchableOpacity onPress={resetMealEditor}>
+                <Ionicons name="close" size={24} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.mealEditorForm}>
+              <Text style={styles.mealEditorLabel}>Name</Text>
+              <TextInput
+                style={styles.mealEditorInput}
+                placeholder="e.g., Taco Tuesday"
+                placeholderTextColor="#6b7280"
+                value={mealName}
+                onChangeText={setMealName}
+              />
+              
+              <Text style={styles.mealEditorLabel}>Icon</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.iconPicker}>
+                {AVAILABLE_ICONS.map((icon) => (
+                  <TouchableOpacity
+                    key={icon}
+                    style={[styles.iconOption, mealIcon === icon && styles.iconOptionSelected]}
+                    onPress={() => setMealIcon(icon)}
+                  >
+                    <Text style={styles.iconOptionText}>{icon}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              
+              <Text style={styles.mealEditorLabel}>AI Prompt (What to suggest)</Text>
+              <TextInput
+                style={[styles.mealEditorInput, { height: 80 }]}
+                placeholder="e.g., Mexican tacos with traditional sides"
+                placeholderTextColor="#6b7280"
+                value={mealPref}
+                onChangeText={setMealPref}
+                multiline
+              />
+              
+              <TouchableOpacity 
+                style={styles.saveMealButton}
+                onPress={handleAddEditMeal}
+              >
+                <Ionicons name="checkmark" size={20} color="#fff" />
+                <Text style={styles.saveMealButtonText}>
+                  {editingMeal ? 'Update Meal' : 'Add Meal'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Structured AI Meal Modal */}
       <Modal visible={showMealModal} animationType="slide" transparent>
