@@ -778,13 +778,48 @@ const styles = StyleSheet.create({
   
   // Input
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
     paddingHorizontal: 16,
     paddingVertical: 12,
     paddingBottom: Platform.OS === 'ios' ? 32 : 12,
     backgroundColor: 'rgba(30, 27, 75, 0.8)',
-    gap: 10,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  mediaButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
+  },
+  selectedImageContainer: {
+    position: 'relative',
+    marginBottom: 10,
+    alignSelf: 'flex-start',
+  },
+  selectedImagePreview: {
+    width: 100,
+    height: 75,
+    borderRadius: 12,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#0f0d1a',
+    borderRadius: 12,
+  },
+  messageImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: 10,
+    marginBottom: 8,
   },
   input: {
     flex: 1,
