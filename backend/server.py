@@ -2773,6 +2773,31 @@ async def create_checkin(request: Request, data: dict):
     
     return await db.checkins.find_one({"checkin_id": checkin_id}, {"_id": 0})
 
+@api_router.get("/checkins")
+async def get_all_checkins(request: Request):
+    """Get all check-ins for family members (parent only)"""
+    current_user = await get_current_user(request)
+    
+    if current_user['role'] == 'parent':
+        # Parents see all family check-ins
+        family_id = current_user['user_id']
+        # Get all children
+        children = await db.users.find({"parent_id": family_id}, {"_id": 0, "user_id": 1}).to_list(20)
+        child_ids = [c['user_id'] for c in children]
+        
+        checkins = await db.checkins.find(
+            {"user_id": {"$in": child_ids}},
+            {"_id": 0}
+        ).sort("created_at", -1).limit(100).to_list(100)
+    else:
+        # Children only see their own
+        checkins = await db.checkins.find(
+            {"user_id": current_user['user_id']},
+            {"_id": 0}
+        ).sort("created_at", -1).limit(50).to_list(50)
+    
+    return {"checkins": checkins}
+
 @api_router.get("/checkins/{user_id}")
 async def get_user_checkins(user_id: str, request: Request):
     current_user = await get_current_user(request)
