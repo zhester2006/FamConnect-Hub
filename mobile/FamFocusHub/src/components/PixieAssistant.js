@@ -196,6 +196,110 @@ export default function PixieAssistant() {
     handleSend(prompt.prompt);
   };
 
+  const handleTakePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Needed', 'Please allow camera access to take photos for Pixie.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setSelectedImage(result.assets[0]);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+    } catch (error) {
+      console.error('Camera error:', error);
+      Alert.alert('Error', 'Failed to open camera');
+    }
+  };
+
+  const handlePickPhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Needed', 'Please allow photo library access.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setSelectedImage(result.assets[0]);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+    } catch (error) {
+      console.error('Photo picker error:', error);
+      Alert.alert('Error', 'Failed to open photo library');
+    }
+  };
+
+  const handleSendWithImage = async () => {
+    if (!selectedImage || loading) return;
+
+    const imagePrompt = input.trim() || "What can you tell me about this image?";
+    
+    // Add user message with image
+    const userMessage = { 
+      role: 'user', 
+      content: imagePrompt, 
+      timestamp: new Date(),
+      image: selectedImage.uri,
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setSelectedImage(null);
+    setShowQuickPrompts(false);
+    setLoading(true);
+
+    try {
+      // Send to AI with image
+      const response = await apiService.post('/ai/pixie', {
+        message: imagePrompt,
+        user_name: user?.name || 'Friend',
+        user_role: user?.role || 'child',
+        context: messages.slice(-4).map(m => ({ role: m.role, content: m.content })),
+        image_base64: selectedImage.base64,
+      });
+
+      const pixieResponse = {
+        role: 'pixie',
+        content: response.response || response.message || "I can see your image! What would you like to know about it?",
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, pixieResponse]);
+      triggerPulse();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      console.error('Pixie image response error:', error);
+      
+      const fallbackResponse = {
+        role: 'pixie',
+        content: "I had trouble analyzing that image. Try taking another photo or asking me something else! 📸",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, fallbackResponse]);
+    } finally {
+      setLoading(false);
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+    }
+  };
+
   const renderMessage = (message, index) => {
     const isPixie = message.role === 'pixie';
     
