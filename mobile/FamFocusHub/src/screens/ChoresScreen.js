@@ -1182,4 +1182,18 @@ const styles = StyleSheet.create({
   applyBtn: { flex: 1, paddingVertical: 14, borderRadius: 20, alignItems: 'center' },
   applyBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
   choreDescription: { fontSize: 12, color: '#9ca3af', marginTop: 4, marginBottom: 4 },
+
+  // Manage Chore Types Modal
+  manageTypesBtn: { padding: 6 },
+  manageHint: { color: '#9ca3af', fontSize: 13, marginBottom: 16, textAlign: 'center' },
+  addTypeRow: { flexDirection: 'row', gap: 8, marginBottom: 20 },
+  addTypeInput: { flex: 1, backgroundColor: 'rgba(15, 13, 26, 0.8)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: '#fff', fontSize: 14, borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.3)' },
+  addTypePoints: { width: 60, backgroundColor: 'rgba(15, 13, 26, 0.8)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 12, color: '#fff', fontSize: 14, textAlign: 'center', borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.3)' },
+  addTypeBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#10b981', justifyContent: 'center', alignItems: 'center' },
+  choreTypeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(15, 13, 26, 0.5)', borderRadius: 12, padding: 12, marginBottom: 8 },
+  choreTypeInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  choreTypeIcon: { fontSize: 24, width: 36, textAlign: 'center' },
+  choreTypeName: { fontSize: 14, fontWeight: '600', color: '#fff' },
+  choreTypePoints: { fontSize: 11, color: '#f59e0b' },
+  deleteTypeBtn: { padding: 8 },
 });
