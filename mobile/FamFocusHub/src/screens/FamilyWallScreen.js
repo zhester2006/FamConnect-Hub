@@ -370,20 +370,24 @@ export default function FamilyWallScreen({ navigation }) {
   const renderPollOptions = (post) => {
     const userVoted = post.user_voted_option !== undefined && post.user_voted_option !== null;
     
-    // Calculate total votes from poll_options
+    // Calculate total votes from poll_options - handle both object and array formats for votes
     const totalVotes = post.poll_options?.reduce((sum, opt) => {
-      const optionData = typeof opt === 'string' ? { votes: [] } : opt;
-      return sum + (optionData.votes?.length || 0);
+      const optionData = typeof opt === 'string' ? { votes: {} } : opt;
+      const votes = optionData.votes || {};
+      // Handle both object format {userId: true} and array format [userId]
+      const voteCount = Array.isArray(votes) ? votes.length : Object.keys(votes).length;
+      return sum + voteCount;
     }, 0) || 0;
 
     return (
-      <View style={styles.pollContainer}>
+      <View style={styles.pollContainer} onStartShouldSetResponder={() => true}>
         {post.poll_options?.map((option, index) => {
-          const optionData = typeof option === 'string' ? { text: option, votes: [], voter_names: [] } : option;
+          const optionData = typeof option === 'string' ? { text: option, votes: {}, voter_names: [] } : option;
           const optionText = optionData.text || option;
-          const votes = optionData.votes || [];
+          const votes = optionData.votes || {};
           const voterNames = optionData.voter_names || [];
-          const voteCount = votes.length;
+          // Handle both object format {userId: true} and array format [userId]
+          const voteCount = Array.isArray(votes) ? votes.length : Object.keys(votes).length;
           const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
           const isUserVote = post.user_voted_option === index;
 
@@ -391,7 +395,8 @@ export default function FamilyWallScreen({ navigation }) {
             <TouchableOpacity
               key={index}
               style={[styles.pollOption, isUserVote && styles.pollOptionVoted]}
-              onPress={() => {
+              onPress={(e) => {
+                e.stopPropagation && e.stopPropagation();
                 console.log('Poll option pressed:', index, 'userVoted:', userVoted);
                 if (!userVoted) {
                   handleVote(post.post_id, index);
@@ -431,6 +436,10 @@ export default function FamilyWallScreen({ navigation }) {
 
   const renderPost = ({ item }) => {
     const authorRank = getUserRank(item.author_id);
+    // Check if user liked - handle both array and object formats
+    const isLiked = Array.isArray(item.liked_by) 
+      ? item.liked_by.includes(user?.user_id)
+      : item.likes && item.likes[user?.user_id];
     
     return (
       <View style={styles.postCard}>
@@ -444,7 +453,7 @@ export default function FamilyWallScreen({ navigation }) {
           />
           <View style={styles.postMeta}>
             <Text style={styles.authorName}>{item.author_name}</Text>
-            <Text style={styles.postTime}>{formatDate(item.created_at)}</Text>
+            <Text style={styles.postTime}>{formatDate(item.created_at || item.timestamp)}</Text>
           </View>
           {item.type === 'poll' && (
             <View style={styles.pollBadge}>
@@ -461,31 +470,34 @@ export default function FamilyWallScreen({ navigation }) {
         )}
 
         {item.image_url && (
-        <Image source={{ uri: item.image_url }} style={styles.postImage} resizeMode="cover" />
-      )}
+          <Image source={{ uri: item.image_url }} style={styles.postImage} resizeMode="cover" />
+        )}
 
-      {item.type === 'poll' && item.poll_options && renderPollOptions(item)}
+        {item.type === 'poll' && item.poll_options && renderPollOptions(item)}
 
-      <View style={styles.postActions}>
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={() => handleLike(item.post_id)}
-        >
-          <Ionicons 
-            name={item.liked_by?.includes(user?.user_id) ? 'heart' : 'heart-outline'} 
-            size={20} 
-            color={item.liked_by?.includes(user?.user_id) ? '#ef4444' : '#9ca3af'} 
-          />
-          <Text style={styles.actionText}>{item.likes_count || 0}</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="chatbubble-outline" size={20} color="#9ca3af" />
-          <Text style={styles.actionText}>{item.comments_count || 0}</Text>
-        </TouchableOpacity>
+        <View style={styles.postActions}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={(e) => {
+              e.stopPropagation && e.stopPropagation();
+              handleLike(item.post_id);
+            }}
+          >
+            <Ionicons 
+              name={isLiked ? 'heart' : 'heart-outline'} 
+              size={20} 
+              color={isLiked ? '#ef4444' : '#9ca3af'} 
+            />
+            <Text style={styles.actionText}>{item.likes_count || (item.likes ? Object.keys(item.likes).length : 0)}</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.actionButton}>
+            <Ionicons name="chatbubble-outline" size={20} color="#9ca3af" />
+            <Text style={styles.actionText}>{item.comments_count || (item.comments ? Object.keys(item.comments).length : 0)}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  );
+    );
   };
 
   if (loading) {
