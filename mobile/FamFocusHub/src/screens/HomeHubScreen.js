@@ -147,8 +147,11 @@ export default function HomeHubScreen({ navigation }) {
   const [showDayModal, setShowDayModal] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
   const [dayEvents, setDayEvents] = useState([]);
-  const [weather, setWeather] = useState({ condition: 'sunny', temp: 72, location: '' });
+  const [weather, setWeather] = useState({ condition: 'sunny', temp: 72, location: 'Loading...' });
   const [lastWeatherUpdate, setLastWeatherUpdate] = useState(null);
+  
+  // Quick Panel toggle (saved per user)
+  const [showQuickPanel, setShowQuickPanel] = useState(true);
   
   // Screensaver state
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -157,6 +160,7 @@ export default function HomeHubScreen({ navigation }) {
   // Modals
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [showAddItem, setShowAddItem] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [newEventTitle, setNewEventTitle] = useState('');
   const [newItem, setNewItem] = useState('');
 
