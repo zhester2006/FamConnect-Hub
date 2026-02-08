@@ -5,11 +5,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Modal, TextInput,
   ScrollView, ActivityIndicator, Animated, KeyboardAvoidingView,
-  Platform, Dimensions, Image, PanResponder
+  Platform, Dimensions, Image, PanResponder, Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import apiService from '../services/api.service';
 import { useAuth } from '../context/AuthContext';
 
