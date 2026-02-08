@@ -67,12 +67,31 @@ export default function ChoresScreen({ navigation }) {
 
   const fetchData = useCallback(async () => {
     try {
-      const [choresData, membersData, leaderboardData] = await Promise.all([
+      const [choresData, membersData, leaderboardData, typesData] = await Promise.all([
         apiService.getChores(),
         apiService.getFamilyMembers(),
         apiService.getLeaderboard().catch(() => ({ leaderboard: [] })),
+        apiService.get('/chores/types').catch(() => ({ chore_types: [] })),
       ]);
       setChores(choresData.chores || []);
+      
+      // Process chore types - merge with defaults
+      const customTypes = typesData.chore_types || [];
+      if (customTypes.length > 0) {
+        // Convert backend types to display format
+        const colors = ['#8b5cf6', '#3b82f6', '#14b8a6', '#f59e0b', '#ec4899', '#6366f1', '#10b981', '#f97316'];
+        const displayTypes = customTypes.map((t, idx) => ({
+          type_id: t.type_id,
+          name: t.name,
+          icon: t.icon || '✨',
+          points: t.points || 10,
+          color: colors[idx % colors.length],
+          frequency: t.frequency,
+        }));
+        setChoreTypes(displayTypes);
+      } else {
+        setChoreTypes(DEFAULT_CHORE_TYPES);
+      }
       
       const members = membersData.members || [];
       const leaderboard = leaderboardData.leaderboard || [];
