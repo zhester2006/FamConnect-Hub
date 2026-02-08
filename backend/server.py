@@ -1233,23 +1233,74 @@ async def get_chore_types(request: Request):
         return {"chore_types": default_types}
     return {"chore_types": chore_types}
 
-# Add new chore type
+# Add new chore type with AI-generated icon
 @api_router.post("/chores/types")
 async def add_chore_type(request: Request, data: dict):
     current_user = await get_current_user(request)
     if current_user['role'] != 'parent':
         raise HTTPException(status_code=403, detail="Only parents can add chore types")
     
+    chore_name = data['name']
+    
+    # Generate icon using AI if not provided
+    icon = data.get('icon')
+    if not icon:
+        try:
+            chat = LlmChat(
+                api_key=os.environ['EMERGENT_LLM_KEY'],
+                session_id=f"chore_icon_{uuid.uuid4().hex[:8]}",
+                system_message="You are a helpful assistant that suggests emojis for household chores. Reply with only a single emoji, nothing else."
+            ).with_model("openai", "gpt-5.2")
+            
+            icon_response = await chat.send_message(UserMessage(text=f"What single emoji best represents this chore: {chore_name}"))
+            icon = str(icon_response).strip()[:4]  # Get just the emoji (emojis can be 1-4 chars)
+            
+            # Fallback if response is too long or not an emoji
+            if len(icon) > 4 or icon.isalpha():
+                icon = "✨"
+        except Exception as e:
+            logger.error(f"Failed to generate chore icon: {e}")
+            icon = "✨"  # Default fallback icon
+    
     type_id = f"type_{uuid.uuid4().hex[:12]}"
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
     type_doc = {
         "type_id": type_id,
-        "name": data['name'],
+        "family_id": family_id,
+        "name": chore_name,
+        "icon": icon,
         "points": data.get('points', 10),
+        "frequency": data.get('frequency', 'daily'),
         "description": data.get('description', ''),
         "created_by": current_user['user_id'],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.chore_types.insert_one(type_doc)
+    return await db.chore_types.find_one({"type_id": type_id}, {"_id": 0})
+
+# Update chore type
+@api_router.put("/chores/types/{type_id}")
+async def update_chore_type(type_id: str, request: Request, data: dict):
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can update chore types")
+    
+    update_data = {}
+    if 'name' in data:
+        update_data['name'] = data['name']
+    if 'icon' in data:
+        update_data['icon'] = data['icon']
+    if 'points' in data:
+        update_data['points'] = data['points']
+    if 'frequency' in data:
+        update_data['frequency'] = data['frequency']
+    if 'description' in data:
+        update_data['description'] = data['description']
+    
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.chore_types.update_one({"type_id": type_id}, {"$set": update_data})
     return await db.chore_types.find_one({"type_id": type_id}, {"_id": 0})
 
 # Delete chore type
