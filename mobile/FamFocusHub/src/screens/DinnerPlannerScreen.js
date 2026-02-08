@@ -679,6 +679,22 @@ const styles = StyleSheet.create({
   quickMealCard: { width: '23%', backgroundColor: 'rgba(15, 13, 26, 0.8)', borderRadius: 14, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.2)' },
   quickMealIcon: { fontSize: 28, marginBottom: 6 },
   quickMealName: { color: '#fff', fontSize: 10, fontWeight: '500', textAlign: 'center' },
+  addMealButton: { padding: 4 },
+  
+  // Meal Editor Modal
+  mealEditorOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
+  mealEditorContent: { backgroundColor: '#0f0d1a', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
+  mealEditorHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  mealEditorTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  mealEditorForm: { gap: 12 },
+  mealEditorLabel: { color: '#a5b4fc', fontSize: 12, fontWeight: '600', marginTop: 8 },
+  mealEditorInput: { backgroundColor: 'rgba(30, 27, 75, 0.8)', borderRadius: 12, padding: 14, color: '#fff', fontSize: 15, borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.2)' },
+  iconPicker: { flexDirection: 'row', marginVertical: 8 },
+  iconOption: { width: 48, height: 48, borderRadius: 12, backgroundColor: 'rgba(30, 27, 75, 0.8)', justifyContent: 'center', alignItems: 'center', marginRight: 8, borderWidth: 2, borderColor: 'transparent' },
+  iconOptionSelected: { borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.2)' },
+  iconOptionText: { fontSize: 24 },
+  saveMealButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#10b981', paddingVertical: 14, borderRadius: 14, marginTop: 16 },
+  saveMealButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   
   // AI Meal Modal
   mealModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
