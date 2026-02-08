@@ -4,6 +4,7 @@ import {
   RefreshControl, ActivityIndicator, TextInput, Alert, Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import apiService from '../services/api.service';
