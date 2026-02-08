@@ -27,45 +27,64 @@ class FirebaseAuthService {
     this.currentUser = null;
     this.unsubscribe = null;
     this.isInitialized = false;
+    this.initializationAttempted = false;
     this.authStateListeners = [];
   }
 
   // Initialize Firebase Auth
   async initialize() {
     try {
+      // Already initialized successfully
       if (this.isInitialized && this.auth) {
         return true;
       }
 
-      // Use centralized Firebase initialization with async auth init
+      // Don't retry if we already attempted and failed
+      if (this.initializationAttempted && !this.auth) {
+        console.log('Firebase Auth init already attempted and failed');
+        return false;
+      }
+
+      this.initializationAttempted = true;
+
+      // Use centralized Firebase initialization
       this.app = getFirebaseApp();
+      
+      if (!this.app) {
+        console.error('Firebase App not available');
+        return false;
+      }
+
+      // Initialize Auth
       this.auth = await initializeFirebaseAuth();
       
       if (!this.auth) {
-        console.error('Firebase Auth not available');
-        this.isInitialized = true;
+        console.error('Firebase Auth initialization returned null');
         return false;
       }
       
       this.isInitialized = true;
 
       // Listen for auth state changes
-      this.unsubscribe = onAuthStateChanged(this.auth, (user) => {
-        this.currentUser = user;
-        this.notifyListeners(user);
-        
-        if (user) {
-          this.persistSession(user);
-        } else {
-          this.clearPersistedSession();
-        }
-      });
+      try {
+        this.unsubscribe = onAuthStateChanged(this.auth, (user) => {
+          this.currentUser = user;
+          this.notifyListeners(user);
+          
+          if (user) {
+            this.persistSession(user);
+          } else {
+            this.clearPersistedSession();
+          }
+        });
+      } catch (listenerError) {
+        console.warn('Could not set up auth state listener:', listenerError.message);
+      }
 
-      console.log('Firebase Auth service initialized');
+      console.log('Firebase Auth service initialized successfully');
       return true;
     } catch (error) {
       console.error('Firebase Auth initialization error:', error);
-      this.isInitialized = true;
       return false;
     }
   }
