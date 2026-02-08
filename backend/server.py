@@ -718,8 +718,8 @@ async def update_member_role(member_id: str, request: Request, data: dict):
         raise HTTPException(status_code=403, detail="Only parents can change member roles")
     
     new_role = data.get('role')
-    if new_role not in ['parent', 'member', 'child']:
-        raise HTTPException(status_code=400, detail="Invalid role. Must be parent, member, or child")
+    if new_role not in ['parent', 'member', 'child', 'homehub']:
+        raise HTTPException(status_code=400, detail="Invalid role. Must be parent, member, child, or homehub")
     
     # Get the member
     member = await db.users.find_one({"user_id": member_id}, {"_id": 0})
