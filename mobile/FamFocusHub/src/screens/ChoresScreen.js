@@ -817,10 +817,10 @@ export default function ChoresScreen({ navigation }) {
             <Text style={styles.quickAssignHint}>Tap a chore type, then select a child to assign</Text>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              {CHORE_TYPES.map((type) => (
-                <View key={type.name} style={styles.quickAssignRow}>
+              {choreTypes.map((type) => (
+                <View key={type.type_id || type.name} style={styles.quickAssignRow}>
                   <View style={[styles.quickAssignType, { backgroundColor: `${type.color}20` }]}>
-                    <Ionicons name={type.icon} size={20} color={type.color} />
+                    <Text style={{ fontSize: 18 }}>{type.icon}</Text>
                     <Text style={styles.quickAssignName}>{type.name}</Text>
                     <Text style={styles.quickAssignPoints}>{type.points}pts</Text>
                   </View>
