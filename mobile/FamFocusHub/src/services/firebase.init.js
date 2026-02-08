@@ -119,23 +119,6 @@ export async function initializeFirebaseAuth() {
     return null;
   }
 }
-  } catch (error) {
-    console.error('Firebase Auth initialization error:', error);
-    authInitializing = false;
-    
-    // Final fallback - try to get auth without persistence
-    try {
-      const { getAuth } = await import('firebase/auth');
-      auth = getAuth(app);
-      console.log('Using Firebase Auth without custom persistence (fallback)');
-      authInitialized = !!auth;
-      return auth;
-    } catch (fallbackError) {
-      console.error('Auth final fallback failed:', fallbackError);
-      return null;
-    }
-  }
-}
 
 export function getFirebaseApp() {
   if (!isInitialized) {
