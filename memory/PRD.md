@@ -2054,3 +2054,72 @@ cd android
 gradlew assembleRelease -x lint -x lintVitalAnalyzeRelease
 # APK location: android/app/build/outputs/apk/release/app-release.apk
 ```
+
+### Session 44 - Major Bug Fixes & Home Hub Role (Feb 2026) ✅
+
+**Bug Fixes:**
+
+1. **Check-in Log Child Selector (CheckinLogScreen.js):**
+   - Changed from chip-style to icon-only profile pictures
+   - Added `childIconOnly` and `childIconSelected` styles
+   - Much more compact and visually clean
+
+2. **Pixie AI Assistant Crash Fix (PixieAssistant.js):**
+   - Fixed crash when dragging the floating button
+   - Replaced direct access to `._value` with `positionRef` tracking
+   - Position state now properly managed via ref
+
+3. **Firebase Auth Improvements (LoginScreen.js):**
+   - Added explicit `firebaseAuthService.initialize()` call before auth
+   - Better error handling when Firebase is unavailable
+   - Fallback to Firebase-only auth if backend is unreachable
+   - More informative error messages for users
+
+4. **Weather Location Fix (HomeHubScreen.js):**
+   - Now requests location permission if not granted
+   - Uses current device location for accurate weather
+   - Shows "Loading..." then "Unavailable" if location fails
+   - Timeout added for location requests
+
+5. **Quick Panel Toggle (HomeHubScreen.js):**
+   - Parents can now toggle Quick Actions Widget on/off
+   - Added settings button in header (gear icon)
+   - Settings modal with toggle switch
+   - State persists during session
+
+**New Features:**
+
+1. **Home Hub Role:**
+   - New role type: `homehub` - designed for family display devices
+   - Like child role but WITHOUT points/rewards
+   - Backend updated to support the new role
+   - Dedicated tab navigation: Home, Calendar, Chores, Shopping, Family Wall
+   - Cyan color theme (#06b6d4)
+   - Can be assigned via Family Management screen
+
+2. **Role System Updates (FamilyManagementScreen.js):**
+   - Added "Home Hub" role option with TV icon
+   - Role descriptions added for clarity
+   - Legend updated with all 4 roles
+
+3. **Navigation Updates (AppNavigator.js):**
+   - Added `HomeHubTabs` component
+   - Role-based navigation now handles 3 roles: parent, homehub, child/member
+
+**Files Modified:**
+- `/app/backend/server.py` - Added homehub role support
+- `/app/mobile/FamFocusHub/src/screens/CheckinLogScreen.js`
+- `/app/mobile/FamFocusHub/src/components/PixieAssistant.js`
+- `/app/mobile/FamFocusHub/src/screens/LoginScreen.js`
+- `/app/mobile/FamFocusHub/src/screens/HomeHubScreen.js`
+- `/app/mobile/FamFocusHub/src/screens/FamilyManagementScreen.js`
+- `/app/mobile/FamFocusHub/src/navigation/AppNavigator.js`
+
+**Build Commands:**
+```bash
+git pull origin main
+cd mobile\FamFocusHub
+npm install
+cd android
+gradlew assembleRelease -x lint -x lintVitalAnalyzeRelease
+```
