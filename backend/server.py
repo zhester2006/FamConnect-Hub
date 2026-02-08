@@ -2502,12 +2502,16 @@ async def complete_task(task_id: str, request: Request):
         raise HTTPException(status_code=404, detail="Task not found")
     
     if current_user['role'] == 'child':
+        # Get child's name/nickname for display
+        child_name = current_user.get('nickname') or current_user.get('name', 'Child')
+        
         # Submit for approval
         await db.tasks.update_one(
             {"task_id": task_id},
             {"$set": {
                 "status": "pending_approval",
                 "completed_by": current_user['user_id'],
+                "completed_by_name": child_name,
                 "completed_at": datetime.now(timezone.utc).isoformat()
             }}
         )
@@ -2516,6 +2520,107 @@ async def complete_task(task_id: str, request: Request):
         await db.tasks.update_one(
             {"task_id": task_id},
             {"$set": {"status": "completed", "completed_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    
+    return {"success": True}
+
+# Claim a task (child only) - reserves the task for this child
+@api_router.post("/tasks/{task_id}/claim")
+async def claim_task(task_id: str, request: Request):
+    current_user = await get_current_user(request)
+    
+    if current_user['role'] != 'child':
+        raise HTTPException(status_code=403, detail="Only children can claim tasks")
+    
+    task = await db.tasks.find_one({"task_id": task_id}, {"_id": 0})
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # Check if already claimed by someone else
+    if task.get('claimed_by') and task['claimed_by'] != current_user['user_id']:
+        raise HTTPException(status_code=400, detail="Task already claimed by another family member")
+    
+    child_name = current_user.get('nickname') or current_user.get('name', 'Child')
+    
+    await db.tasks.update_one(
+        {"task_id": task_id},
+        {"$set": {
+            "claimed_by": current_user['user_id'],
+            "claimed_by_name": child_name,
+            "claimed_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"success": True, "message": f"Task claimed by {child_name}"}
+
+# Unclaim a task (child only)
+@api_router.post("/tasks/{task_id}/unclaim")
+async def unclaim_task(task_id: str, request: Request):
+    current_user = await get_current_user(request)
+    
+    task = await db.tasks.find_one({"task_id": task_id}, {"_id": 0})
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # Only allow unclaim if this child claimed it
+    if task.get('claimed_by') != current_user['user_id']:
+        raise HTTPException(status_code=403, detail="You can only unclaim tasks you claimed")
+    
+    await db.tasks.update_one(
+        {"task_id": task_id},
+        {"$unset": {"claimed_by": "", "claimed_by_name": "", "claimed_at": ""}}
+    )
+    
+    return {"success": True}
+
+# Approve task completion (parent only)
+@api_router.put("/tasks/{task_id}/approve")
+async def approve_task(task_id: str, request: Request, data: dict):
+    current_user = await get_current_user(request)
+    
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can approve tasks")
+    
+    task = await db.tasks.find_one({"task_id": task_id}, {"_id": 0})
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    approved = data.get('approved', True)
+    
+    if approved:
+        # Mark as approved and award points
+        await db.tasks.update_one(
+            {"task_id": task_id},
+            {"$set": {
+                "status": "approved",
+                "approved_at": datetime.now(timezone.utc).isoformat(),
+                "approved_by": current_user['user_id']
+            }}
+        )
+        
+        # Award points to the child who completed it
+        if task.get('completed_by'):
+            points = task.get('points', 0)
+            if points > 0:
+                await db.users.update_one(
+                    {"user_id": task['completed_by']},
+                    {"$inc": {"points": points}}
+                )
+    else:
+        # Deny - reset task to available
+        await db.tasks.update_one(
+            {"task_id": task_id},
+            {"$set": {
+                "status": "available"
+            },
+            "$unset": {
+                "completed_by": "",
+                "completed_by_name": "",
+                "completed_at": "",
+                "claimed_by": "",
+                "claimed_by_name": "",
+                "claimed_at": ""
+            }}
         )
     
     return {"success": True}
