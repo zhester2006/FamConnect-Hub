@@ -678,41 +678,6 @@ export default function LoginScreen({ navigation }) {
               <TouchableOpacity onPress={() => switchMode('signup')} style={styles.createAccountLink}>
                 <Text style={styles.createAccountText}>New here? <Text style={styles.createAccountBold}>Create Account</Text></Text>
               </TouchableOpacity>
-
-              {/* Dev Login Buttons */}
-              <View style={styles.devSection}>
-                <Text style={styles.devLabel}>Development Mode</Text>
-                <View style={styles.devButtons}>
-                  <TouchableOpacity
-                    style={styles.devButton}
-                    onPress={() => handleDevLogin('parent')}
-                    disabled={devLoading !== null}
-                  >
-                    {devLoading === 'parent' ? (
-                      <ActivityIndicator color="#fff" size="small" />
-                    ) : (
-                      <>
-                        <Ionicons name="person" size={16} color="#a78bfa" />
-                        <Text style={styles.devButtonText}>Parent</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.devButton}
-                    onPress={() => handleDevLogin('child')}
-                    disabled={devLoading !== null}
-                  >
-                    {devLoading === 'child' ? (
-                      <ActivityIndicator color="#fff" size="small" />
-                    ) : (
-                      <>
-                        <Ionicons name="happy" size={16} color="#34d399" />
-                        <Text style={styles.devButtonText}>Child</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </View>
             </>
           ) : (
             renderAuthForm()
