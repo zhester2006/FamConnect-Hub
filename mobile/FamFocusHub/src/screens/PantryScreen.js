@@ -258,6 +258,114 @@ export default function PantryScreen({ navigation }) {
     }
   };
 
+  // Receipt Scanner Functions
+  const pickReceiptImage = async (useCamera = false) => {
+    try {
+      let result;
+      if (useCamera) {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission needed', 'Please allow camera access to scan receipts');
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          quality: 0.8,
+          base64: true,
+        });
+      } else {
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          quality: 0.8,
+          base64: true,
+        });
+      }
+
+      if (!result.canceled && result.assets?.[0]) {
+        setReceiptImage(result.assets[0]);
+        setShowReceiptScanner(false);
+        scanReceiptImage(result.assets[0].base64);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  const scanReceiptImage = async (base64) => {
+    setScanningReceipt(true);
+    setShowScannedItems(true);
+    setScannedItems([]);
+    
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      
+      const response = await apiService.post('/pantry/scan-receipt', {
+        image_base64: base64
+      });
+      
+      if (response.success && response.items?.length > 0) {
+        setScannedItems(response.items);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Alert.alert('No Items Found', response.error || 'Could not identify food items in this receipt. Try a clearer image.');
+        setShowScannedItems(false);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to scan receipt. Please try again.');
+      setShowScannedItems(false);
+    } finally {
+      setScanningReceipt(false);
+    }
+  };
+
+  const updateScannedItem = (tempId, field, value) => {
+    setScannedItems(items =>
+      items.map(item =>
+        item.temp_id === tempId ? { ...item, [field]: value } : item
+      )
+    );
+  };
+
+  const removeScannedItem = (tempId) => {
+    setScannedItems(items => items.filter(item => item.temp_id !== tempId));
+  };
+
+  const handleConfirmScannedItems = async () => {
+    if (scannedItems.length === 0) {
+      Alert.alert('No Items', 'Please add at least one item');
+      return;
+    }
+
+    setSubmittingScanned(true);
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      
+      const response = await apiService.post('/pantry/add-scanned-items', {
+        items: scannedItems
+      });
+      
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      let message = `${response.added_count} items added to pantry!`;
+      if (response.removed_from_shopping?.length > 0) {
+        message += `\n\nRemoved from shopping list:\n${response.removed_from_shopping.map(n => `• ${n}`).join('\n')}`;
+      }
+      
+      Alert.alert('Success! 🎉', message);
+      
+      setShowScannedItems(false);
+      setScannedItems([]);
+      setReceiptImage(null);
+      fetchPantryItems();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add items. Please try again.');
+    } finally {
+      setSubmittingScanned(false);
+    }
+  };
+
   const handleGenerateShoppingFromPantry = async () => {
     setAiLoading(true);
     try {
