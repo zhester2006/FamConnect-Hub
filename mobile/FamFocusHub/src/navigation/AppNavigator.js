@@ -143,7 +143,7 @@ function HomeHubTabs() {
       <Tab.Screen name="Hub" component={HomeHubScreen} options={{ title: 'Home' }} />
       <Tab.Screen name="Calendar" component={CalendarScreen} />
       <Tab.Screen name="Chores" component={ChoresScreen} />
-      <Tab.Screen name="Shopping" component={ShoppingScreen} />
+      <Tab.Screen name="Shopping" component={ShoppingListScreen} />
       <Tab.Screen name="Wall" component={FamilyWallScreen} options={{ title: 'Family Wall' }} />
     </Tab.Navigator>
   );
