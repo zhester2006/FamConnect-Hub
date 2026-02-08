@@ -1,96 +1,41 @@
 // Firebase Auth Service for FamFocus Hub
-// Handles Firebase Authentication with email/password and Google Sign-In
+// Using React Native Firebase (Native implementation)
 
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  GoogleAuthProvider,
-  signInWithCredential,
-  sendPasswordResetEmail,
-  updateProfile,
-  EmailAuthProvider,
-  reauthenticateWithCredential,
-  updatePassword
-} from 'firebase/auth';
+import auth from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
-import { getFirebaseApp, initializeFirebaseAuth } from './firebase.init';
 
 WebBrowser.maybeCompleteAuthSession();
 
 class FirebaseAuthService {
   constructor() {
-    this.app = null;
-    this.auth = null;
     this.currentUser = null;
     this.unsubscribe = null;
     this.isInitialized = false;
-    this.initializationAttempted = false;
     this.authStateListeners = [];
-    this.initRetryCount = 0;
   }
 
   // Initialize Firebase Auth
   async initialize() {
     try {
-      // Already initialized successfully
-      if (this.isInitialized && this.auth) {
-        console.log('[AuthService] Already initialized');
+      if (this.isInitialized) {
         return true;
       }
 
-      // Allow up to 3 retry attempts
-      if (this.initializationAttempted && !this.auth && this.initRetryCount >= 3) {
-        console.log('[AuthService] Max retries reached');
-        return false;
-      }
+      // Set up auth state listener
+      this.unsubscribe = auth().onAuthStateChanged((user) => {
+        this.currentUser = user;
+        this.notifyListeners(user);
+        
+        if (user) {
+          this.persistSession(user);
+        } else {
+          this.clearPersistedSession();
+        }
+      });
 
-      this.initializationAttempted = true;
-      this.initRetryCount++;
-      console.log(`[AuthService] Initialization attempt ${this.initRetryCount}`);
-
-      // Use centralized Firebase initialization
-      this.app = getFirebaseApp();
-      
-      if (!this.app) {
-        console.error('[AuthService] Firebase App not available');
-        return false;
-      }
-      console.log('[AuthService] Firebase App available');
-
-      // Initialize Auth - this is async and may take a moment
-      this.auth = await initializeFirebaseAuth();
-      
-      if (!this.auth) {
-        console.error('[AuthService] Firebase Auth initialization returned null');
-        // Reset for potential retry
-        this.initializationAttempted = false;
-        return false;
-      }
-      
-      console.log('[AuthService] Firebase Auth object obtained');
       this.isInitialized = true;
-
-      // Listen for auth state changes
-      try {
-        this.unsubscribe = onAuthStateChanged(this.auth, (user) => {
-          this.currentUser = user;
-          this.notifyListeners(user);
-          
-          if (user) {
-            this.persistSession(user);
-          } else {
-            this.clearPersistedSession();
-          }
-        });
-        console.log('[AuthService] Auth state listener set up');
-      } catch (listenerError) {
-        console.warn('[AuthService] Could not set up auth state listener:', listenerError.message);
-      }
-
-      console.log('[AuthService] Initialization complete');
+      console.log('[AuthService] Firebase Auth initialized successfully');
       return true;
     } catch (error) {
       console.error('[AuthService] Initialization error:', error.message);
@@ -118,18 +63,14 @@ class FirebaseAuthService {
 
   // Sign in with email and password
   async signInWithEmail(email, password) {
-    if (!this.auth) {
-      await this.initialize();
-    }
-
     try {
-      const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
+      const userCredential = await auth().signInWithEmailAndPassword(email, password);
       return {
         success: true,
         user: this.formatUser(userCredential.user),
       };
     } catch (error) {
-      console.error('Email sign in error:', error);
+      console.error('[AuthService] Email sign in error:', error);
       return {
         success: false,
         error: this.getErrorMessage(error.code),
@@ -139,15 +80,11 @@ class FirebaseAuthService {
 
   // Create account with email and password
   async signUpWithEmail(email, password, displayName) {
-    if (!this.auth) {
-      await this.initialize();
-    }
-
     try {
-      const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
+      const userCredential = await auth().createUserWithEmailAndPassword(email, password);
       
       if (displayName) {
-        await updateProfile(userCredential.user, { displayName });
+        await userCredential.user.updateProfile({ displayName });
       }
 
       return {
@@ -155,7 +92,7 @@ class FirebaseAuthService {
         user: this.formatUser(userCredential.user),
       };
     } catch (error) {
-      console.error('Email sign up error:', error);
+      console.error('[AuthService] Email sign up error:', error);
       return {
         success: false,
         error: this.getErrorMessage(error.code),
@@ -163,22 +100,19 @@ class FirebaseAuthService {
     }
   }
 
-  // Sign in with Google
+  // Sign in with Google (using credential)
   async signInWithGoogle(idToken) {
-    if (!this.auth) {
-      await this.initialize();
-    }
-
     try {
+      const { GoogleAuthProvider } = require('@react-native-firebase/auth');
       const credential = GoogleAuthProvider.credential(idToken);
-      const userCredential = await signInWithCredential(this.auth, credential);
+      const userCredential = await auth().signInWithCredential(credential);
       
       return {
         success: true,
         user: this.formatUser(userCredential.user),
       };
     } catch (error) {
-      console.error('Google sign in error:', error);
+      console.error('[AuthService] Google sign in error:', error);
       return {
         success: false,
         error: this.getErrorMessage(error.code),
@@ -189,28 +123,22 @@ class FirebaseAuthService {
   // Sign out
   async signOut() {
     try {
-      if (this.auth) {
-        await firebaseSignOut(this.auth);
-      }
+      await auth().signOut();
       await this.clearPersistedSession();
       return { success: true };
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error('[AuthService] Sign out error:', error);
       return { success: false, error: error.message };
     }
   }
 
   // Send password reset email
   async sendPasswordReset(email) {
-    if (!this.auth) {
-      await this.initialize();
-    }
-
     try {
-      await sendPasswordResetEmail(this.auth, email);
+      await auth().sendPasswordResetEmail(email);
       return { success: true };
     } catch (error) {
-      console.error('Password reset error:', error);
+      console.error('[AuthService] Password reset error:', error);
       return {
         success: false,
         error: this.getErrorMessage(error.code),
@@ -220,21 +148,20 @@ class FirebaseAuthService {
 
   // Change password
   async changePassword(currentPassword, newPassword) {
-    if (!this.auth || !this.auth.currentUser) {
+    const user = auth().currentUser;
+    if (!user) {
       return { success: false, error: 'Not authenticated' };
     }
 
     try {
-      const credential = EmailAuthProvider.credential(
-        this.auth.currentUser.email,
-        currentPassword
-      );
-      await reauthenticateWithCredential(this.auth.currentUser, credential);
-      await updatePassword(this.auth.currentUser, newPassword);
+      const { EmailAuthProvider } = require('@react-native-firebase/auth');
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await user.reauthenticateWithCredential(credential);
+      await user.updatePassword(newPassword);
       
       return { success: true };
     } catch (error) {
-      console.error('Change password error:', error);
+      console.error('[AuthService] Change password error:', error);
       return {
         success: false,
         error: this.getErrorMessage(error.code),
@@ -244,15 +171,16 @@ class FirebaseAuthService {
 
   // Update user profile
   async updateUserProfile(updates) {
-    if (!this.auth || !this.auth.currentUser) {
+    const user = auth().currentUser;
+    if (!user) {
       return { success: false, error: 'Not authenticated' };
     }
 
     try {
-      await updateProfile(this.auth.currentUser, updates);
+      await user.updateProfile(updates);
       return { success: true };
     } catch (error) {
-      console.error('Update profile error:', error);
+      console.error('[AuthService] Update profile error:', error);
       return {
         success: false,
         error: error.message,
@@ -262,24 +190,26 @@ class FirebaseAuthService {
 
   // Get current user
   getCurrentUser() {
-    return this.currentUser ? this.formatUser(this.currentUser) : null;
+    const user = auth().currentUser;
+    return user ? this.formatUser(user) : null;
   }
 
   // Check if user is authenticated
   isAuthenticated() {
-    return !!this.currentUser;
+    return !!auth().currentUser;
   }
 
   // Get ID token for backend authentication
   async getIdToken() {
-    if (!this.currentUser) {
+    const user = auth().currentUser;
+    if (!user) {
       return null;
     }
 
     try {
-      return await this.currentUser.getIdToken();
+      return await user.getIdToken();
     } catch (error) {
-      console.error('Get ID token error:', error);
+      console.error('[AuthService] Get ID token error:', error);
       return null;
     }
   }
@@ -310,7 +240,7 @@ class FirebaseAuthService {
       };
       await AsyncStorage.setItem('@firebase_session', JSON.stringify(sessionData));
     } catch (error) {
-      console.error('Persist session error:', error);
+      console.error('[AuthService] Persist session error:', error);
     }
   }
 
@@ -319,7 +249,7 @@ class FirebaseAuthService {
     try {
       await AsyncStorage.removeItem('@firebase_session');
     } catch (error) {
-      console.error('Clear session error:', error);
+      console.error('[AuthService] Clear session error:', error);
     }
   }
 
@@ -329,7 +259,7 @@ class FirebaseAuthService {
       const session = await AsyncStorage.getItem('@firebase_session');
       return session ? JSON.parse(session) : null;
     } catch (error) {
-      console.error('Get persisted session error:', error);
+      console.error('[AuthService] Get persisted session error:', error);
       return null;
     }
   }
@@ -347,6 +277,7 @@ class FirebaseAuthService {
       'auth/too-many-requests': 'Too many attempts. Please try again later',
       'auth/operation-not-allowed': 'This sign-in method is not enabled',
       'auth/requires-recent-login': 'Please sign in again to perform this action',
+      'auth/invalid-credential': 'Invalid credentials. Please check your email and password.',
     };
 
     return errorMessages[errorCode] || 'An error occurred. Please try again.';
