@@ -498,4 +498,22 @@ const styles = StyleSheet.create({
   // AI Meal Modal
   mealModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
   mealModalContent: { maxHeight: '90%', backgroundColor: '#0f0d1a', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 16 },
+
+  // Pantry Sync Styles
+  pantrySection: { marginTop: 16, marginBottom: 8 },
+  pantryToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(15, 13, 26, 0.8)', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.2)' },
+  pantryToggleLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  pantryToggleTitle: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  pantryToggleSubtext: { color: '#6b7280', fontSize: 11, marginTop: 2 },
+  toggleSwitch: { width: 48, height: 28, borderRadius: 14, backgroundColor: 'rgba(107, 114, 128, 0.3)', justifyContent: 'center', padding: 2 },
+  toggleSwitchActive: { backgroundColor: 'rgba(16, 185, 129, 0.3)' },
+  toggleKnob: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#6b7280' },
+  toggleKnobActive: { backgroundColor: '#10b981', alignSelf: 'flex-end' },
+  pantrySummaryCard: { backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: 12, padding: 12, marginTop: 10, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.2)' },
+  pantrySummaryHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  pantrySummaryTitle: { flex: 1, color: '#10b981', fontSize: 13, fontWeight: '600' },
+  pantrySummaryLink: { color: '#6366f1', fontSize: 12, fontWeight: '600' },
+  pantrySummaryStats: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  pantryStat: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(0,0,0,0.2)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  pantryStatText: { color: '#9ca3af', fontSize: 11 },
 });
