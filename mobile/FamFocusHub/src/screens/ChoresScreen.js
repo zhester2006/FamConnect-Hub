@@ -12,15 +12,15 @@ import MedalEmblem from '../components/MedalEmblem';
 import ProfileAvatar from '../components/ProfileAvatar';
 
 // Default chore types that can be quickly assigned
-const CHORE_TYPES = [
-  { name: 'Make Bed', icon: 'bed', points: 5, color: '#8b5cf6' },
-  { name: 'Clean Room', icon: 'home', points: 15, color: '#3b82f6' },
-  { name: 'Do Dishes', icon: 'restaurant', points: 10, color: '#14b8a6' },
-  { name: 'Take Out Trash', icon: 'trash', points: 10, color: '#f59e0b' },
-  { name: 'Vacuum', icon: 'sparkles', points: 15, color: '#ec4899' },
-  { name: 'Laundry', icon: 'shirt', points: 20, color: '#6366f1' },
-  { name: 'Mow Lawn', icon: 'leaf', points: 25, color: '#10b981' },
-  { name: 'Walk Dog', icon: 'paw', points: 15, color: '#f97316' },
+const DEFAULT_CHORE_TYPES = [
+  { name: 'Make Bed', icon: '🛏️', points: 5, color: '#8b5cf6' },
+  { name: 'Clean Room', icon: '🧹', points: 15, color: '#3b82f6' },
+  { name: 'Do Dishes', icon: '🍽️', points: 10, color: '#14b8a6' },
+  { name: 'Take Out Trash', icon: '🗑️', points: 10, color: '#f59e0b' },
+  { name: 'Vacuum', icon: '✨', points: 15, color: '#ec4899' },
+  { name: 'Laundry', icon: '👕', points: 20, color: '#6366f1' },
+  { name: 'Mow Lawn', icon: '🌱', points: 25, color: '#10b981' },
+  { name: 'Walk Dog', icon: '🐕', points: 15, color: '#f97316' },
 ];
 
 export default function ChoresScreen({ navigation }) {
@@ -29,6 +29,7 @@ export default function ChoresScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [chores, setChores] = useState([]);
+  const [choreTypes, setChoreTypes] = useState(DEFAULT_CHORE_TYPES);
   const [familyMembers, setFamilyMembers] = useState([]);
   const [filter, setFilter] = useState('all'); // all, pending, completed, approved
   const [viewMode, setViewMode] = useState('list'); // list, calendar, byChild
@@ -38,6 +39,7 @@ export default function ChoresScreen({ navigation }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAiScheduler, setShowAiScheduler] = useState(false);
   const [showQuickAssign, setShowQuickAssign] = useState(false);
+  const [showManageTypes, setShowManageTypes] = useState(false);
   const [editingChore, setEditingChore] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   
@@ -50,6 +52,10 @@ export default function ChoresScreen({ navigation }) {
     scheduledDate: new Date().toISOString().split('T')[0],
     isRepeat: false,
   });
+  
+  // New chore type form
+  const [newChoreType, setNewChoreType] = useState({ name: '', points: '10' });
+  const [addingType, setAddingType] = useState(false);
   
   // AI Scheduler state
   const [aiDays, setAiDays] = useState(7);
