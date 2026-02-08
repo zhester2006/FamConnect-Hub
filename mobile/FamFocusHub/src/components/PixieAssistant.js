@@ -466,27 +466,58 @@ export default function PixieAssistant() {
 
             {/* Input Area */}
             <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Ask Pixie anything..."
-                placeholderTextColor="#9ca3af"
-                value={input}
-                onChangeText={setInput}
-                multiline
-                maxLength={500}
-                onFocus={() => setShowQuickPrompts(false)}
-              />
-              <TouchableOpacity
-                style={[styles.sendButton, (!input.trim() || loading) && styles.sendButtonDisabled]}
-                onPress={() => handleSend()}
-                disabled={!input.trim() || loading}
-              >
-                {loading ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Ionicons name="send" size={20} color="#fff" />
-                )}
-              </TouchableOpacity>
+              {/* Selected Image Preview */}
+              {selectedImage && (
+                <View style={styles.selectedImageContainer}>
+                  <Image source={{ uri: selectedImage.uri }} style={styles.selectedImagePreview} />
+                  <TouchableOpacity 
+                    style={styles.removeImageButton}
+                    onPress={() => setSelectedImage(null)}
+                  >
+                    <Ionicons name="close-circle" size={24} color="#ef4444" />
+                  </TouchableOpacity>
+                </View>
+              )}
+              
+              <View style={styles.inputRow}>
+                {/* Camera Button */}
+                <TouchableOpacity
+                  style={styles.mediaButton}
+                  onPress={handleTakePhoto}
+                >
+                  <Ionicons name="camera" size={22} color="#a5b4fc" />
+                </TouchableOpacity>
+                
+                {/* Photo Library Button */}
+                <TouchableOpacity
+                  style={styles.mediaButton}
+                  onPress={handlePickPhoto}
+                >
+                  <Ionicons name="image" size={22} color="#a5b4fc" />
+                </TouchableOpacity>
+                
+                <TextInput
+                  style={styles.input}
+                  placeholder={selectedImage ? "Ask about this image..." : "Ask Pixie anything..."}
+                  placeholderTextColor="#9ca3af"
+                  value={input}
+                  onChangeText={setInput}
+                  multiline
+                  maxLength={500}
+                  onFocus={() => setShowQuickPrompts(false)}
+                />
+                <TouchableOpacity
+                  style={[styles.sendButton, ((!input.trim() && !selectedImage) || loading) && styles.sendButtonDisabled]}
+                  onPress={selectedImage ? handleSendWithImage : () => handleSend()}
+                  disabled={(!input.trim() && !selectedImage) || loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="send" size={20} color="#fff" />
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
           </KeyboardAvoidingView>
         </View>
