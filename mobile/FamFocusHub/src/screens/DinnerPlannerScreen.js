@@ -317,6 +317,59 @@ export default function DinnerPlannerScreen({ navigation, route }) {
               </View>
             </View>
           </View>
+
+          {/* Pantry Sync Section */}
+          <View style={styles.pantrySection}>
+            <TouchableOpacity 
+              style={styles.pantryToggle}
+              onPress={() => setUsePantry(!usePantry)}
+            >
+              <View style={styles.pantryToggleLeft}>
+                <Ionicons name="cube" size={20} color={usePantry ? '#10b981' : '#6b7280'} />
+                <View>
+                  <Text style={styles.pantryToggleTitle}>Use Pantry Items</Text>
+                  <Text style={styles.pantryToggleSubtext}>
+                    {usePantry ? 'AI will prioritize your available ingredients' : 'Tap to enable pantry sync'}
+                  </Text>
+                </View>
+              </View>
+              <View style={[styles.toggleSwitch, usePantry && styles.toggleSwitchActive]}>
+                <View style={[styles.toggleKnob, usePantry && styles.toggleKnobActive]} />
+              </View>
+            </TouchableOpacity>
+
+            {usePantry && pantrySummary && (
+              <View style={styles.pantrySummaryCard}>
+                <View style={styles.pantrySummaryHeader}>
+                  <Ionicons name="checkmark-circle" size={16} color="#10b981" />
+                  <Text style={styles.pantrySummaryTitle}>
+                    {pantrySummary.total_items} items in pantry
+                  </Text>
+                  <TouchableOpacity onPress={() => navigation.navigate('Pantry')}>
+                    <Text style={styles.pantrySummaryLink}>Manage</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.pantrySummaryStats}>
+                  <View style={styles.pantryStat}>
+                    <Ionicons name="fitness" size={14} color="#ef4444" />
+                    <Text style={styles.pantryStatText}>{pantrySummary.summary?.protein || 0} protein</Text>
+                  </View>
+                  <View style={styles.pantryStat}>
+                    <Ionicons name="nutrition" size={14} color="#22c55e" />
+                    <Text style={styles.pantryStatText}>{pantrySummary.summary?.produce || 0} produce</Text>
+                  </View>
+                  <View style={styles.pantryStat}>
+                    <Ionicons name="cube" size={14} color="#f59e0b" />
+                    <Text style={styles.pantryStatText}>{pantrySummary.summary?.grains || 0} grains</Text>
+                  </View>
+                  <View style={styles.pantryStat}>
+                    <Ionicons name="water" size={14} color="#60a5fa" />
+                    <Text style={styles.pantryStatText}>{pantrySummary.summary?.dairy || 0} dairy</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+          </View>
           
           <TouchableOpacity 
             style={[styles.secondaryButton, weeklyLoading && styles.buttonDisabled]}
