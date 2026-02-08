@@ -11,16 +11,18 @@ import AnimatedBackground from '../components/AnimatedBackground';
 import AIMealCard from '../components/AIMealCard';
 import WeeklyMealPlan from '../components/WeeklyMealPlan';
 
-const QUICK_MEALS = [
-  { name: 'Pasta Night', icon: '🍝', pref: 'Italian pasta dishes' },
-  { name: 'Taco Tuesday', icon: '🌮', pref: 'Mexican tacos and sides' },
-  { name: 'Pizza Party', icon: '🍕', pref: 'Homemade pizza' },
-  { name: 'Stir Fry', icon: '🥘', pref: 'Asian stir fry dishes' },
-  { name: 'Burger Night', icon: '🍔', pref: 'Gourmet burgers' },
-  { name: 'Soup & Salad', icon: '🥗', pref: 'Light healthy soups and salads' },
-  { name: 'Breakfast for Dinner', icon: '🥞', pref: 'Breakfast foods for dinner' },
-  { name: 'BBQ Night', icon: '🍖', pref: 'Grilled meats and BBQ' },
+const DEFAULT_QUICK_MEALS = [
+  { id: '1', name: 'Pasta Night', icon: '🍝', pref: 'Italian pasta dishes' },
+  { id: '2', name: 'Taco Tuesday', icon: '🌮', pref: 'Mexican tacos and sides' },
+  { id: '3', name: 'Pizza Party', icon: '🍕', pref: 'Homemade pizza' },
+  { id: '4', name: 'Stir Fry', icon: '🥘', pref: 'Asian stir fry dishes' },
+  { id: '5', name: 'Burger Night', icon: '🍔', pref: 'Gourmet burgers' },
+  { id: '6', name: 'Soup & Salad', icon: '🥗', pref: 'Light healthy soups and salads' },
+  { id: '7', name: 'Breakfast for Dinner', icon: '🥞', pref: 'Breakfast foods for dinner' },
+  { id: '8', name: 'BBQ Night', icon: '🍖', pref: 'Grilled meats and BBQ' },
 ];
+
+const AVAILABLE_ICONS = ['🍝', '🌮', '🍕', '🥘', '🍔', '🥗', '🥞', '🍖', '🍣', '🥪', '🍜', '🥙', '🍲', '🥩', '🍛', '🥧'];
 
 export default function DinnerPlannerScreen({ navigation, route }) {
   const { user } = useAuth();
