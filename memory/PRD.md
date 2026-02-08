@@ -1757,3 +1757,26 @@ Update Firebase Realtime Database rules in Firebase Console to:
 3. **Rewards Redemption:** Child requests → pending → parent approves (already existed)
 4. **Chore Completion:** Child marks done → parent approves (already existed)
 5. **Reading Logs:** Child submits → parent approves (already existed)
+
+### Session 41 Update - Advanced Chore Features (Feb 2026) ✅
+
+**Enhanced AI Chore Scheduler:**
+- New parameters:
+  - `excluded_members` - Array of names/user_ids to exclude from schedule
+  - `excluded_chores` - Array of chore names to exclude
+  - `natural_language` - Free-form requests like "Give Sarah more outdoor chores"
+  - `specific_assignments` - Pre-assign specific chores to specific children
+- Shows child ages for age-appropriate task assignment
+- Uses nicknames when available
+- Includes actual dates in the schedule
+
+**Parent-Manageable Chore Types:**
+- `POST /api/chores/types` - Add new chore type with AI-generated icon
+- `PUT /api/chores/types/{type_id}` - Update existing chore type
+- `DELETE /api/chores/types/{type_id}` - Delete chore type
+- AI automatically suggests appropriate emoji icon for new chores
+
+**API Changes:**
+- Enhanced `/api/chores/ai-schedule` with advanced options
+- New `PUT /api/chores/types/{type_id}` endpoint
+- Chore types now include: type_id, family_id, name, icon, points, frequency, description
