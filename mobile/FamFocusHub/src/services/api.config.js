@@ -95,6 +95,13 @@ export const API_ENDPOINTS = {
   // Achievements
   ACHIEVEMENTS: '/achievements',
   ACHIEVEMENTS_FAMILY: '/achievements/family',
+  ACHIEVEMENTS_USER: (userId) => `/achievements/user/${userId}`,
+  ACHIEVEMENTS_CUSTOM: '/achievements/custom',
+  ACHIEVEMENTS_CUSTOM_BY_ID: (id) => `/achievements/custom/${id}`,
+  ACHIEVEMENTS_CUSTOM_AWARD: (id) => `/achievements/custom/${id}/award`,
+  ACHIEVEMENTS_AI_SUGGESTIONS: '/achievements/ai-suggestions',
+  ACHIEVEMENTS_CHECK: '/achievements/check',
+  ACHIEVEMENTS_SEASONAL: '/achievements/seasonal',
   
   // Dashboard
   DASHBOARD_CONFIG: '/dashboard/config',
