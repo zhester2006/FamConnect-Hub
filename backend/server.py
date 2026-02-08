@@ -4359,52 +4359,69 @@ Include ONLY food and grocery items. Skip totals, taxes, store info, etc.""",
 @api_router.post("/pantry/add-scanned-items")
 async def add_scanned_items(request: Request, data: dict):
     """Add confirmed scanned items to pantry and remove from shopping list"""
-    current_user = await get_current_user(request)
-    family_id = current_user.get('parent_id', current_user['user_id'])
-    
-    items = data.get('items', [])
-    if not items:
-        raise HTTPException(status_code=400, detail="No items to add")
-    
-    added_items = []
-    removed_from_shopping = []
-    
-    for item in items:
-        # Add to pantry
-        item_id = f"pantry_{uuid.uuid4().hex[:12]}"
-        pantry_doc = {
-            "item_id": item_id,
-            "family_id": family_id,
-            "name": item.get('name', '').strip(),
-            "category": item.get('category', 'other'),
-            "quantity": item.get('quantity', 1),
-            "unit": item.get('unit', 'each'),
-            "added_by": current_user['user_id'],
-            "source": "receipt_scan",
-            "created_at": datetime.now(timezone.utc).isoformat()
+    try:
+        current_user = await get_current_user(request)
+        family_id = current_user.get('parent_id', current_user['user_id'])
+        
+        items = data.get('items', [])
+        if not items:
+            raise HTTPException(status_code=400, detail="No items to add")
+        
+        added_items = []
+        removed_from_shopping = []
+        
+        for item in items:
+            # Add to pantry
+            item_id = f"pantry_{uuid.uuid4().hex[:12]}"
+            item_name = str(item.get('name', '')).strip()
+            
+            if not item_name:
+                continue  # Skip items without names
+                
+            pantry_doc = {
+                "item_id": item_id,
+                "family_id": family_id,
+                "name": item_name,
+                "category": item.get('category', 'other'),
+                "quantity": int(item.get('quantity', 1)) if str(item.get('quantity', '1')).isdigit() else 1,
+                "unit": str(item.get('unit', 'each')),
+                "added_by": current_user['user_id'],
+                "source": "receipt_scan",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.pantry.insert_one(pantry_doc)
+            added_items.append(pantry_doc)
+            
+            # Check if item exists in shopping list and remove it
+            try:
+                item_name_lower = item_name.lower()
+                shopping_item = await db.shopping_items.find_one({
+                    "family_id": family_id,
+                    "name": {"$regex": f"^{re.escape(item_name_lower)}$", "$options": "i"},
+                    "status": {"$in": ["approved", "pending"]}
+                })
+                
+                if shopping_item:
+                    await db.shopping_items.delete_one({"item_id": shopping_item['item_id']})
+                    removed_from_shopping.append(shopping_item.get('name'))
+            except Exception as e:
+                logger.warning(f"Failed to check/remove shopping item: {e}")
+        
+        if not added_items:
+            raise HTTPException(status_code=400, detail="No valid items to add")
+        
+        return {
+            "success": True,
+            "added_count": len(added_items),
+            "removed_from_shopping": removed_from_shopping,
+            "message": f"Added {len(added_items)} items to pantry" + 
+                       (f" and removed {len(removed_from_shopping)} from shopping list" if removed_from_shopping else "")
         }
-        await db.pantry.insert_one(pantry_doc)
-        added_items.append(pantry_doc)
-        
-        # Check if item exists in shopping list and remove it
-        item_name_lower = item.get('name', '').lower().strip()
-        shopping_item = await db.shopping_items.find_one({
-            "family_id": family_id,
-            "name": {"$regex": f"^{re.escape(item_name_lower)}$", "$options": "i"},
-            "status": {"$in": ["approved", "pending"]}
-        })
-        
-        if shopping_item:
-            await db.shopping_items.delete_one({"item_id": shopping_item['item_id']})
-            removed_from_shopping.append(shopping_item.get('name'))
-    
-    return {
-        "success": True,
-        "added_count": len(added_items),
-        "removed_from_shopping": removed_from_shopping,
-        "message": f"Added {len(added_items)} items to pantry" + 
-                   (f" and removed {len(removed_from_shopping)} from shopping list" if removed_from_shopping else "")
-    }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to add scanned items: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to add items: {str(e)}")
 
 # ==================== FAMILY RECIPES ====================
 
