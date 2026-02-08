@@ -44,12 +44,114 @@ export default function DinnerPlannerScreen({ navigation, route }) {
   const [pantrySummary, setPantrySummary] = useState(null);
   const [pantryLoading, setPantryLoading] = useState(false);
   
+  // Quick meals management
+  const [quickMeals, setQuickMeals] = useState(DEFAULT_QUICK_MEALS);
+  const [showMealEditor, setShowMealEditor] = useState(false);
+  const [editingMeal, setEditingMeal] = useState(null);
+  const [mealName, setMealName] = useState('');
+  const [mealIcon, setMealIcon] = useState('🍽️');
+  const [mealPref, setMealPref] = useState('');
+  
   // Check for pantry items passed from PantryScreen
   useEffect(() => {
     if (route?.params?.pantryItems) {
       setIngredients(route.params.pantryItems);
     }
   }, [route?.params?.pantryItems]);
+  
+  // Load saved quick meals
+  useEffect(() => {
+    loadQuickMeals();
+  }, []);
+  
+  const loadQuickMeals = async () => {
+    try {
+      const saved = await AsyncStorage.getItem('famfocus_quick_meals');
+      if (saved) {
+        setQuickMeals(JSON.parse(saved));
+      }
+    } catch (error) {
+      console.error('Failed to load quick meals:', error);
+    }
+  };
+  
+  const saveQuickMeals = async (meals) => {
+    try {
+      await AsyncStorage.setItem('famfocus_quick_meals', JSON.stringify(meals));
+      setQuickMeals(meals);
+    } catch (error) {
+      console.error('Failed to save quick meals:', error);
+    }
+  };
+  
+  const handleAddEditMeal = () => {
+    if (!mealName.trim() || !mealPref.trim()) {
+      Alert.alert('Missing Info', 'Please enter a name and description for the meal');
+      return;
+    }
+    
+    let updatedMeals;
+    if (editingMeal) {
+      updatedMeals = quickMeals.map(m => 
+        m.id === editingMeal.id 
+          ? { ...m, name: mealName, icon: mealIcon, pref: mealPref }
+          : m
+      );
+    } else {
+      const newMeal = {
+        id: Date.now().toString(),
+        name: mealName,
+        icon: mealIcon,
+        pref: mealPref,
+      };
+      updatedMeals = [...quickMeals, newMeal];
+    }
+    
+    saveQuickMeals(updatedMeals);
+    resetMealEditor();
+    Alert.alert('Success', editingMeal ? 'Meal updated!' : 'Meal added!');
+  };
+  
+  const handleDeleteMeal = (meal) => {
+    Alert.alert(
+      'Delete Meal',
+      `Remove "${meal.name}" from quick meals?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: () => {
+            const updatedMeals = quickMeals.filter(m => m.id !== meal.id);
+            saveQuickMeals(updatedMeals);
+          }
+        }
+      ]
+    );
+  };
+  
+  const openMealEditor = (meal = null) => {
+    if (meal) {
+      setEditingMeal(meal);
+      setMealName(meal.name);
+      setMealIcon(meal.icon);
+      setMealPref(meal.pref);
+    } else {
+      setEditingMeal(null);
+      setMealName('');
+      setMealIcon('🍽️');
+      setMealPref('');
+    }
+    setShowMealEditor(true);
+  };
+  
+  const resetMealEditor = () => {
+    setShowMealEditor(false);
+    setEditingMeal(null);
+    setMealName('');
+    setMealIcon('🍽️');
+    setMealPref('');
+  };
   
   // Results
   const [suggestion, setSuggestion] = useState('');
