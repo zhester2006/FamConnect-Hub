@@ -455,10 +455,12 @@ export default function RewardsScreen({ navigation }) {
                 </View>
               ) : (
                 tasks.map((task) => {
-                  // Determine if task is completed or pending review
-                  const isCompleted = task.status === 'completed' || task.status === 'approved';
-                  const isPendingReview = task.status === 'completed';
+                  // Determine task state
+                  const isPendingApproval = task.status === 'pending_approval';
                   const isApproved = task.status === 'approved';
+                  const isCompleted = isPendingApproval || isApproved;
+                  const isClaimed = task.claimed_by && !isCompleted;
+                  const isClaimedByMe = task.claimed_by === user?.user_id;
                   const claimedByName = task.completed_by_name || task.claimed_by_name;
                   
                   return (
@@ -466,13 +468,20 @@ export default function RewardsScreen({ navigation }) {
                       <View style={[
                         styles.rewardIcon, 
                         { backgroundColor: isApproved ? 'rgba(16, 185, 129, 0.3)' : 
-                                          isPendingReview ? 'rgba(251, 191, 36, 0.2)' : 
+                                          isPendingApproval ? 'rgba(251, 191, 36, 0.2)' : 
+                                          isClaimed ? 'rgba(99, 102, 241, 0.2)' :
                                           'rgba(16, 185, 129, 0.2)' }
                       ]}>
                         <Ionicons 
-                          name={isApproved ? "checkmark-circle" : isPendingReview ? "hourglass" : "checkbox-outline"} 
+                          name={isApproved ? "checkmark-circle" : 
+                                isPendingApproval ? "hourglass" : 
+                                isClaimed ? "person" :
+                                "checkbox-outline"} 
                           size={28} 
-                          color={isApproved ? "#10b981" : isPendingReview ? "#fbbf24" : "#10b981"} 
+                          color={isApproved ? "#10b981" : 
+                                 isPendingApproval ? "#fbbf24" : 
+                                 isClaimed ? "#6366f1" :
+                                 "#10b981"} 
                         />
                       </View>
                       <View style={styles.rewardInfo}>
@@ -480,8 +489,9 @@ export default function RewardsScreen({ navigation }) {
                         {claimedByName && (
                           <Text style={styles.taskClaimedBy}>
                             {isApproved ? `✓ Completed by ${claimedByName}` : 
-                             isPendingReview ? `⏳ ${claimedByName} - Awaiting approval` : 
-                             `Claimed by ${claimedByName}`}
+                             isPendingApproval ? `⏳ ${claimedByName} - Awaiting approval` : 
+                             isClaimed ? `👤 Claimed by ${claimedByName}` :
+                             ''}
                           </Text>
                         )}
                         {task.deadline && (
@@ -492,15 +502,62 @@ export default function RewardsScreen({ navigation }) {
                           <Text style={styles.rewardPointsText}>+{task.points} pts</Text>
                         </View>
                       </View>
+                      
+                      {/* Child Actions */}
                       {user?.role === 'child' && !isCompleted && (
-                        <TouchableOpacity
-                          style={[styles.redeemButton, { backgroundColor: '#10b981' }]}
-                          onPress={() => handleCompleteTask(task)}
-                        >
-                          <Text style={styles.redeemButtonText}>Done</Text>
-                        </TouchableOpacity>
+                        <View style={styles.taskActions}>
+                          {isClaimedByMe ? (
+                            <>
+                              <TouchableOpacity
+                                style={[styles.redeemButton, { backgroundColor: '#10b981' }]}
+                                onPress={() => handleCompleteTask(task)}
+                              >
+                                <Text style={styles.redeemButtonText}>Done</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={styles.unclaimBtn}
+                                onPress={() => handleUnclaimTask(task)}
+                              >
+                                <Ionicons name="close-circle-outline" size={20} color="#ef4444" />
+                              </TouchableOpacity>
+                            </>
+                          ) : !isClaimed ? (
+                            <TouchableOpacity
+                              style={[styles.redeemButton, { backgroundColor: '#6366f1' }]}
+                              onPress={() => handleClaimTask(task)}
+                            >
+                              <Text style={styles.redeemButtonText}>Claim</Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <View style={styles.claimedBadge}>
+                              <Text style={styles.claimedBadgeText}>Taken</Text>
+                            </View>
+                          )}
+                        </View>
                       )}
-                      {isPendingReview && !isApproved && (
+                      
+                      {/* Parent Actions - Approve pending tasks */}
+                      {user?.role === 'parent' && isPendingApproval && (
+                        <View style={styles.approvalActions}>
+                          <TouchableOpacity
+                            style={styles.approveTaskBtn}
+                            onPress={() => handleApproveTask(task, true)}
+                            disabled={processing}
+                          >
+                            <Ionicons name="checkmark" size={18} color="#fff" />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.denyTaskBtn}
+                            onPress={() => handleApproveTask(task, false)}
+                            disabled={processing}
+                          >
+                            <Ionicons name="close" size={18} color="#fff" />
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                      
+                      {/* Status badges */}
+                      {isPendingApproval && user?.role !== 'parent' && (
                         <View style={styles.pendingBadge}>
                           <Text style={styles.pendingBadgeText}>Pending</Text>
                         </View>
