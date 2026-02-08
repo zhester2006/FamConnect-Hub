@@ -251,6 +251,7 @@ export default function SettingsScreen({ navigation }) {
         ...(user?.role === 'parent' ? [
           { icon: 'people', label: 'Family', screen: 'Family', color: '#06b6d4' },
           { icon: 'settings', label: 'Manage Family', screen: 'FamilyManagement', color: '#a855f7' },
+          { icon: 'trophy', label: 'Goals & Achievements', screen: 'ParentManagement', color: '#f59e0b' },
         ] : []),
       ],
     },
