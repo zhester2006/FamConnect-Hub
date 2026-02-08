@@ -319,6 +319,12 @@ export default function FamilyManagementScreen({ navigation }) {
               <Text style={styles.legendRole}>Child:</Text> Limited access - needs approval for tasks, location sharing
             </Text>
           </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: ROLE_COLORS.homehub }]} />
+            <Text style={styles.legendText}>
+              <Text style={styles.legendRole}>Home Hub:</Text> Family display - calendar, chores, shopping (no points)
+            </Text>
+          </View>
         </View>
       </ScrollView>
 
@@ -337,7 +343,7 @@ export default function FamilyManagementScreen({ navigation }) {
               Select a new role for {selectedMember?.nickname || selectedMember?.name}
             </Text>
             
-            {['parent', 'member', 'child'].map((role) => (
+            {['parent', 'member', 'child', 'homehub'].map((role) => (
               <TouchableOpacity
                 key={role}
                 style={[
@@ -350,12 +356,10 @@ export default function FamilyManagementScreen({ navigation }) {
                 <Ionicons name={ROLE_ICONS[role]} size={24} color={ROLE_COLORS[role]} />
                 <View style={styles.roleOptionInfo}>
                   <Text style={[styles.roleOptionTitle, { color: ROLE_COLORS[role] }]}>
-                    {role.charAt(0).toUpperCase() + role.slice(1)}
+                    {role === 'homehub' ? 'Home Hub' : role.charAt(0).toUpperCase() + role.slice(1)}
                   </Text>
                   <Text style={styles.roleOptionDesc}>
-                    {role === 'parent' && 'Full management access'}
-                    {role === 'member' && 'Standard family member'}
-                    {role === 'child' && 'Limited access, needs approval'}
+                    {ROLE_DESCRIPTIONS[role]}
                   </Text>
                 </View>
                 {selectedMember?.role === role && (
