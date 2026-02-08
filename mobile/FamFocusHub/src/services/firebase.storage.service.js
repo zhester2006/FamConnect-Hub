@@ -1,25 +1,20 @@
 // Firebase Storage Service for FamFocus Hub
-// Handles all image/file uploads for profile pictures, chat, family wall, etc.
+// Using React Native Firebase (Native implementation)
 
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { getApp } from 'firebase/app';
-import * as FileSystem from 'expo-file-system';
+import storage from '@react-native-firebase/storage';
 
 class FirebaseStorageService {
   constructor() {
-    this.storage = null;
     this.isInitialized = false;
   }
 
   initialize() {
     try {
-      const app = getApp();
-      this.storage = getStorage(app);
       this.isInitialized = true;
-      console.log('Firebase Storage initialized');
+      console.log('[StorageService] Firebase Storage initialized');
       return true;
     } catch (error) {
-      console.error('Firebase Storage initialization error:', error);
+      console.error('[StorageService] Initialization error:', error);
       return false;
     }
   }
@@ -54,25 +49,21 @@ class FirebaseStorageService {
   // Generic image upload
   async uploadImage(path, imageUri) {
     if (!this.isInitialized) {
-      console.error('Firebase Storage not initialized');
-      return null;
+      this.initialize();
     }
 
     try {
-      // Read the file as blob
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
-
-      // Create reference and upload
-      const storageRef = ref(this.storage, path);
-      const snapshot = await uploadBytes(storageRef, blob);
-
+      const reference = storage().ref(path);
+      
+      // Upload file
+      await reference.putFile(imageUri);
+      
       // Get download URL
-      const downloadUrl = await getDownloadURL(snapshot.ref);
-      console.log('Image uploaded successfully:', downloadUrl);
+      const downloadUrl = await reference.getDownloadURL();
+      console.log('[StorageService] Image uploaded successfully:', downloadUrl);
       return downloadUrl;
     } catch (error) {
-      console.error('Image upload error:', error);
+      console.error('[StorageService] Image upload error:', error);
       return null;
     }
   }
@@ -80,55 +71,55 @@ class FirebaseStorageService {
   // Generic file upload
   async uploadFile(path, fileUri, contentType) {
     if (!this.isInitialized) {
-      console.error('Firebase Storage not initialized');
-      return null;
+      this.initialize();
     }
 
     try {
-      const response = await fetch(fileUri);
-      const blob = await response.blob();
-
-      const storageRef = ref(this.storage, path);
-      const metadata = { contentType };
-      const snapshot = await uploadBytes(storageRef, blob, metadata);
-
-      const downloadUrl = await getDownloadURL(snapshot.ref);
+      const reference = storage().ref(path);
+      
+      // Upload with metadata
+      await reference.putFile(fileUri, { contentType });
+      
+      const downloadUrl = await reference.getDownloadURL();
       return downloadUrl;
     } catch (error) {
-      console.error('File upload error:', error);
+      console.error('[StorageService] File upload error:', error);
       return null;
     }
   }
 
   // Delete a file
   async deleteFile(path) {
-    if (!this.isInitialized) return false;
+    if (!this.isInitialized) {
+      this.initialize();
+    }
 
     try {
-      const storageRef = ref(this.storage, path);
-      await deleteObject(storageRef);
+      const reference = storage().ref(path);
+      await reference.delete();
       return true;
     } catch (error) {
-      console.error('File delete error:', error);
+      console.error('[StorageService] File delete error:', error);
       return false;
     }
   }
 
   // Upload base64 image
   async uploadBase64Image(path, base64Data) {
-    if (!this.isInitialized) return null;
+    if (!this.isInitialized) {
+      this.initialize();
+    }
 
     try {
-      // Convert base64 to blob
-      const response = await fetch(base64Data);
-      const blob = await response.blob();
-
-      const storageRef = ref(this.storage, path);
-      const snapshot = await uploadBytes(storageRef, blob);
-      const downloadUrl = await getDownloadURL(snapshot.ref);
+      const reference = storage().ref(path);
+      
+      // Upload base64 string
+      await reference.putString(base64Data, 'data_url');
+      
+      const downloadUrl = await reference.getDownloadURL();
       return downloadUrl;
     } catch (error) {
-      console.error('Base64 upload error:', error);
+      console.error('[StorageService] Base64 upload error:', error);
       return null;
     }
   }
