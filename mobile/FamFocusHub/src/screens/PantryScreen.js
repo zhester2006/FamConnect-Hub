@@ -662,6 +662,168 @@ export default function PantryScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* Receipt Scanner Modal */}
+      <Modal visible={showReceiptScanner} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.scannerModal}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>📷 Scan Receipt</Text>
+              <TouchableOpacity onPress={() => setShowReceiptScanner(false)}>
+                <Ionicons name="close" size={24} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.scannerDescription}>
+              Take a photo or select an image of your grocery receipt. Our AI will automatically extract food items and categorize them for your pantry.
+            </Text>
+
+            <View style={styles.scannerActions}>
+              <TouchableOpacity 
+                style={styles.scannerBtn}
+                onPress={() => pickReceiptImage(true)}
+              >
+                <LinearGradient
+                  colors={['#10b981', '#059669']}
+                  style={styles.scannerBtnGradient}
+                >
+                  <Ionicons name="camera" size={32} color="#fff" />
+                  <Text style={styles.scannerBtnText}>Take Photo</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.scannerBtn}
+                onPress={() => pickReceiptImage(false)}
+              >
+                <LinearGradient
+                  colors={['#6366f1', '#8b5cf6']}
+                  style={styles.scannerBtnGradient}
+                >
+                  <Ionicons name="images" size={32} color="#fff" />
+                  <Text style={styles.scannerBtnText}>Choose Photo</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.scannerTips}>
+              <Text style={styles.scannerTipsTitle}>Tips for best results:</Text>
+              <Text style={styles.scannerTip}>• Make sure the receipt is flat and well-lit</Text>
+              <Text style={styles.scannerTip}>• Include the entire item list in the frame</Text>
+              <Text style={styles.scannerTip}>• Avoid shadows and reflections</Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Scanned Items Review Modal */}
+      <Modal visible={showScannedItems} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.scannedModal}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {scanningReceipt ? '🔍 Scanning...' : `✅ ${scannedItems.length} Items Found`}
+              </Text>
+              <TouchableOpacity onPress={() => {
+                setShowScannedItems(false);
+                setScannedItems([]);
+              }}>
+                <Ionicons name="close" size={24} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
+
+            {scanningReceipt ? (
+              <View style={styles.scanningContainer}>
+                <ActivityIndicator size="large" color="#10b981" />
+                <Text style={styles.scanningText}>Analyzing receipt...</Text>
+                <Text style={styles.scanningSubtext}>Our AI is identifying food items</Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.reviewHint}>
+                  Review and edit items before adding to your pantry. Items on your shopping list will be automatically removed.
+                </Text>
+
+                <ScrollView style={styles.scannedItemsList}>
+                  {scannedItems.map((item) => (
+                    <View key={item.temp_id} style={styles.scannedItemCard}>
+                      <View style={styles.scannedItemMain}>
+                        <TextInput
+                          style={styles.scannedItemName}
+                          value={item.name}
+                          onChangeText={(text) => updateScannedItem(item.temp_id, 'name', text)}
+                          placeholder="Item name"
+                          placeholderTextColor="#6b7280"
+                        />
+                        <TouchableOpacity
+                          style={styles.removeScannedBtn}
+                          onPress={() => removeScannedItem(item.temp_id)}
+                        >
+                          <Ionicons name="close-circle" size={22} color="#ef4444" />
+                        </TouchableOpacity>
+                      </View>
+                      
+                      <View style={styles.scannedItemDetails}>
+                        <View style={styles.scannedItemQty}>
+                          <TouchableOpacity 
+                            style={styles.qtyBtn}
+                            onPress={() => updateScannedItem(item.temp_id, 'quantity', Math.max(1, item.quantity - 1))}
+                          >
+                            <Ionicons name="remove" size={16} color="#fff" />
+                          </TouchableOpacity>
+                          <Text style={styles.qtyText}>{item.quantity}</Text>
+                          <TouchableOpacity 
+                            style={styles.qtyBtn}
+                            onPress={() => updateScannedItem(item.temp_id, 'quantity', item.quantity + 1)}
+                          >
+                            <Ionicons name="add" size={16} color="#fff" />
+                          </TouchableOpacity>
+                        </View>
+                        
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
+                          {PANTRY_CATEGORIES.slice(0, 6).map(cat => (
+                            <TouchableOpacity
+                              key={cat.id}
+                              style={[
+                                styles.scannedCatChip,
+                                item.category === cat.id && { backgroundColor: cat.color }
+                              ]}
+                              onPress={() => updateScannedItem(item.temp_id, 'category', cat.id)}
+                            >
+                              <Ionicons 
+                                name={cat.icon} 
+                                size={14} 
+                                color={item.category === cat.id ? '#fff' : cat.color} 
+                              />
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+
+                <TouchableOpacity
+                  style={[styles.confirmBtn, submittingScanned && styles.confirmBtnDisabled]}
+                  onPress={handleConfirmScannedItems}
+                  disabled={submittingScanned || scannedItems.length === 0}
+                >
+                  {submittingScanned ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                      <Text style={styles.confirmBtnText}>
+                        Add {scannedItems.length} Items to Pantry
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </AnimatedBackground>
   );
 }
