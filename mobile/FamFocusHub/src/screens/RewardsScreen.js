@@ -130,9 +130,61 @@ export default function RewardsScreen({ navigation }) {
     try {
       await apiService.post(`/tasks/${task.task_id}/complete`);
       Alert.alert('✨ Task Submitted!', 'Your task completion has been submitted for approval.');
+      await refreshUser();
       fetchData();
     } catch (error) {
       Alert.alert('Error', 'Failed to complete task');
+    }
+  };
+
+  const handleClaimTask = async (task) => {
+    try {
+      await apiService.post(`/tasks/${task.task_id}/claim`);
+      Alert.alert('👍 Task Claimed!', `You've claimed "${task.title}". Complete it to earn ${task.points} points!`);
+      fetchData();
+    } catch (error) {
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to claim task');
+    }
+  };
+
+  const handleUnclaimTask = async (task) => {
+    Alert.alert(
+      'Unclaim Task',
+      `Are you sure you want to give up "${task.title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unclaim',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiService.post(`/tasks/${task.task_id}/unclaim`);
+              fetchData();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to unclaim task');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleApproveTask = async (task, approved) => {
+    setProcessing(true);
+    try {
+      await apiService.put(`/tasks/${task.task_id}/approve`, { approved });
+      Alert.alert(
+        approved ? 'Approved!' : 'Denied',
+        approved 
+          ? `${task.completed_by_name}'s task completion has been approved! They earned ${task.points} points.` 
+          : 'Task has been reset and is available again.'
+      );
+      await refreshUser();
+      fetchData();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to process task');
+    } finally {
+      setProcessing(false);
     }
   };
 
