@@ -6602,6 +6602,28 @@ async def update_bug_report(report_id: str, request: Request, data: dict):
     await db.bug_reports.update_one({"report_id": report_id}, {"$set": update_data})
     return await db.bug_reports.find_one({"report_id": report_id}, {"_id": 0})
 
+# Reset tutorial/onboarding for dev users
+@api_router.post("/dev/reset-tutorial")
+async def reset_tutorial(request: Request):
+    """Reset tutorial completion status to show onboarding again"""
+    # Reset for all dev users
+    result = await db.users.update_many(
+        {"email": {"$regex": "dev@famfocus"}},
+        {"$set": {"settings.tutorial_completed": False, "settings.onboarding_completed": False}}
+    )
+    
+    # Also reset for the current user if authenticated
+    try:
+        current_user = await get_current_user(request)
+        await db.users.update_one(
+            {"user_id": current_user['user_id']},
+            {"$set": {"settings.tutorial_completed": False, "settings.onboarding_completed": False}}
+        )
+    except:
+        pass
+    
+    return {"success": True, "message": f"Tutorial reset for {result.modified_count} users. Restart app to see onboarding."}
+
 # Sample data endpoint
 @api_router.post("/dev/populate-sample-data")
 async def populate_sample_data(request: Request):
