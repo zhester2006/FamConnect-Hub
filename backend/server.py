@@ -3157,7 +3157,7 @@ async def trending_gifs(limit: int = 20):
 # Advanced AI Chore Scheduling
 @api_router.post("/chores/ai-schedule")
 async def ai_schedule_chores(request: Request, data: dict):
-    """Use AI to create a fair chore schedule for the family"""
+    """Use AI to create a fair chore schedule for the family with advanced options"""
     current_user = await get_current_user(request)
     
     if current_user.get('role') != 'parent':
@@ -3168,10 +3168,24 @@ async def ai_schedule_chores(request: Request, data: dict):
     # Get family members
     members = await db.users.find(
         {"$or": [{"user_id": family_id}, {"parent_id": family_id}]},
-        {"_id": 0, "user_id": 1, "name": 1, "role": 1}
+        {"_id": 0, "user_id": 1, "name": 1, "nickname": 1, "role": 1, "age": 1}
     ).to_list(20)
     
     children = [m for m in members if m.get('role') == 'child']
+    
+    # Handle exclusions - can exclude by name or user_id
+    excluded_members = data.get('excluded_members', [])
+    excluded_chores = data.get('excluded_chores', [])
+    
+    # Filter out excluded children
+    if excluded_members:
+        excluded_lower = [e.lower() for e in excluded_members]
+        children = [
+            c for c in children 
+            if c['user_id'] not in excluded_members 
+            and c.get('name', '').lower() not in excluded_lower
+            and c.get('nickname', '').lower() not in excluded_lower
+        ]
     
     # Get available chores
     chores = await db.chore_types.find(
@@ -3182,15 +3196,20 @@ async def ai_schedule_chores(request: Request, data: dict):
     if not chores:
         # Use default chores
         chores = [
-            {"name": "Wash dishes", "points": 10, "frequency": "daily"},
-            {"name": "Take out trash", "points": 5, "frequency": "daily"},
-            {"name": "Clean room", "points": 15, "frequency": "weekly"},
-            {"name": "Vacuum living room", "points": 10, "frequency": "weekly"},
-            {"name": "Set the table", "points": 5, "frequency": "daily"},
-            {"name": "Feed pets", "points": 5, "frequency": "daily"},
-            {"name": "Do laundry", "points": 15, "frequency": "weekly"},
-            {"name": "Mow lawn", "points": 20, "frequency": "weekly"}
+            {"name": "Wash dishes", "points": 10, "frequency": "daily", "icon": "🍽️"},
+            {"name": "Take out trash", "points": 5, "frequency": "daily", "icon": "🗑️"},
+            {"name": "Clean room", "points": 15, "frequency": "weekly", "icon": "🛏️"},
+            {"name": "Vacuum living room", "points": 10, "frequency": "weekly", "icon": "🧹"},
+            {"name": "Set the table", "points": 5, "frequency": "daily", "icon": "🍴"},
+            {"name": "Feed pets", "points": 5, "frequency": "daily", "icon": "🐕"},
+            {"name": "Do laundry", "points": 15, "frequency": "weekly", "icon": "👕"},
+            {"name": "Mow lawn", "points": 20, "frequency": "weekly", "icon": "🌱"}
         ]
+    
+    # Filter out excluded chores
+    if excluded_chores:
+        excluded_chores_lower = [c.lower() for c in excluded_chores]
+        chores = [c for c in chores if c.get('name', '').lower() not in excluded_chores_lower]
     
     # Get recent chore history for fairness
     week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
@@ -3210,40 +3229,60 @@ async def ai_schedule_chores(request: Request, data: dict):
     # Build context for AI
     children_info = []
     for child in children:
+        name = child.get('nickname') or child.get('name', 'Unknown')
         points = child_points.get(child['user_id'], 0)
-        recent = [c for c in child_chores.get(child['user_id'], [])[:5] if c]  # Filter out None values
-        children_info.append(f"- {child['name']}: {points} points earned, recent chores: {', '.join(recent) if recent else 'none'}")
+        age = child.get('age', 'unknown')
+        recent = [c for c in child_chores.get(child['user_id'], [])[:5] if c]
+        children_info.append(f"- {name} (age: {age}): {points} points this week, recent chores: {', '.join(recent) if recent else 'none'}")
     
     chores_info = [f"- {c['name']} ({c.get('points', 10)} points, {c.get('frequency', 'daily')})" for c in chores[:15]]
     
+    # Advanced preferences
     preferences = data.get('preferences', '')
     schedule_days = data.get('days', 7)
+    natural_language = data.get('natural_language', '')  # "Give Sarah more outdoor chores"
+    specific_assignments = data.get('specific_assignments', [])  # [{child: "Sarah", chore: "Mow lawn", day: "Saturday"}]
+    
+    # Build preference string from all inputs
+    all_preferences = []
+    if preferences:
+        all_preferences.append(preferences)
+    if natural_language:
+        all_preferences.append(f"Additional request: {natural_language}")
+    if specific_assignments:
+        for assign in specific_assignments:
+            all_preferences.append(f"Assign {assign.get('chore')} to {assign.get('child')} on {assign.get('day', 'any day')}")
+    
+    preference_text = "\n".join(all_preferences) if all_preferences else "Balance workload fairly across all children"
     
     chat = LlmChat(
         api_key=os.environ['EMERGENT_LLM_KEY'],
         session_id=f"chore_schedule_{uuid.uuid4().hex[:8]}",
-        system_message="You are a helpful family chore scheduling assistant. Create fair and balanced chore schedules."
+        system_message="You are a helpful family chore scheduling assistant. Create fair and balanced chore schedules. Be specific with dates and assignments."
     ).with_model("openai", "gpt-5.2")
     
-    prompt = f"""Create a {schedule_days}-day chore schedule for this family.
+    today = datetime.now(timezone.utc).strftime("%A, %B %d")
+    
+    prompt = f"""Create a {schedule_days}-day chore schedule for this family starting from {today}.
 
-CHILDREN:
-{chr(10).join(children_info) if children_info else 'No children found'}
+CHILDREN TO ASSIGN CHORES:
+{chr(10).join(children_info) if children_info else 'No children available (some may be excluded)'}
 
 AVAILABLE CHORES:
-{chr(10).join(chores_info) if chores_info else 'No chores found'}
+{chr(10).join(chores_info) if chores_info else 'No chores available'}
 
-SCHEDULING PREFERENCES:
-{preferences if preferences else 'Balance workload fairly across all children'}
+SCHEDULING PREFERENCES AND REQUESTS:
+{preference_text}
 
 RULES:
 1. Distribute chores fairly based on recent history (children with fewer points should get more)
 2. Rotate daily chores so no one does the same thing every day
-3. Consider age-appropriateness
+3. Consider age-appropriateness (younger kids get simpler tasks)
 4. Include variety for each child
-5. Don't overload any single day
+5. Don't overload any single day (max 2-3 chores per child per day)
+6. Follow any specific assignments or preferences mentioned above
 
-Format the schedule clearly by day, showing which child does which chore."""
+Format the schedule clearly by day with actual dates, showing which child does which chore and the points they'll earn."""
     
     logger.info(f"AI Schedule prompt has {len(children_info)} children, {len(chores_info)} chores")
     
