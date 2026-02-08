@@ -434,9 +434,14 @@ export default function PantryScreen({ navigation }) {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.title}>Pantry</Text>
-        <TouchableOpacity onPress={() => setShowQuickSelect(true)} style={styles.quickAddBtn}>
-          <Ionicons name="flash" size={20} color={primaryColor} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={() => setShowReceiptScanner(true)} style={styles.scanBtn}>
+            <Ionicons name="scan" size={20} color="#10b981" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowQuickSelect(true)} style={styles.quickAddBtn}>
+            <Ionicons name="flash" size={20} color={primaryColor} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Search */}
