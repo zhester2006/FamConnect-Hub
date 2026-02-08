@@ -12,8 +12,8 @@ import * as Haptics from 'expo-haptics';
 import { useAuth } from '../context/AuthContext';
 import biometricService from '../services/biometric.service';
 import firebaseAuthService from '../services/firebase.auth.service';
+import API_BASE_URL from '../services/api.config';
 
-const API_BASE = 'https://familyhub-68.preview.emergentagent.com';
 const { width, height } = Dimensions.get('window');
 
 WebBrowser.maybeCompleteAuthSession();
