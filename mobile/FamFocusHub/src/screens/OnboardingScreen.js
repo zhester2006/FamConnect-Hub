@@ -19,6 +19,12 @@ const ICONS = {
   target: 'flag',
   trophy: 'trophy',
   star: 'star',
+  restaurant: 'restaurant',
+  cart: 'cart',
+  chatbubbles: 'chatbubbles',
+  people: 'people',
+  sparkles: 'sparkles',
+  book: 'book',
 };
 
 const GRADIENTS = {
@@ -32,6 +38,9 @@ const GRADIENTS = {
   chat: ['#ec4899', '#8b5cf6', '#6366f1'],
   points: ['#f59e0b', '#f97316', '#ef4444'],
   complete: ['#f59e0b', '#6366f1', '#06b6d4'],
+  pantry: ['#84cc16', '#10b981', '#14b8a6'],
+  shopping: ['#14b8a6', '#06b6d4', '#3b82f6'],
+  family: ['#8b5cf6', '#6366f1', '#ec4899'],
 };
 
 export default function OnboardingScreen({ onComplete }) {
