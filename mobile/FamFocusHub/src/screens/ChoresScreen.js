@@ -435,21 +435,21 @@ export default function ChoresScreen({ navigation }) {
             style={[styles.viewModeTab, viewMode === 'list' && { backgroundColor: primaryColor }]}
             onPress={() => setViewMode('list')}
           >
-            <Ionicons name="list" size={18} color={viewMode === 'list' ? '#fff' : '#9ca3af'} />
+            <Ionicons name="list" size={16} color={viewMode === 'list' ? '#fff' : '#9ca3af'} />
             <Text style={[styles.viewModeText, viewMode === 'list' && { color: '#fff' }]}>List</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.viewModeTab, viewMode === 'byChild' && { backgroundColor: primaryColor }]}
             onPress={() => setViewMode('byChild')}
           >
-            <Ionicons name="people" size={18} color={viewMode === 'byChild' ? '#fff' : '#9ca3af'} />
+            <Ionicons name="people" size={16} color={viewMode === 'byChild' ? '#fff' : '#9ca3af'} />
             <Text style={[styles.viewModeText, viewMode === 'byChild' && { color: '#fff' }]}>By Child</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.viewModeTab, viewMode === 'calendar' && { backgroundColor: primaryColor }]}
             onPress={() => setViewMode('calendar')}
           >
-            <Ionicons name="calendar" size={18} color={viewMode === 'calendar' ? '#fff' : '#9ca3af'} />
+            <Ionicons name="calendar" size={16} color={viewMode === 'calendar' ? '#fff' : '#9ca3af'} />
             <Text style={[styles.viewModeText, viewMode === 'calendar' && { color: '#fff' }]}>Week</Text>
           </TouchableOpacity>
         </View>
