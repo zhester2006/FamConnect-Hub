@@ -205,13 +205,19 @@ export default function LoginScreen({ navigation }) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     try {
-      // Initialize Firebase Auth if needed
-      await firebaseAuthService.initialize();
+      // Initialize Firebase Auth if needed with retry
+      const initResult = await firebaseAuthService.initialize();
       
-      if (!firebaseAuthService.auth) {
-        setError('Authentication service unavailable. Please restart the app.');
-        setLoading(false);
-        return;
+      if (!initResult || !firebaseAuthService.auth) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        firebaseAuthService.initializationAttempted = false;
+        const retryResult = await firebaseAuthService.initialize();
+        
+        if (!retryResult || !firebaseAuthService.auth) {
+          setError('Unable to connect to authentication. Please check your internet connection and restart the app.');
+          setLoading(false);
+          return;
+        }
       }
       
       const result = await firebaseAuthService.signUpWithEmail(email, password, displayName);
