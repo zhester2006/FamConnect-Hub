@@ -1064,9 +1064,9 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 12, color: '#9ca3af', marginTop: 2 },
   addButton: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
 
-  viewModeRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginBottom: 12 },
-  viewModeTab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 12, backgroundColor: 'rgba(30, 27, 75, 0.6)' },
-  viewModeText: { fontSize: 12, color: '#9ca3af', fontWeight: '600' },
+  viewModeRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 6, marginBottom: 10 },
+  viewModeTab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 8, borderRadius: 10, backgroundColor: 'rgba(30, 27, 75, 0.6)' },
+  viewModeText: { fontSize: 11, color: '#9ca3af', fontWeight: '600' },
 
   actionButtons: { flexDirection: 'row', paddingHorizontal: 16, gap: 10, marginBottom: 12 },
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 12 },
