@@ -1780,3 +1780,23 @@ Update Firebase Realtime Database rules in Firebase Console to:
 - Enhanced `/api/chores/ai-schedule` with advanced options
 - New `PUT /api/chores/types/{type_id}` endpoint
 - Chore types now include: type_id, family_id, name, icon, points, frequency, description
+
+### Session 41 Update - Chore Management UI (Feb 2026) ✅
+
+**ChoresScreen Updates:**
+- Chore types now fetched from backend and displayed dynamically
+- Added "Manage Chore Types" modal accessible via settings icon
+- Parents can add new chores with AI-generated icons
+- Parents can delete custom chore types
+- Available chores now show emoji icons instead of Ionicons
+- Quick Assign modal updated to use dynamic chore types
+
+**Key Files Modified:**
+- `/app/mobile/FamFocusHub/src/screens/ChoresScreen.js` - Full chore type management UI
+
+**Features Summary:**
+1. AI-generated icons for new chores
+2. Custom points per chore
+3. Family-specific chore lists
+4. Add/Delete chore types (parent only)
+5. Defaults restored if no custom types exist
