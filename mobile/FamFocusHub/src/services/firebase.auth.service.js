@@ -29,6 +29,7 @@ class FirebaseAuthService {
     this.isInitialized = false;
     this.initializationAttempted = false;
     this.authStateListeners = [];
+    this.initRetryCount = 0;
   }
 
   // Initialize Firebase Auth
@@ -36,33 +37,40 @@ class FirebaseAuthService {
     try {
       // Already initialized successfully
       if (this.isInitialized && this.auth) {
+        console.log('[AuthService] Already initialized');
         return true;
       }
 
-      // Don't retry if we already attempted and failed
-      if (this.initializationAttempted && !this.auth) {
-        console.log('Firebase Auth init already attempted and failed');
+      // Allow up to 3 retry attempts
+      if (this.initializationAttempted && !this.auth && this.initRetryCount >= 3) {
+        console.log('[AuthService] Max retries reached');
         return false;
       }
 
       this.initializationAttempted = true;
+      this.initRetryCount++;
+      console.log(`[AuthService] Initialization attempt ${this.initRetryCount}`);
 
       // Use centralized Firebase initialization
       this.app = getFirebaseApp();
       
       if (!this.app) {
-        console.error('Firebase App not available');
+        console.error('[AuthService] Firebase App not available');
         return false;
       }
+      console.log('[AuthService] Firebase App available');
 
-      // Initialize Auth
+      // Initialize Auth - this is async and may take a moment
       this.auth = await initializeFirebaseAuth();
       
       if (!this.auth) {
-        console.error('Firebase Auth initialization returned null');
+        console.error('[AuthService] Firebase Auth initialization returned null');
+        // Reset for potential retry
+        this.initializationAttempted = false;
         return false;
       }
       
+      console.log('[AuthService] Firebase Auth object obtained');
       this.isInitialized = true;
 
       // Listen for auth state changes
@@ -77,14 +85,15 @@ class FirebaseAuthService {
             this.clearPersistedSession();
           }
         });
+        console.log('[AuthService] Auth state listener set up');
       } catch (listenerError) {
-        console.warn('Could not set up auth state listener:', listenerError.message);
+        console.warn('[AuthService] Could not set up auth state listener:', listenerError.message);
       }
 
-      console.log('Firebase Auth service initialized successfully');
+      console.log('[AuthService] Initialization complete');
       return true;
     } catch (error) {
-      console.error('Firebase Auth initialization error:', error);
+      console.error('[AuthService] Initialization error:', error.message);
       return false;
     }
   }
