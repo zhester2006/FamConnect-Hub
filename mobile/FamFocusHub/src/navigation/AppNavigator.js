@@ -201,6 +201,7 @@ export default function AppNavigator() {
                   <Stack.Screen name="CheckinLog" component={CheckinLogScreen} />
                   <Stack.Screen name="Recipes" component={RecipesScreen} />
                   <Stack.Screen name="FamilyManagement" component={FamilyManagementScreen} />
+                  <Stack.Screen name="ParentManagement" component={ParentManagementScreen} />
                 </>
               ) : (
                 <>
