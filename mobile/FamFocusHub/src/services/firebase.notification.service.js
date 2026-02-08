@@ -48,8 +48,14 @@ class FirebaseNotificationService {
       // Get Expo push token (works on physical devices)
       if (Device.isDevice) {
         try {
+          // Get projectId from Constants (reads from app.json)
+          const projectId = Constants.expoConfig?.extra?.eas?.projectId || 
+                           Constants.easConfig?.projectId || 
+                           '8bac899b-ce06-479a-9216-b762626cddba';
+          console.log('Using EAS projectId for notifications:', projectId);
+          
           const tokenData = await Notifications.getExpoPushTokenAsync({
-            projectId: 'family-hub-app-d9c04'
+            projectId: projectId
           });
           this.expoPushToken = tokenData.data;
           console.log('Expo Push Token:', this.expoPushToken);
