@@ -259,8 +259,10 @@ export default function LoginScreen({ navigation }) {
         path: 'auth/callback',
       });
       
+      // Use base URL without /api for OAuth redirect
+      const baseUrl = API_BASE_URL.replace('/api', '');
       const result = await WebBrowser.openAuthSessionAsync(
-        `https://auth.emergentagent.com/?redirect=${encodeURIComponent(API_BASE + '/dashboard')}`,
+        `https://auth.emergentagent.com/?redirect=${encodeURIComponent(baseUrl + '/dashboard')}`,
         redirectUri
       );
       
