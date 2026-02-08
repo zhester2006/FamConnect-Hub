@@ -301,6 +301,51 @@ export default function ChoresScreen({ navigation }) {
     setEditingChore(null);
   };
 
+  // Chore Type Management
+  const handleAddChoreType = async () => {
+    if (!newChoreType.name.trim()) {
+      Alert.alert('Error', 'Please enter a chore name');
+      return;
+    }
+
+    setAddingType(true);
+    try {
+      await apiService.post('/chores/types', {
+        name: newChoreType.name.trim(),
+        points: parseInt(newChoreType.points) || 10,
+      });
+      setNewChoreType({ name: '', points: '10' });
+      fetchData();
+      Alert.alert('Added!', `"${newChoreType.name}" has been added with an AI-generated icon!`);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add chore type');
+    } finally {
+      setAddingType(false);
+    }
+  };
+
+  const handleDeleteChoreType = (type) => {
+    Alert.alert(
+      'Delete Chore Type',
+      `Remove "${type.name}" from available chores?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiService.delete(`/chores/types/${type.type_id || type.name}`);
+              fetchData();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete chore type');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const getFilteredChores = () => {
     let filtered = chores;
     
