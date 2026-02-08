@@ -895,4 +895,40 @@ const styles = StyleSheet.create({
   quickItem: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(30, 41, 59, 0.8)', borderRadius: 10, padding: 10, margin: 4, gap: 6 },
   quickItemAdded: { backgroundColor: 'rgba(16, 185, 129, 0.15)', borderWidth: 1, borderColor: '#10b981' },
   quickItemText: { fontSize: 12, color: '#fff', flex: 1 },
+
+  // Header actions
+  headerActions: { flexDirection: 'row', gap: 8 },
+  scanBtn: { padding: 8, backgroundColor: 'rgba(16, 185, 129, 0.15)', borderRadius: 8 },
+
+  // Receipt Scanner Modal
+  scannerModal: { backgroundColor: '#1e1b4b', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' },
+  scannerDescription: { color: '#9ca3af', fontSize: 14, lineHeight: 20, marginBottom: 24, textAlign: 'center' },
+  scannerActions: { flexDirection: 'row', gap: 16, marginBottom: 24 },
+  scannerBtn: { flex: 1 },
+  scannerBtnGradient: { alignItems: 'center', justifyContent: 'center', paddingVertical: 24, borderRadius: 16, gap: 8 },
+  scannerBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  scannerTips: { backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 14 },
+  scannerTipsTitle: { color: '#fff', fontSize: 13, fontWeight: '600', marginBottom: 8 },
+  scannerTip: { color: '#9ca3af', fontSize: 12, marginBottom: 4 },
+
+  // Scanned Items Modal
+  scannedModal: { backgroundColor: '#1e1b4b', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '90%' },
+  scanningContainer: { alignItems: 'center', paddingVertical: 60 },
+  scanningText: { color: '#10b981', fontSize: 18, fontWeight: '600', marginTop: 20 },
+  scanningSubtext: { color: '#6b7280', fontSize: 13, marginTop: 8 },
+  reviewHint: { color: '#9ca3af', fontSize: 12, marginBottom: 16, textAlign: 'center' },
+  scannedItemsList: { maxHeight: 400 },
+  scannedItemCard: { backgroundColor: 'rgba(15, 13, 26, 0.8)', borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.2)' },
+  scannedItemMain: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  scannedItemName: { flex: 1, backgroundColor: 'rgba(30, 41, 59, 0.8)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, color: '#fff', fontSize: 15 },
+  removeScannedBtn: { padding: 4 },
+  scannedItemDetails: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  scannedItemQty: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(99, 102, 241, 0.1)', borderRadius: 8, padding: 4 },
+  qtyBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(99, 102, 241, 0.3)', justifyContent: 'center', alignItems: 'center' },
+  qtyText: { color: '#fff', fontSize: 14, fontWeight: '600', width: 28, textAlign: 'center' },
+  categoryScroll: { flex: 1 },
+  scannedCatChip: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(30, 41, 59, 0.8)', justifyContent: 'center', alignItems: 'center', marginRight: 6 },
+  confirmBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#10b981', paddingVertical: 16, borderRadius: 12, marginTop: 16 },
+  confirmBtnDisabled: { opacity: 0.6 },
+  confirmBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });
