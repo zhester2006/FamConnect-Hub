@@ -2,6 +2,17 @@
 // Production API URL - change this when deploying to your own server
 const API_BASE_URL = 'https://familyhub-68.preview.emergentagent.com/api';
 
+// Production mode flag - set to true for release builds
+export const IS_PRODUCTION = !__DEV__;
+
+// Disable console logs in production
+if (IS_PRODUCTION) {
+  console.log = () => {};
+  console.warn = () => {};
+  console.info = () => {};
+  // Keep console.error for crash reporting
+}
+
 export const API_ENDPOINTS = {
   // Auth
   AUTH_SESSION: '/auth/session',
