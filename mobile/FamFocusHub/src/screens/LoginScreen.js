@@ -186,7 +186,7 @@ export default function LoginScreen({ navigation }) {
         const idToken = await firebaseAuthService.getIdToken();
         
         // Call backend to create user
-        const response = await fetch(`${API_BASE}/api/auth/firebase-signup`, {
+        const response = await fetch(`${API_BASE_URL}/auth/firebase-signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
