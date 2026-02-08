@@ -436,11 +436,17 @@ export default function ChoresScreen({ navigation }) {
           <View style={styles.sectionHeader}>
             <Ionicons name="sparkles" size={18} color="#f59e0b" />
             <Text style={styles.sectionTitle}>Available Chores</Text>
+            <TouchableOpacity 
+              style={styles.manageTypesBtn}
+              onPress={() => setShowManageTypes(true)}
+            >
+              <Ionicons name="settings-outline" size={16} color="#9ca3af" />
+            </TouchableOpacity>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.availableChoresScroll}>
-            {CHORE_TYPES.map((type) => (
+            {choreTypes.map((type) => (
               <TouchableOpacity
-                key={type.name}
+                key={type.type_id || type.name}
                 style={[styles.availableChoreCard, { borderColor: type.color + '40' }]}
                 onPress={() => {
                   setChoreForm({ ...choreForm, title: type.name, points: String(type.points) });
@@ -448,7 +454,7 @@ export default function ChoresScreen({ navigation }) {
                 }}
               >
                 <View style={[styles.availableChoreIcon, { backgroundColor: type.color + '20' }]}>
-                  <Ionicons name={type.icon} size={20} color={type.color} />
+                  <Text style={{ fontSize: 20 }}>{type.icon}</Text>
                 </View>
                 <Text style={styles.availableChoreTitle}>{type.name}</Text>
                 <Text style={styles.availableChorePoints}>{type.points} pts</Text>
