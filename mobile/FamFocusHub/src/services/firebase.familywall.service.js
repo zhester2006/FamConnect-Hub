@@ -1,18 +1,15 @@
 // Firebase Family Wall Service for FamFocus Hub
-// Real-time family posts, photos, polls with Firebase
+// Using React Native Firebase (Native implementation)
 
-import { getDatabase, ref, push, set, onValue, off, query, orderByChild, limitToLast, update, remove } from 'firebase/database';
-import { getApp } from 'firebase/app';
+import database from '@react-native-firebase/database';
 import firebaseStorageService from './firebase.storage.service';
 
 class FirebaseFamilyWallService {
   constructor() {
-    this.db = null;
     this.familyId = null;
     this.userId = null;
     this.userName = null;
     this.userPicture = null;
-    this.postsRef = null;
     this.unsubscribers = [];
     this.postCallback = null;
     this.isInitialized = false;
@@ -20,13 +17,11 @@ class FirebaseFamilyWallService {
 
   initialize() {
     try {
-      const app = getApp();
-      this.db = getDatabase(app);
       this.isInitialized = true;
-      console.log('Firebase Family Wall initialized');
+      console.log('[FamilyWallService] Firebase Family Wall initialized');
       return true;
     } catch (error) {
-      console.error('Firebase Family Wall initialization error:', error);
+      console.error('[FamilyWallService] Initialization error:', error);
       return false;
     }
   }
@@ -36,54 +31,51 @@ class FirebaseFamilyWallService {
     this.userName = userName;
     this.userPicture = userPicture;
     this.familyId = familyId;
-
-    if (this.isInitialized && familyId) {
-      this.postsRef = ref(this.db, `family-wall/${familyId}/posts`);
-    }
   }
 
   // Connect and listen for posts
   connect(onPosts) {
-    if (!this.isInitialized || !this.postsRef) {
-      console.log('Firebase Family Wall not initialized');
+    if (!this.isInitialized || !this.familyId) {
+      console.log('[FamilyWallService] Not initialized or no family set');
       return false;
     }
 
     this.postCallback = onPosts;
 
-    const postsQuery = query(
-      this.postsRef,
-      orderByChild('timestamp'),
-      limitToLast(50)
-    );
-
-    const unsubPosts = onValue(postsQuery, (snapshot) => {
-      const posts = [];
-      snapshot.forEach((childSnapshot) => {
-        posts.push({
-          ...childSnapshot.val(),
-          post_id: childSnapshot.key,
+    const postsRef = database().ref(`family-wall/${this.familyId}/posts`);
+    const listener = postsRef
+      .orderByChild('timestamp')
+      .limitToLast(50)
+      .on('value', (snapshot) => {
+        const posts = [];
+        snapshot.forEach((childSnapshot) => {
+          posts.push({
+            ...childSnapshot.val(),
+            post_id: childSnapshot.key,
+          });
+          return false;
         });
+
+        // Sort by timestamp descending (newest first)
+        posts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+        if (this.postCallback) {
+          this.postCallback(posts);
+        }
       });
 
-      // Sort by timestamp descending (newest first)
-      posts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-
-      if (this.postCallback) {
-        this.postCallback(posts);
-      }
-    });
-
-    this.unsubscribers.push(() => off(postsQuery));
+    this.unsubscribers.push(() => postsRef.off('value', listener));
     return true;
   }
 
   // Create a text post
   async createTextPost(content) {
-    if (!this.postsRef) return null;
+    if (!this.familyId) return null;
 
     try {
-      const postRef = push(this.postsRef);
+      const postsRef = database().ref(`family-wall/${this.familyId}/posts`);
+      const postRef = postsRef.push();
+      
       const post = {
         type: 'text',
         content,
@@ -95,20 +87,21 @@ class FirebaseFamilyWallService {
         comments: {},
       };
 
-      await set(postRef, post);
+      await postRef.set(post);
       return { ...post, post_id: postRef.key };
     } catch (error) {
-      console.error('Create text post error:', error);
+      console.error('[FamilyWallService] Create text post error:', error);
       return null;
     }
   }
 
   // Create a photo post
   async createPhotoPost(content, imageUri) {
-    if (!this.postsRef) return null;
+    if (!this.familyId) return null;
 
     try {
-      const postRef = push(this.postsRef);
+      const postsRef = database().ref(`family-wall/${this.familyId}/posts`);
+      const postRef = postsRef.push();
       
       // Upload image to Firebase Storage
       const imageUrl = await firebaseStorageService.uploadFamilyWallImage(
@@ -133,20 +126,22 @@ class FirebaseFamilyWallService {
         comments: {},
       };
 
-      await set(postRef, post);
+      await postRef.set(post);
       return { ...post, post_id: postRef.key };
     } catch (error) {
-      console.error('Create photo post error:', error);
+      console.error('[FamilyWallService] Create photo post error:', error);
       return null;
     }
   }
 
   // Create a GIF post
   async createGifPost(content, gifUrl) {
-    if (!this.postsRef) return null;
+    if (!this.familyId) return null;
 
     try {
-      const postRef = push(this.postsRef);
+      const postsRef = database().ref(`family-wall/${this.familyId}/posts`);
+      const postRef = postsRef.push();
+      
       const post = {
         type: 'gif',
         content,
@@ -159,20 +154,22 @@ class FirebaseFamilyWallService {
         comments: {},
       };
 
-      await set(postRef, post);
+      await postRef.set(post);
       return { ...post, post_id: postRef.key };
     } catch (error) {
-      console.error('Create GIF post error:', error);
+      console.error('[FamilyWallService] Create GIF post error:', error);
       return null;
     }
   }
 
   // Create a poll post
   async createPollPost(question, options) {
-    if (!this.postsRef) return null;
+    if (!this.familyId) return null;
 
     try {
-      const postRef = push(this.postsRef);
+      const postsRef = database().ref(`family-wall/${this.familyId}/posts`);
+      const postRef = postsRef.push();
+      
       const pollOptions = options.map((opt, idx) => ({
         id: idx,
         text: opt,
@@ -191,69 +188,69 @@ class FirebaseFamilyWallService {
         comments: {},
       };
 
-      await set(postRef, post);
+      await postRef.set(post);
       return { ...post, post_id: postRef.key };
     } catch (error) {
-      console.error('Create poll post error:', error);
+      console.error('[FamilyWallService] Create poll post error:', error);
       return null;
     }
   }
 
   // Vote on a poll
   async voteOnPoll(postId, optionIndex) {
-    if (!this.postsRef) return false;
+    if (!this.familyId) return false;
 
     try {
-      const voteRef = ref(this.db, `family-wall/${this.familyId}/posts/${postId}/poll_options/${optionIndex}/votes/${this.userId}`);
-      await set(voteRef, {
+      const voteRef = database().ref(`family-wall/${this.familyId}/posts/${postId}/poll_options/${optionIndex}/votes/${this.userId}`);
+      await voteRef.set({
         voted_at: Date.now(),
         voter_name: this.userName,
       });
       return true;
     } catch (error) {
-      console.error('Vote on poll error:', error);
+      console.error('[FamilyWallService] Vote on poll error:', error);
       return false;
     }
   }
 
   // Like a post
   async likePost(postId) {
-    if (!this.postsRef) return false;
+    if (!this.familyId) return false;
 
     try {
-      const likeRef = ref(this.db, `family-wall/${this.familyId}/posts/${postId}/likes/${this.userId}`);
-      await set(likeRef, {
+      const likeRef = database().ref(`family-wall/${this.familyId}/posts/${postId}/likes/${this.userId}`);
+      await likeRef.set({
         liked_at: Date.now(),
         user_name: this.userName,
       });
       return true;
     } catch (error) {
-      console.error('Like post error:', error);
+      console.error('[FamilyWallService] Like post error:', error);
       return false;
     }
   }
 
   // Unlike a post
   async unlikePost(postId) {
-    if (!this.postsRef) return false;
+    if (!this.familyId) return false;
 
     try {
-      const likeRef = ref(this.db, `family-wall/${this.familyId}/posts/${postId}/likes/${this.userId}`);
-      await remove(likeRef);
+      const likeRef = database().ref(`family-wall/${this.familyId}/posts/${postId}/likes/${this.userId}`);
+      await likeRef.remove();
       return true;
     } catch (error) {
-      console.error('Unlike post error:', error);
+      console.error('[FamilyWallService] Unlike post error:', error);
       return false;
     }
   }
 
   // Add a comment
   async addComment(postId, comment) {
-    if (!this.postsRef) return null;
+    if (!this.familyId) return null;
 
     try {
-      const commentsRef = ref(this.db, `family-wall/${this.familyId}/posts/${postId}/comments`);
-      const commentRef = push(commentsRef);
+      const commentsRef = database().ref(`family-wall/${this.familyId}/posts/${postId}/comments`);
+      const commentRef = commentsRef.push();
       
       const commentData = {
         content: comment,
@@ -263,24 +260,24 @@ class FirebaseFamilyWallService {
         timestamp: Date.now(),
       };
 
-      await set(commentRef, commentData);
+      await commentRef.set(commentData);
       return { ...commentData, comment_id: commentRef.key };
     } catch (error) {
-      console.error('Add comment error:', error);
+      console.error('[FamilyWallService] Add comment error:', error);
       return null;
     }
   }
 
   // Delete a post (only author or parent can delete)
   async deletePost(postId) {
-    if (!this.postsRef) return false;
+    if (!this.familyId) return false;
 
     try {
-      const postRef = ref(this.db, `family-wall/${this.familyId}/posts/${postId}`);
-      await remove(postRef);
+      const postRef = database().ref(`family-wall/${this.familyId}/posts/${postId}`);
+      await postRef.remove();
       return true;
     } catch (error) {
-      console.error('Delete post error:', error);
+      console.error('[FamilyWallService] Delete post error:', error);
       return false;
     }
   }
@@ -300,7 +297,6 @@ class FirebaseFamilyWallService {
     this.disconnect();
     this.familyId = null;
     this.userId = null;
-    this.postsRef = null;
   }
 }
 
