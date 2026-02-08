@@ -285,58 +285,6 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
-  // Dev Login
-  const handleDevLogin = async (role = 'parent') => {
-    setDevLoading(role);
-    setError(null);
-    
-    try {
-      console.log(`Attempting dev login as ${role}...`);
-      
-      const response = await fetch(`${API_BASE}/api/auth/dev-login`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ role }),
-      });
-      
-      console.log(`Dev login response status: ${response.status}`);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Dev login error response:', errorText);
-        throw new Error(`Login failed (${response.status}): Please check your connection`);
-      }
-      
-      const data = await response.json();
-      console.log('Dev login success:', data.user?.name);
-      
-      if (data.session_token) {
-        await login(data.session_token, data.user);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        
-        if (biometricAvailable && !biometricEnabled) {
-          setTimeout(() => promptEnableBiometric(data.session_token), 1000);
-        }
-      } else {
-        throw new Error('No session token received');
-      }
-    } catch (err) {
-      console.error('Dev login error:', err);
-      // More descriptive error messages
-      let errorMessage = err.message || 'Login failed';
-      if (errorMessage.includes('Network request failed') || errorMessage.includes('fetch')) {
-        errorMessage = 'Cannot connect to server. Please check your internet connection.';
-      }
-      setError(errorMessage);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } finally {
-      setDevLoading(null);
-    }
-  };
-
   // Biometric Login
   const handleBiometricLogin = async () => {
     setBiometricLoading(true);
