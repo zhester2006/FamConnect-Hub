@@ -202,7 +202,9 @@ export default function CheckinLogScreen({ navigation }) {
                   <View style={styles.lastLocation}>
                     <Ionicons name="location" size={12} color="#6b7280" />
                     <Text style={styles.lastLocationText}>
-                      Last seen: {selectedChild.last_location}
+                      Last seen: {typeof selectedChild.last_location === 'string' 
+                        ? selectedChild.last_location 
+                        : selectedChild.last_location.name || 'Unknown'}
                     </Text>
                   </View>
                 )}
