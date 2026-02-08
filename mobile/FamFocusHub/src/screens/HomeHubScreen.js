@@ -195,30 +195,41 @@ export default function HomeHubScreen({ navigation }) {
 
   const fetchWeather = async () => {
     try {
-      // Try to get current location for accurate weather
+      // Request and get current location for accurate weather
       let lat = null, lon = null;
       try {
-        const { status } = await Location.getForegroundPermissionsAsync();
+        // Request permission if not granted
+        let { status } = await Location.getForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          const result = await Location.requestForegroundPermissionsAsync();
+          status = result.status;
+        }
+        
         if (status === 'granted') {
-          const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          const location = await Location.getCurrentPositionAsync({ 
+            accuracy: Location.Accuracy.Balanced,
+            timeout: 10000,
+          });
           lat = location.coords.latitude;
           lon = location.coords.longitude;
+          console.log('Weather location:', lat, lon);
         }
       } catch (locError) {
-        console.log('Location not available for weather:', locError);
+        console.log('Location not available for weather:', locError.message);
       }
       
       const weatherData = await apiService.getWeather(lat, lon);
       if (weatherData) {
         setWeather({
-          temp: weatherData.temp || weatherData.temperature || 72,
+          temp: Math.round(weatherData.temp || weatherData.temperature || 72),
           condition: weatherData.condition || weatherData.weather || 'sunny',
-          location: weatherData.location || weatherData.city || '',
+          location: weatherData.location || weatherData.city || 'Unknown',
         });
         setLastWeatherUpdate(new Date());
       }
     } catch (error) {
       console.error('Failed to fetch weather:', error);
+      setWeather(prev => ({ ...prev, location: 'Unavailable' }));
     }
   };
 
