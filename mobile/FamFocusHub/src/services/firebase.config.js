@@ -1,5 +1,6 @@
 // Firebase Configuration for FamFocus Hub
-// Using Firebase Realtime Database for reliable real-time chat
+// NOTE: With React Native Firebase, configuration is read from google-services.json (Android)
+// and GoogleService-Info.plist (iOS). This file is kept for reference only.
 
 const firebaseConfig = {
   apiKey: "AIzaSyBY0WHn9JnhNmIygAUDHtIdXHGM5rFLoaM",
