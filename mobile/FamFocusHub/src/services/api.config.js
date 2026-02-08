@@ -13,6 +13,8 @@ export const API_ENDPOINTS = {
   // Family
   FAMILIES: '/families',
   FAMILY_MEMBERS: '/family/members',
+  FAMILY_MEMBERS_DETAILED: '/family/members/detailed',
+  FAMILY_INFO: '/family/info',
   FAMILY_SWITCH: (id) => `/families/switch/${id}`,
   FAMILY_INVITE: (id) => `/families/${id}/invite`,
   FAMILY_INVITES_PENDING: '/families/invites/pending',
