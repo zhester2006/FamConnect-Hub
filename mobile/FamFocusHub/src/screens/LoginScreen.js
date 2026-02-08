@@ -198,33 +198,50 @@ export default function LoginScreen({ navigation }) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     try {
+      // Initialize Firebase Auth if needed
+      await firebaseAuthService.initialize();
+      
+      if (!firebaseAuthService.auth) {
+        setError('Authentication service unavailable. Please restart the app.');
+        setLoading(false);
+        return;
+      }
+      
       const result = await firebaseAuthService.signUpWithEmail(email, password, displayName);
       
       if (result.success) {
         const idToken = await firebaseAuthService.getIdToken();
         
         // Call backend to create user
-        const response = await fetch(`${API_BASE_URL}/auth/firebase-signup`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            idToken,
-            user: result.user,
-            displayName
-          }),
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          await login(data.session_token, data.user);
+        try {
+          const response = await fetch(`${API_BASE_URL}/auth/firebase-signup`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              idToken,
+              user: result.user,
+              displayName
+            }),
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            await login(data.session_token, data.user);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          } else {
+            // Fall back to using Firebase user directly
+            await login(result.user.uid, result.user);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }
+        } catch (backendError) {
+          console.log('Backend signup failed, using Firebase auth:', backendError.message);
+          await login(result.user.uid, result.user);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        } else {
-          await login(idToken, result.user);
         }
         
         Alert.alert('Welcome!', 'Your account has been created successfully.');
       } else {
-        setError(result.error);
+        setError(result.error || 'Sign up failed');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
     } catch (err) {
