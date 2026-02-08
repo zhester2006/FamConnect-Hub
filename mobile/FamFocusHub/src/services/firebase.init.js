@@ -82,16 +82,35 @@ export async function initializeFirebaseAuth() {
 
   try {
     // Import AsyncStorage dynamically to ensure it's loaded
-    const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+    const AsyncStorageModule = await import('@react-native-async-storage/async-storage');
+    const AsyncStorage = AsyncStorageModule.default;
     
-    // Import Firebase Auth modules
+    // Import Firebase Auth modules - try different import paths for getReactNativePersistence
     const firebaseAuth = await import('firebase/auth');
-    const { initializeAuth, getReactNativePersistence, getAuth } = firebaseAuth;
+    const { initializeAuth, getAuth } = firebaseAuth;
     
-    // Check if getReactNativePersistence is available (it may not be in all versions)
+    // getReactNativePersistence might be in different locations depending on Firebase version
+    let getReactNativePersistence = firebaseAuth.getReactNativePersistence;
+    
+    // Try alternative import if not found
     if (!getReactNativePersistence) {
-      console.warn('getReactNativePersistence not available, using getAuth fallback');
-      auth = getAuth(app);
+      try {
+        const rnAuth = await import('firebase/auth/react-native');
+        getReactNativePersistence = rnAuth.getReactNativePersistence;
+      } catch (e) {
+        console.warn('Could not import from firebase/auth/react-native:', e.message);
+      }
+    }
+    
+    // Check if getReactNativePersistence is available
+    if (!getReactNativePersistence) {
+      console.warn('getReactNativePersistence not available - auth state will not persist');
+      try {
+        auth = getAuth(app);
+        console.log('Using Firebase Auth without persistence (Expo Go limitation)');
+      } catch (e) {
+        console.error('getAuth failed:', e.message);
+      }
     } else {
       try {
         // Initialize auth with persistence
@@ -102,11 +121,16 @@ export async function initializeFirebaseAuth() {
       } catch (authError) {
         // Handle "already initialized" error
         if (authError.code === 'auth/already-initialized' || 
-            authError.message?.includes('already been called')) {
-          console.log('Firebase Auth already initialized, getting existing instance');
-          auth = getAuth(app);
+            authError.message?.includes('already been called') ||
+            authError.message?.includes('Component auth has not been registered')) {
+          console.log('Auth already initialized or not registered, using getAuth');
+          try {
+            auth = getAuth(app);
+          } catch (e) {
+            console.warn('getAuth also failed:', e.message);
+          }
         } else {
-          console.warn('Auth init error, trying getAuth fallback:', authError.message);
+          console.warn('Auth init error:', authError.message);
           try {
             auth = getAuth(app);
           } catch (fallbackError) {
@@ -127,7 +151,7 @@ export async function initializeFirebaseAuth() {
     try {
       const { getAuth } = await import('firebase/auth');
       auth = getAuth(app);
-      console.log('Using Firebase Auth without custom persistence');
+      console.log('Using Firebase Auth without custom persistence (fallback)');
       authInitialized = !!auth;
       return auth;
     } catch (fallbackError) {
