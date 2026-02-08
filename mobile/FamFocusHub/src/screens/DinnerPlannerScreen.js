@@ -35,6 +35,11 @@ export default function DinnerPlannerScreen({ navigation, route }) {
   const [preferences, setPreferences] = useState('');
   const [familySize, setFamilySize] = useState(4);
   const [budget, setBudget] = useState('moderate');
+  const [usePantry, setUsePantry] = useState(true);
+  
+  // Pantry summary
+  const [pantrySummary, setPantrySummary] = useState(null);
+  const [pantryLoading, setPantryLoading] = useState(false);
   
   // Check for pantry items passed from PantryScreen
   useEffect(() => {
@@ -51,6 +56,19 @@ export default function DinnerPlannerScreen({ navigation, route }) {
   const [savedPlans, setSavedPlans] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
 
+  // Fetch pantry summary for meal planning
+  const fetchPantrySummary = useCallback(async () => {
+    setPantryLoading(true);
+    try {
+      const data = await apiService.get('/dinner/pantry-summary');
+      setPantrySummary(data);
+    } catch (error) {
+      console.error('Failed to fetch pantry summary:', error);
+    } finally {
+      setPantryLoading(false);
+    }
+  }, []);
+
   const fetchSavedPlans = useCallback(async () => {
     try {
       const data = await apiService.get('/dinner/plans');
@@ -62,11 +80,12 @@ export default function DinnerPlannerScreen({ navigation, route }) {
 
   useEffect(() => {
     fetchSavedPlans();
-  }, [fetchSavedPlans]);
+    fetchPantrySummary();
+  }, [fetchSavedPlans, fetchPantrySummary]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchSavedPlans();
+    await Promise.all([fetchSavedPlans(), fetchPantrySummary()]);
     setRefreshing(false);
   }, [fetchSavedPlans]);
 
