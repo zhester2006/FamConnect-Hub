@@ -5682,6 +5682,196 @@ async def get_family_achievements(request: Request):
         }
     }
 
+# ==================== ACHIEVEMENT/BADGE/GOAL MANAGEMENT (Parents) ====================
+
+@api_router.post("/achievements/custom")
+async def create_custom_achievement(request: Request, data: dict):
+    """Create a custom achievement/badge (parent only) with AI icon suggestion"""
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can create custom achievements")
+    
+    family_id = current_user['user_id']
+    name = data.get('name', '').strip()
+    description = data.get('description', '')
+    
+    if not name:
+        raise HTTPException(status_code=400, detail="Achievement name is required")
+    
+    # Generate icon using AI if not provided
+    icon = data.get('icon')
+    if not icon:
+        try:
+            chat = LlmChat(
+                api_key=os.environ['EMERGENT_LLM_KEY'],
+                session_id=f"badge_icon_{uuid.uuid4().hex[:8]}",
+                system_message="You are a helpful assistant that suggests emojis for achievements and badges. Reply with only a single emoji, nothing else."
+            ).with_model("openai", "gpt-5.2")
+            
+            icon_response = await chat.send_message(UserMessage(text=f"What single emoji best represents this achievement: {name}. Description: {description}"))
+            icon = str(icon_response).strip()[:4]
+            if len(icon) > 4 or icon.isalpha():
+                icon = "🏆"
+        except:
+            icon = "🏆"
+    
+    achievement_id = f"custom_{uuid.uuid4().hex[:12]}"
+    
+    achievement_doc = {
+        "achievement_id": achievement_id,
+        "family_id": family_id,
+        "name": name,
+        "description": description,
+        "icon": icon,
+        "category": data.get('category', 'custom'),
+        "type": data.get('type', 'manual'),  # manual, chores, points, reading
+        "requirement": data.get('requirement', 1),
+        "points_reward": data.get('points_reward', 0),
+        "active": True,
+        "created_by": current_user['user_id'],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.custom_achievements.insert_one(achievement_doc)
+    return await db.custom_achievements.find_one({"achievement_id": achievement_id}, {"_id": 0})
+
+@api_router.get("/achievements/custom")
+async def get_custom_achievements(request: Request):
+    """Get all custom achievements for the family"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    achievements = await db.custom_achievements.find(
+        {"family_id": family_id, "active": True},
+        {"_id": 0}
+    ).to_list(100)
+    
+    return {"achievements": achievements}
+
+@api_router.put("/achievements/custom/{achievement_id}")
+async def update_custom_achievement(achievement_id: str, request: Request, data: dict):
+    """Update a custom achievement (parent only)"""
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can update achievements")
+    
+    update_data = {}
+    for field in ['name', 'description', 'icon', 'requirement', 'points_reward', 'active']:
+        if field in data:
+            update_data[field] = data[field]
+    
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.custom_achievements.update_one({"achievement_id": achievement_id}, {"$set": update_data})
+    return await db.custom_achievements.find_one({"achievement_id": achievement_id}, {"_id": 0})
+
+@api_router.delete("/achievements/custom/{achievement_id}")
+async def delete_custom_achievement(achievement_id: str, request: Request):
+    """Delete a custom achievement (parent only)"""
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can delete achievements")
+    
+    await db.custom_achievements.delete_one({"achievement_id": achievement_id, "family_id": current_user['user_id']})
+    return {"success": True}
+
+@api_router.post("/achievements/custom/{achievement_id}/award")
+async def award_custom_achievement(achievement_id: str, request: Request, data: dict):
+    """Award a custom achievement to a child (parent only)"""
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can award achievements")
+    
+    child_id = data.get('child_id')
+    if not child_id:
+        raise HTTPException(status_code=400, detail="child_id is required")
+    
+    # Get the achievement
+    achievement = await db.custom_achievements.find_one({"achievement_id": achievement_id}, {"_id": 0})
+    if not achievement:
+        raise HTTPException(status_code=404, detail="Achievement not found")
+    
+    # Check if already awarded
+    existing = await db.user_achievements.find_one({
+        "achievement_id": achievement_id,
+        "user_id": child_id
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Achievement already awarded to this child")
+    
+    # Award the achievement
+    award_doc = {
+        "achievement_id": achievement_id,
+        "user_id": child_id,
+        "awarded_by": current_user['user_id'],
+        "earned_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.user_achievements.insert_one(award_doc)
+    
+    # Award points if configured
+    if achievement.get('points_reward', 0) > 0:
+        await db.users.update_one(
+            {"user_id": child_id},
+            {"$inc": {"points": achievement['points_reward']}}
+        )
+    
+    return {"success": True, "message": f"Achievement '{achievement['name']}' awarded!"}
+
+@api_router.post("/achievements/ai-suggestions")
+async def get_ai_achievement_suggestions(request: Request, data: dict):
+    """Get AI suggestions for new achievements based on family activity"""
+    current_user = await get_current_user(request)
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can get suggestions")
+    
+    family_id = current_user['user_id']
+    context = data.get('context', '')  # Optional context like "summer activities" or "reading"
+    
+    # Get family stats for context
+    children = await db.users.find({"parent_id": family_id}, {"_id": 0, "name": 1, "nickname": 1}).to_list(10)
+    child_names = [c.get('nickname') or c.get('name', 'Child') for c in children]
+    
+    existing_achievements = await db.custom_achievements.find(
+        {"family_id": family_id},
+        {"_id": 0, "name": 1}
+    ).to_list(20)
+    existing_names = [a['name'] for a in existing_achievements]
+    
+    chat = LlmChat(
+        api_key=os.environ['EMERGENT_LLM_KEY'],
+        session_id=f"achievement_suggest_{uuid.uuid4().hex[:8]}",
+        system_message="You are a helpful family achievement system assistant. Suggest fun, motivating achievements for children."
+    ).with_model("openai", "gpt-5.2")
+    
+    prompt = f"""Suggest 5 creative achievement badges for a family app.
+Children in family: {', '.join(child_names) if child_names else 'Multiple children'}
+Context/Theme: {context if context else 'General family achievements'}
+Existing achievements to avoid duplicating: {', '.join(existing_names[:10]) if existing_names else 'None yet'}
+
+For each suggestion provide:
+1. Name (short, catchy)
+2. Description (1 sentence)
+3. Emoji icon
+4. Requirement (what to do to earn it)
+5. Suggested points reward
+
+Format as JSON array: [{{"name": "...", "description": "...", "icon": "...", "requirement": "...", "points": 10}}, ...]"""
+    
+    try:
+        response = await chat.send_message(UserMessage(text=prompt))
+        response_text = str(response).strip()
+        
+        # Extract JSON
+        json_match = re.search(r'\[[\s\S]*\]', response_text)
+        if json_match:
+            suggestions = json.loads(json_match.group())
+            return {"suggestions": suggestions}
+        else:
+            return {"suggestions": [], "error": "Could not parse suggestions"}
+    except Exception as e:
+        logger.error(f"AI achievement suggestion error: {e}")
+        return {"suggestions": [], "error": str(e)}
+
 @api_router.post("/achievements/check")
 async def check_achievements(request: Request):
     """Check and award any new achievements for the current user"""
