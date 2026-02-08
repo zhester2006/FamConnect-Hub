@@ -1304,14 +1304,19 @@ async def update_chore_type(type_id: str, request: Request, data: dict):
     return await db.chore_types.find_one({"type_id": type_id}, {"_id": 0})
 
 # Delete chore type
-@api_router.delete("/chores/types/{type_name}")
-async def delete_chore_type(type_name: str, request: Request):
+@api_router.delete("/chores/types/{type_id}")
+async def delete_chore_type(type_id: str, request: Request):
     current_user = await get_current_user(request)
     if current_user['role'] != 'parent':
         raise HTTPException(status_code=403, detail="Only parents can delete chore types")
     
-    await db.chore_types.delete_one({"name": type_name})
-    return {"success": True}
+    # Try to delete by type_id first, then fall back to name for backwards compatibility
+    result = await db.chore_types.delete_one({"type_id": type_id})
+    if result.deleted_count == 0:
+        # Fall back to name match
+        result = await db.chore_types.delete_one({"name": type_id})
+    
+    return {"success": result.deleted_count > 0}
 
 # Toggle child exclusion from chore
 @api_router.put("/chores/exclude-child")
