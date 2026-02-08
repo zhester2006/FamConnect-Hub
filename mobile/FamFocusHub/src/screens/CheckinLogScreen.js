@@ -288,7 +288,11 @@ export default function CheckinLogScreen({ navigation }) {
                               {checkin.location_name || checkin.zone_name || 'Unknown Location'}
                             </Text>
                             <Text style={styles.checkinAddress} numberOfLines={1}>
-                              {checkin.address || `${checkin.lat?.toFixed(4)}, ${checkin.lng?.toFixed(4)}`}
+                              {typeof checkin.address === 'string' 
+                                ? checkin.address 
+                                : (checkin.lat && checkin.lng) 
+                                  ? `${Number(checkin.lat).toFixed(4)}, ${Number(checkin.lng).toFixed(4)}`
+                                  : 'Location data'}
                             </Text>
                           </View>
                           <Text style={styles.checkinTime}>
