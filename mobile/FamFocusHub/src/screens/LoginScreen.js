@@ -117,6 +117,15 @@ export default function LoginScreen({ navigation }) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     try {
+      // Initialize Firebase Auth if needed
+      await firebaseAuthService.initialize();
+      
+      if (!firebaseAuthService.auth) {
+        setError('Authentication service unavailable. Please restart the app.');
+        setLoading(false);
+        return;
+      }
+      
       const result = await firebaseAuthService.signInWithEmail(email, password);
       
       if (result.success) {
@@ -124,34 +133,43 @@ export default function LoginScreen({ navigation }) {
         const idToken = await firebaseAuthService.getIdToken();
         
         // Call backend to create/sync user session
-        const response = await fetch(`${API_BASE_URL}/auth/firebase-login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            idToken,
-            user: result.user 
-          }),
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          await login(data.session_token, data.user);
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        try {
+          const response = await fetch(`${API_BASE_URL}/auth/firebase-login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              idToken,
+              user: result.user 
+            }),
+          });
           
-          if (biometricAvailable && !biometricEnabled) {
-            setTimeout(() => promptEnableBiometric(data.session_token), 1000);
+          if (response.ok) {
+            const data = await response.json();
+            await login(data.session_token, data.user);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            
+            if (biometricAvailable && !biometricEnabled) {
+              setTimeout(() => promptEnableBiometric(data.session_token), 1000);
+            }
+          } else {
+            // Fall back to using Firebase user directly
+            console.log('Backend session failed, using Firebase auth directly');
+            await login(idToken, result.user);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           }
-        } else {
-          // Fall back to using Firebase user directly
-          await login(idToken, result.user);
+        } catch (backendError) {
+          // If backend fails, still login with Firebase
+          console.log('Backend unavailable, using Firebase auth:', backendError.message);
+          await login(result.user.uid, result.user);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
       } else {
-        setError(result.error);
+        setError(result.error || 'Login failed');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
     } catch (err) {
       console.error('Email login error:', err);
-      setError(err.message || 'Login failed');
+      setError(err.message || 'Login failed. Please check your credentials.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setLoading(false);
