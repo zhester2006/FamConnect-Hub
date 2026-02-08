@@ -319,6 +319,16 @@ export default function PixieAssistant() {
         )}
         <View style={[styles.messageBubble, isPixie ? styles.pixieBubble : styles.userBubble]}>
           {isPixie && <Text style={styles.pixieName}>Pixie</Text>}
+          
+          {/* Show image if message has one */}
+          {message.image && (
+            <Image 
+              source={{ uri: message.image }} 
+              style={styles.messageImage} 
+              resizeMode="cover"
+            />
+          )}
+          
           <Text style={[styles.messageText, !isPixie && styles.userMessageText]}>
             {message.content}
           </Text>
