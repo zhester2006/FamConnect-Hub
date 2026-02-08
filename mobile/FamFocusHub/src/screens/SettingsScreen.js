@@ -261,7 +261,7 @@ export default function SettingsScreen({ navigation }) {
         { icon: 'calendar', label: 'Calendar', screen: 'Calendar', color: '#fbbf24' },
         ...(user?.role === 'parent' ? [{ icon: 'checkbox', label: 'Chores', screen: 'Chores', color: '#10b981' }] : []),
         { icon: 'gift', label: 'Rewards', screen: 'Rewards', color: '#a855f7' },
-        { icon: 'book', label: 'Reading Logs', screen: 'ReadingLogs', color: '#3b82f6' },
+        ...(user?.role !== 'parent' ? [{ icon: 'book', label: 'Reading Logs', screen: 'ReadingLogs', color: '#3b82f6' }] : []),
         { icon: 'restaurant', label: 'Dinner Planner', screen: 'DinnerPlanner', color: '#f97316' },
         { icon: 'bookmark', label: 'Family Recipes', screen: 'Recipes', color: '#ef4444' },
         { icon: 'cube', label: 'Pantry', screen: 'Pantry', color: '#84cc16' },
