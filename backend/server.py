@@ -583,13 +583,13 @@ async def join_family(request: Request, data: dict):
     current_user = await get_current_user(request)
     
     family_code = data.get('family_code', '').strip().upper()
-    role = data.get('role', 'member')  # child or member (not parent during join)
+    role = data.get('role', 'member')  # child, member, or homehub (not parent during join)
     
     if not family_code:
         raise HTTPException(status_code=400, detail="Family code is required")
     
-    if role not in ['child', 'member']:
-        raise HTTPException(status_code=400, detail="Role must be 'child' or 'member'")
+    if role not in ['child', 'member', 'homehub']:
+        raise HTTPException(status_code=400, detail="Role must be 'child', 'member', or 'homehub'")
     
     # Check if user already belongs to a family
     if current_user.get('family_id'):
