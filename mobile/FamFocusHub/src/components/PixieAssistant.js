@@ -52,6 +52,8 @@ export default function PixieAssistant() {
   const floatAnim = useRef(new Animated.Value(0)).current;
   
   // Position for draggable button - start at bottom right
+  // Track position values
+  const positionRef = useRef({ x: MAX_X, y: MAX_Y - 50 });
   const pan = useRef(new Animated.ValueXY({ x: MAX_X, y: MAX_Y - 50 })).current;
 
   // Pan responder for drag functionality
@@ -66,8 +68,8 @@ export default function PixieAssistant() {
         setIsDragging(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         pan.setOffset({
-          x: pan.x._value,
-          y: pan.y._value,
+          x: positionRef.current.x,
+          y: positionRef.current.y,
         });
         pan.setValue({ x: 0, y: 0 });
       },
@@ -79,16 +81,20 @@ export default function PixieAssistant() {
         pan.flattenOffset();
         setIsDragging(false);
         
-        // Clamp to screen bounds
-        let newX = pan.x._value;
-        let newY = pan.y._value;
+        // Calculate new position from gesture
+        let newX = positionRef.current.x + gestureState.dx;
+        let newY = positionRef.current.y + gestureState.dy;
         
+        // Clamp to screen bounds
         newX = Math.max(MIN_X, Math.min(MAX_X, newX));
         newY = Math.max(MIN_Y, Math.min(MAX_Y, newY));
         
         // Snap to nearest edge (left or right)
         const snapToLeft = newX < SCREEN_WIDTH / 2;
         const finalX = snapToLeft ? MIN_X : MAX_X;
+        
+        // Update position ref
+        positionRef.current = { x: finalX, y: newY };
         
         Animated.spring(pan, {
           toValue: { x: finalX, y: newY },
