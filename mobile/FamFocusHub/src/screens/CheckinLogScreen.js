@@ -318,6 +318,17 @@ const styles = StyleSheet.create({
   childSelector: { paddingHorizontal: 16, marginBottom: 12 },
   childChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: 'rgba(30, 41, 59, 0.8)', borderRadius: 20, marginRight: 10, gap: 8 },
   childChipText: { fontSize: 13, color: '#9ca3af', fontWeight: '600' },
+  childIconOnly: { 
+    padding: 4, 
+    marginRight: 8, 
+    borderRadius: 24, 
+    borderWidth: 2, 
+    borderColor: 'transparent',
+  },
+  childIconSelected: { 
+    borderColor: '#6366f1',
+    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+  },
   
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: '#fff', marginTop: 16 },
