@@ -1832,3 +1832,52 @@ Frontend (RewardsScreen):
 - `/app/backend/server.py` - Task claim/unclaim/approve endpoints
 - `/app/mobile/FamFocusHub/src/screens/RewardsScreen.js` - Task claim UI
 - `/app/mobile/FamFocusHub/src/screens/SettingsScreen.js` - Hidden Reading Log for parents
+
+### Session 41 Update - Onboarding & Pantry Sync (Feb 2026) ✅
+
+**Updated Onboarding Tutorial:**
+Parent slides now include (12 total):
+1. Welcome
+2. Home Hub Dashboard
+3. Smart Chore Management (AI icons, approvals)
+4. Family Calendar & Approvals
+5. Rewards & Task System (claim/complete/approve)
+6. Dinner Planner & Pantry (NEW)
+7. Shopping List & Approvals (NEW)
+8. Family Wall & Chat
+9. Family Management (NEW)
+10. Location & Safety
+11. Meet Pixie - AI Assistant (NEW)
+12. All Set!
+
+Child slides now include (9 total):
+1. Welcome
+2. Daily Missions
+3. Claim Tasks & Earn Points (NEW)
+4. Rewards Shop
+5. Reading Log (NEW)
+6. Shopping & Calendar (NEW)
+7. Family Wall
+8. Ask Pixie for Help (NEW)
+9. Ready to Go!
+
+**Pantry & Dinner Planner Sync:**
+Backend:
+- `POST /dinner/weekly-plan` now checks pantry and prioritizes available ingredients
+- `GET /dinner/pantry-summary` returns pantry stats for meal planning
+- AI prompt includes pantry items with quantities by category
+- Meals are marked with 🏠 when using pantry items
+- Missing ingredients are highlighted
+
+Frontend (DinnerPlannerScreen):
+- "Use Pantry Items" toggle - enabled by default
+- Pantry summary card showing:
+  - Total items count
+  - Quick stats: protein, produce, grains, dairy
+  - Link to Pantry screen for management
+- Success message shows how many pantry items were used
+
+**Key Files Modified:**
+- `/app/backend/server.py` - Tutorial content, pantry-aware meal planning
+- `/app/mobile/FamFocusHub/src/screens/OnboardingScreen.js` - New icons/gradients
+- `/app/mobile/FamFocusHub/src/screens/DinnerPlannerScreen.js` - Pantry sync UI
