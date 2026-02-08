@@ -62,8 +62,8 @@ export async function initializeFirebaseAuth() {
   
   // Prevent concurrent initialization attempts
   if (authInitializing) {
-    // Wait a bit and check again
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait and check again
+    await new Promise(resolve => setTimeout(resolve, 200));
     if (auth) return auth;
   }
   
@@ -81,68 +81,44 @@ export async function initializeFirebaseAuth() {
   }
 
   try {
-    // Import AsyncStorage dynamically to ensure it's loaded
-    const AsyncStorageModule = await import('@react-native-async-storage/async-storage');
-    const AsyncStorage = AsyncStorageModule.default;
+    // Import Firebase Auth
+    const { initializeAuth, getAuth, getReactNativePersistence } = await import('firebase/auth');
+    const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
     
-    // Import Firebase Auth modules - try different import paths for getReactNativePersistence
-    const firebaseAuth = await import('firebase/auth');
-    const { initializeAuth, getAuth } = firebaseAuth;
-    
-    // getReactNativePersistence might be in different locations depending on Firebase version
-    let getReactNativePersistence = firebaseAuth.getReactNativePersistence;
-    
-    // Try alternative import if not found
-    if (!getReactNativePersistence) {
+    // Try to initialize with persistence first
+    if (getReactNativePersistence) {
       try {
-        const rnAuth = await import('firebase/auth/react-native');
-        getReactNativePersistence = rnAuth.getReactNativePersistence;
-      } catch (e) {
-        console.warn('Could not import from firebase/auth/react-native:', e.message);
-      }
-    }
-    
-    // Check if getReactNativePersistence is available
-    if (!getReactNativePersistence) {
-      console.warn('getReactNativePersistence not available - auth state will not persist');
-      try {
-        auth = getAuth(app);
-        console.log('Using Firebase Auth without persistence (Expo Go limitation)');
-      } catch (e) {
-        console.error('getAuth failed:', e.message);
-      }
-    } else {
-      try {
-        // Initialize auth with persistence
         auth = initializeAuth(app, {
           persistence: getReactNativePersistence(AsyncStorage)
         });
-        console.log('Firebase Auth initialized with AsyncStorage persistence');
-      } catch (authError) {
-        // Handle "already initialized" error
-        if (authError.code === 'auth/already-initialized' || 
-            authError.message?.includes('already been called') ||
-            authError.message?.includes('Component auth has not been registered')) {
-          console.log('Auth already initialized or not registered, using getAuth');
-          try {
-            auth = getAuth(app);
-          } catch (e) {
-            console.warn('getAuth also failed:', e.message);
-          }
-        } else {
-          console.warn('Auth init error:', authError.message);
-          try {
-            auth = getAuth(app);
-          } catch (fallbackError) {
-            console.error('Auth getAuth fallback failed:', fallbackError.message);
-          }
-        }
+        console.log('Firebase Auth initialized with persistence');
+        authInitialized = true;
+        authInitializing = false;
+        return auth;
+      } catch (initError) {
+        console.log('initializeAuth failed, trying getAuth:', initError.message);
       }
     }
     
-    authInitialized = !!auth;
+    // Fallback to getAuth (without persistence)
+    try {
+      auth = getAuth(app);
+      console.log('Firebase Auth initialized (no persistence)');
+      authInitialized = true;
+      authInitializing = false;
+      return auth;
+    } catch (getAuthError) {
+      console.error('getAuth failed:', getAuthError.message);
+    }
+    
     authInitializing = false;
-    return auth;
+    return null;
+  } catch (error) {
+    console.error('Firebase Auth initialization error:', error);
+    authInitializing = false;
+    return null;
+  }
+}
   } catch (error) {
     console.error('Firebase Auth initialization error:', error);
     authInitializing = false;
