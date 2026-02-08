@@ -1,7 +1,15 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import apiService from './api.service';
+
+// Get the EAS projectId from app.json
+const getProjectId = () => {
+  return Constants.expoConfig?.extra?.eas?.projectId || 
+         Constants.easConfig?.projectId || 
+         '8bac899b-ce06-479a-9216-b762626cddba'; // fallback to the actual EAS projectId
+};
 
 // Configure notification handler
 Notifications.setNotificationHandler({
@@ -46,10 +54,13 @@ class PushNotificationService {
       }
       
       try {
+        const projectId = getProjectId();
+        console.log('Using EAS projectId:', projectId);
         token = (await Notifications.getExpoPushTokenAsync({
-          projectId: 'famfocus-hub'
+          projectId: projectId
         })).data;
         this.expoPushToken = token;
+        console.log('Push token obtained:', token?.substring(0, 30) + '...');
         
         // Register token with backend
         await this.registerTokenWithBackend(token);
