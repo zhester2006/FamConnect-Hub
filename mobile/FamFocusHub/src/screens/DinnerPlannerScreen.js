@@ -117,10 +117,15 @@ export default function DinnerPlannerScreen({ navigation, route }) {
         family_size: familySize,
         preferences,
         budget,
+        use_pantry: usePantry,
       });
       setWeeklyPlan(response.plan || 'No plan available');
       fetchSavedPlans();
-      Alert.alert('Success', 'Weekly meal plan created!');
+      
+      const pantryMsg = response.pantry_items_used?.length > 0 
+        ? `\n\nUsing ${response.pantry_items_used.length} items from your pantry!` 
+        : '';
+      Alert.alert('Success', `Weekly meal plan created!${pantryMsg}`);
     } catch (error) {
       console.error('Failed to get weekly plan:', error);
       Alert.alert('Error', 'Failed to create weekly plan');
