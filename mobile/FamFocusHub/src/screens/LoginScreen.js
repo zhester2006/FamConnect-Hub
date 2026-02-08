@@ -124,7 +124,7 @@ export default function LoginScreen({ navigation }) {
         const idToken = await firebaseAuthService.getIdToken();
         
         // Call backend to create/sync user session
-        const response = await fetch(`${API_BASE}/api/auth/firebase-login`, {
+        const response = await fetch(`${API_BASE_URL}/auth/firebase-login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
