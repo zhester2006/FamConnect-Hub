@@ -4,7 +4,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
 import { getStorage } from 'firebase/storage';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import firebaseConfig from './firebase.config';
 
 let app = null;
@@ -33,9 +32,10 @@ function initializeApp_() {
   return app;
 }
 
-// Initialize Auth with multiple fallback strategies
+// Initialize Auth - simplified approach that works with Expo
 async function initializeAuth_() {
   if (auth && authInitialized) {
+    console.log('[Firebase] Auth already initialized');
     return auth;
   }
 
@@ -48,78 +48,58 @@ async function initializeAuth_() {
     return null;
   }
 
-  // Strategy 1: Try initializeAuth with persistence
   try {
-    const firebaseAuth = await import('firebase/auth');
-    const { initializeAuth, getReactNativePersistence } = firebaseAuth;
+    // Import the auth module - this registers the 'auth' component
+    const firebaseAuth = require('firebase/auth');
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
     
-    if (initializeAuth && getReactNativePersistence) {
-      auth = initializeAuth(app, {
-        persistence: getReactNativePersistence(AsyncStorage)
-      });
-      console.log('[Firebase] Auth initialized with persistence');
+    // Try initializeAuth with React Native persistence first
+    try {
+      if (firebaseAuth.initializeAuth && firebaseAuth.getReactNativePersistence) {
+        auth = firebaseAuth.initializeAuth(app, {
+          persistence: firebaseAuth.getReactNativePersistence(AsyncStorage)
+        });
+        console.log('[Firebase] Auth initialized with initializeAuth + persistence');
+        authInitialized = true;
+        return auth;
+      }
+    } catch (initError) {
+      // If "already initialized" error, fall back to getAuth
+      if (initError.code === 'auth/already-initialized') {
+        console.log('[Firebase] Auth already initialized, using getAuth');
+        auth = firebaseAuth.getAuth(app);
+        authInitialized = true;
+        return auth;
+      }
+      console.log('[Firebase] initializeAuth error:', initError.message);
+    }
+
+    // Fallback: try getAuth directly
+    try {
+      auth = firebaseAuth.getAuth(app);
+      console.log('[Firebase] Auth initialized with getAuth');
       authInitialized = true;
       return auth;
+    } catch (getAuthError) {
+      console.error('[Firebase] getAuth failed:', getAuthError.message);
     }
-  } catch (error) {
-    console.log('[Firebase] initializeAuth failed:', error.message);
-  }
 
-  // Strategy 2: Try getAuth (for already initialized or fallback)
-  try {
-    const { getAuth } = await import('firebase/auth');
-    auth = getAuth(app);
-    console.log('[Firebase] Auth initialized with getAuth');
-    authInitialized = true;
-    return auth;
   } catch (error) {
-    console.error('[Firebase] getAuth failed:', error.message);
+    console.error('[Firebase] Auth module load error:', error.message);
   }
 
   return null;
-}
-
-// Initialize all Firebase services
-async function initializeAll() {
-  if (isInitialized && app && auth) {
-    return { app, auth, database, storage };
-  }
-
-  // Initialize app first
-  initializeApp_();
-  
-  // Initialize auth
-  await initializeAuth_();
-
-  // Initialize database
-  if (app) {
-    try {
-      database = getDatabase(app);
-      console.log('[Firebase] Database initialized');
-    } catch (e) {
-      console.warn('[Firebase] Database init error:', e.message);
-    }
-
-    try {
-      storage = getStorage(app);
-      console.log('[Firebase] Storage initialized');
-    } catch (e) {
-      console.warn('[Firebase] Storage init error:', e.message);
-    }
-  }
-
-  isInitialized = true;
-  return { app, auth, database, storage };
 }
 
 // Synchronous app initialization (called at module load)
 export function initializeFirebase() {
   initializeApp_();
   
-  // Also init database and storage synchronously
+  // Initialize database and storage synchronously
   if (app && !database) {
     try {
       database = getDatabase(app);
+      console.log('[Firebase] Database initialized');
     } catch (e) {
       console.warn('[Firebase] Database init error:', e.message);
     }
@@ -128,6 +108,7 @@ export function initializeFirebase() {
   if (app && !storage) {
     try {
       storage = getStorage(app);
+      console.log('[Firebase] Storage initialized');
     } catch (e) {
       console.warn('[Firebase] Storage init error:', e.message);
     }
