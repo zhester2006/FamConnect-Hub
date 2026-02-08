@@ -8,14 +8,17 @@ import {
   RefreshControl,
   Animated,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api.service';
 
 export default function AchievementsScreen({ route }) {
   const theme = useTheme();
-  const user = route?.params?.user;
+  const { user: authUser } = useAuth();
+  const user = route?.params?.user || authUser;
   
   const [achievements, setAchievements] = useState([]);
   const [stats, setStats] = useState({});
@@ -29,11 +32,16 @@ export default function AchievementsScreen({ route }) {
   const [celebrationAnim] = useState(new Animated.Value(0));
 
   const fetchAchievements = useCallback(async () => {
+    if (!user?.user_id) {
+      setLoading(false);
+      return;
+    }
+    
     try {
       const [userRes, familyRes, seasonalRes] = await Promise.all([
-        apiService.get(`/achievements/user/${user?.user_id}`),
-        apiService.get('/achievements/family'),
-        apiService.get('/achievements/seasonal'),
+        apiService.get(`/achievements/user/${user.user_id}`).catch(() => null),
+        apiService.get('/achievements/family').catch(() => null),
+        apiService.get('/achievements/seasonal').catch(() => null),
       ]);
 
       if (userRes) {
