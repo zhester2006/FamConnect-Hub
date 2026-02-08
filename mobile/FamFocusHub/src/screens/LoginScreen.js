@@ -118,12 +118,19 @@ export default function LoginScreen({ navigation }) {
     
     try {
       // Initialize Firebase Auth if needed
-      await firebaseAuthService.initialize();
+      const initResult = await firebaseAuthService.initialize();
       
-      if (!firebaseAuthService.auth) {
-        setError('Authentication service unavailable. Please restart the app.');
-        setLoading(false);
-        return;
+      if (!initResult || !firebaseAuthService.auth) {
+        // Retry initialization once
+        await new Promise(resolve => setTimeout(resolve, 500));
+        firebaseAuthService.initializationAttempted = false; // Reset to allow retry
+        const retryResult = await firebaseAuthService.initialize();
+        
+        if (!retryResult || !firebaseAuthService.auth) {
+          setError('Unable to connect to authentication. Please check your internet connection and restart the app.');
+          setLoading(false);
+          return;
+        }
       }
       
       const result = await firebaseAuthService.signInWithEmail(email, password);
@@ -164,7 +171,7 @@ export default function LoginScreen({ navigation }) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
       } else {
-        setError(result.error || 'Login failed');
+        setError(result.error || 'Login failed. Please check your credentials.');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
     } catch (err) {
