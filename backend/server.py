@@ -3852,30 +3852,63 @@ async def reset_onboarding(request: Request):
     
     return {"success": True}
 
-# Enhanced Dinner Planner with weekly meal planning
+# Enhanced Dinner Planner with weekly meal planning and Pantry sync
 @api_router.post("/dinner/weekly-plan")
 async def create_weekly_meal_plan(request: Request, data: dict):
     current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
     
     family_size = data.get('family_size', 4)
     preferences = data.get('preferences', '')
     budget = data.get('budget', 'moderate')
+    use_pantry = data.get('use_pantry', True)  # Whether to check pantry items
+    
+    # Get pantry items to suggest meals based on available ingredients
+    pantry_items = []
+    pantry_text = ""
+    if use_pantry:
+        items = await db.pantry.find(
+            {"family_id": family_id, "quantity": {"$gt": 0}},
+            {"_id": 0, "name": 1, "category": 1, "quantity": 1}
+        ).to_list(100)
+        
+        pantry_items = [item['name'] for item in items]
+        if pantry_items:
+            by_category = {}
+            for item in items:
+                cat = item.get('category', 'other')
+                if cat not in by_category:
+                    by_category[cat] = []
+                by_category[cat].append(f"{item['name']} ({item.get('quantity', 1)})")
+            
+            pantry_text = "\n".join([f"- {cat.title()}: {', '.join(items)}" for cat, items in by_category.items()])
     
     chat = LlmChat(
         api_key=os.environ['EMERGENT_LLM_KEY'],
         session_id=f"mealplan_{uuid.uuid4().hex[:8]}",
-        system_message="You are a helpful family meal planning assistant."
+        system_message="You are a helpful family meal planning assistant. Prioritize using available pantry items when possible."
     ).with_model("openai", "gpt-5.2")
     
     prompt = f"""Create a weekly dinner plan for a family of {family_size}.
-Preferences: {preferences}
+Preferences: {preferences if preferences else 'Family-friendly meals'}
 Budget: {budget}
+"""
+    
+    if pantry_text:
+        prompt += f"""
+AVAILABLE IN PANTRY (prioritize using these):
+{pantry_text}
 
+Please create meals that USE these pantry ingredients when possible. Indicate which meals use pantry items.
+"""
+    
+    prompt += """
 For each day (Monday-Sunday), provide:
-1. Meal name
+1. Meal name (mark with 🏠 if using pantry items)
 2. Brief description
 3. Estimated prep time
-4. Key ingredients
+4. Key ingredients (mark pantry items with ✓)
+5. Missing ingredients to buy
 
 Format as a clear list for each day."""
     
@@ -3885,16 +3918,56 @@ Format as a clear list for each day."""
     plan_id = f"mealplan_{uuid.uuid4().hex[:12]}"
     plan_doc = {
         "plan_id": plan_id,
-        "family_id": current_user.get('parent_id', current_user['user_id']),
+        "family_id": family_id,
         "week_start": datetime.now(timezone.utc).date().isoformat(),
         "plan": response,
         "preferences": preferences,
+        "budget": budget,
+        "pantry_items_used": pantry_items[:20] if use_pantry else [],
         "created_by": current_user['user_id'],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.meal_plans.insert_one(plan_doc)
     
-    return {"plan_id": plan_id, "plan": response}
+    return {"plan_id": plan_id, "plan": response, "pantry_items_used": pantry_items[:20]}
+
+# Get pantry summary for dinner planner
+@api_router.get("/dinner/pantry-summary")
+async def get_pantry_for_dinner(request: Request):
+    """Get a summary of pantry items organized for meal planning"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    items = await db.pantry.find(
+        {"family_id": family_id, "quantity": {"$gt": 0}},
+        {"_id": 0, "name": 1, "category": 1, "quantity": 1}
+    ).to_list(100)
+    
+    # Group by category
+    by_category = {}
+    for item in items:
+        cat = item.get('category', 'other')
+        if cat not in by_category:
+            by_category[cat] = []
+        by_category[cat].append(item)
+    
+    # Count totals
+    protein_count = len(by_category.get('meat', []))
+    produce_count = len(by_category.get('produce', []))
+    grains_count = len(by_category.get('grains', []))
+    dairy_count = len(by_category.get('dairy', []))
+    
+    return {
+        "total_items": len(items),
+        "categories": by_category,
+        "summary": {
+            "protein": protein_count,
+            "produce": produce_count,
+            "grains": grains_count,
+            "dairy": dairy_count,
+        },
+        "item_names": [item['name'] for item in items]
+    }
 
 # Get saved meal plans
 @api_router.get("/dinner/plans")
