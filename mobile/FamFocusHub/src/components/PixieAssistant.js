@@ -46,6 +46,7 @@ export default function PixieAssistant() {
   const [loading, setLoading] = useState(false);
   const [showQuickPrompts, setShowQuickPrompts] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const scrollRef = useRef(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
