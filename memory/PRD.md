@@ -1800,3 +1800,35 @@ Update Firebase Realtime Database rules in Firebase Console to:
 3. Family-specific chore lists
 4. Add/Delete chore types (parent only)
 5. Defaults restored if no custom types exist
+
+### Session 41 Update - Task Claim System & Parent Restrictions (Feb 2026) ✅
+
+**Reading Log Hidden for Parents:**
+- Reading Logs menu item only shows for child users
+- Parents still have access via URL/navigation if needed
+
+**Task Claim/Unclaim System (NEW):**
+Backend endpoints:
+- `POST /tasks/{task_id}/claim` - Child claims a task
+- `POST /tasks/{task_id}/unclaim` - Child releases a claimed task
+- `PUT /tasks/{task_id}/approve` - Parent approves/denies task completion
+
+Frontend (RewardsScreen):
+- Children can claim tasks before completing them
+- Claimed tasks show "Claim" button, claimed ones show "Done" + unclaim option
+- Tasks claimed by others show "Taken" badge
+- Parents see approve/deny buttons for pending task completions
+- Points automatically awarded on approval
+
+**Task Flow:**
+1. Child sees available task → clicks "Claim"
+2. Task shows as claimed by that child
+3. Child completes task → clicks "Done"
+4. Task status: pending_approval
+5. Parent approves → points awarded, task marked approved
+6. Parent denies → task reset to available
+
+**Key Files Modified:**
+- `/app/backend/server.py` - Task claim/unclaim/approve endpoints
+- `/app/mobile/FamFocusHub/src/screens/RewardsScreen.js` - Task claim UI
+- `/app/mobile/FamFocusHub/src/screens/SettingsScreen.js` - Hidden Reading Log for parents
