@@ -59,7 +59,6 @@ const FeatureCard = ({ icon, text, color }) => (
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [devLoading, setDevLoading] = useState(null);
   const [error, setError] = useState(null);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricType, setBiometricType] = useState('Biometric');
