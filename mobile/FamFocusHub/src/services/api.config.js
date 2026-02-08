@@ -1,4 +1,5 @@
 // API Configuration for FamFocus Hub Mobile App
+// Production API URL - change this when deploying to your own server
 const API_BASE_URL = 'https://familyhub-68.preview.emergentagent.com/api';
 
 export const API_ENDPOINTS = {
@@ -8,7 +9,6 @@ export const API_ENDPOINTS = {
   AUTH_LOGOUT: '/auth/logout',
   FIREBASE_LOGIN: '/auth/firebase-login',
   FIREBASE_SIGNUP: '/auth/firebase-signup',
-  DEV_LOGIN: '/auth/dev-login',
   
   // Family
   FAMILIES: '/families',
