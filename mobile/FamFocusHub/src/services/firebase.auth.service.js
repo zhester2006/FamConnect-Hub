@@ -191,11 +191,15 @@ class FirebaseAuthService {
   // Sign out
   async signOut() {
     try {
-      await auth().signOut();
+      console.log('[AuthService] Signing out...');
+      if (this.auth) {
+        await this.auth.signOut();
+      }
       await this.clearPersistedSession();
+      console.log('[AuthService] Sign out successful');
       return { success: true };
     } catch (error) {
-      console.error('[AuthService] Sign out error:', error);
+      console.error('[AuthService] Sign out error:', error.code, error.message);
       return { success: false, error: error.message };
     }
   }
@@ -203,10 +207,21 @@ class FirebaseAuthService {
   // Send password reset email
   async sendPasswordReset(email) {
     try {
-      await auth().sendPasswordResetEmail(email);
+      console.log('[AuthService] Sending password reset email to:', email);
+      
+      if (!this.auth) {
+        await this.initialize();
+      }
+      
+      if (!this.auth) {
+        return { success: false, error: 'Authentication service not available.' };
+      }
+      
+      await this.auth.sendPasswordResetEmail(email);
+      console.log('[AuthService] Password reset email sent');
       return { success: true };
     } catch (error) {
-      console.error('[AuthService] Password reset error:', error);
+      console.error('[AuthService] Password reset error:', error.code, error.message);
       return {
         success: false,
         error: this.getErrorMessage(error.code),
@@ -216,20 +231,20 @@ class FirebaseAuthService {
 
   // Change password
   async changePassword(currentPassword, newPassword) {
-    const user = auth().currentUser;
+    const user = this.auth?.currentUser;
     if (!user) {
       return { success: false, error: 'Not authenticated' };
     }
 
     try {
-      const { EmailAuthProvider } = require('@react-native-firebase/auth');
-      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      const credential = auth.EmailAuthProvider.credential(user.email, currentPassword);
       await user.reauthenticateWithCredential(credential);
       await user.updatePassword(newPassword);
+      console.log('[AuthService] Password changed successfully');
       
       return { success: true };
     } catch (error) {
-      console.error('[AuthService] Change password error:', error);
+      console.error('[AuthService] Change password error:', error.code, error.message);
       return {
         success: false,
         error: this.getErrorMessage(error.code),
