@@ -237,5 +237,5 @@ FamFocusHub/
 ## Support
 
 For issues or questions about the mobile app, check:
-- Backend API: `https://familyhub-68.preview.emergentagent.com/docs`
+- Backend API: `https://family-hub-app-2.preview.emergentagent.com/docs`
 - Expo documentation: `https://docs.expo.dev`

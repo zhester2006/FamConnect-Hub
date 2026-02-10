@@ -4,144 +4,141 @@ The user wants to create a comprehensive, family-oriented, mobile-friendly app c
 **PRODUCT REQUIREMENTS:**
 -   **Profiles:** Customizable parent and child profiles with nicknames.
 -   **Dashboards:** Child-specific dashboards and a Parent dashboard for management. A main Home Hub for large screens.
--   **Family Management:** A family code system for joining. Parents can manage members, assign roles (Parent, Child, Member), and send invites via a dedicated screen.
+-   **Family Management:** A family code system for joining. Parents can manage members, assign roles (Parent, Child, Member, HomeHub), and send invites.
 -   **Core Features:**
     -   **Calendar:** Shared family calendar. Events added by children require parent approval.
-    -   **Chores:** AI-assisted chore scheduling with parent override, assignments, and approval. Profile photos on tasks. Parents can edit the available chore list.
-    -   **Live Chat:** Real-time messenger on Firebase with profile pictures.
-    -   **Family Wall:** A shared social space for posts, photos, polls, and GIFs. Interactions (likes, comments, votes) should happen in-place without navigation. Profile pictures must be displayed.
+    -   **Chores:** AI-assisted chore scheduling with parent override, assignments, and approval.
+    -   **Live Chat:** Real-time messenger on Firebase.
+    -   **Family Wall:** A shared social space for posts, photos, polls, and GIFs. Interactions should happen in-place without navigation.
     -   **Shopping List:** Collaborative list. Items added by children require parent approval.
-    -   **Points & Rewards:** Gamified system. Points are automatically updated upon chore approval/denial or reward redemption.
-    -   **Reading Log:** Children submit book summaries for parent approval. (Parent profiles do not have this feature).
-    -   **Dinner Planner:** AI-suggested weekly meals. UI should allow viewing meal details and selecting specific ingredients to add to the shopping list.
-    -   **AI Assistant (Pixie):** An app-wide assistant that uses user nicknames. Should provide daily inspiration, including Bible quotes.
-    -   **Location & Check-ins:** Safe zones with Google Maps, location updates, and check-in notifications to parents.
-    -   **Pantry:** Inventory of food, integrated with Dinner Planner.
-    -   **Personal Recipes:** Section to manage recipes, which should also appear in Quick Meal Ideas.
+    -   **Points & Rewards:** Gamified system (not for 'HomeHub' role).
+    -   **Reading Log:** Children submit book summaries for parent approval.
+    -   **Dinner Planner:** AI-suggested weekly meals with an editable Quick Meal Ideas section.
+    -   **AI Assistant (Pixie):** An app-wide assistant that can accept image/camera input.
+    -   **Location & Check-ins:** Safe zones with Google Maps, location updates, and check-in notifications.
 -   **Technical & UX Requirements:**
-    -   **Authentication:** Full Firebase Authentication with persistent login sessions.
-    -   **UI:** Vibrant, mobile-friendly UI. Profile pictures must be displayed on all user icons throughout the app.
-    -   **Onboarding:** A tutorial for first-time users, updated with new features.
-    -   **Bug Reporting:** A feature in settings for users to report bugs with logs attached.
+    -   **Authentication:** Full Firebase Authentication (Email/Password & Google).
+    -   **UI:** Vibrant, mobile-friendly UI. Profile pictures on all user icons.
+    -   **Production Ready:** The app should be configurable for production (hide dev logins, manage build warnings).
 
 **User's preferred language**: English
 
 **what currently exists?**
-The agent has implemented a massive number of features requested by the user. This includes a full bug reporting and suggestions system with email notifications, an AI-powered receipt scanner for the pantry, synchronization between the pantry and the dinner planner, an updated onboarding tutorial, a claim system for tasks, and parent-side management for the available chore list with AI-generated icons.
+A full-stack application with a React Native (Expo) frontend and a FastAPI backend. A vast number of features have been implemented, including a new homehub role, CRUD functionality for Quick Meal Ideas, and camera integration for the AI assistant. The app has also been prepared for production by removing development logins and adding build optimizations.
 
-However, the application remains highly unstable. Critical issues from the previous session, most notably the Firebase Authentication initialization failure, persist despite multiple fix attempts. The user has reported new bugs, including a crash on the Check-in Log screen, issues with data not refreshing correctly (chore list), and other features not working as expected (Achievements, Goals, Receipt Scanner). The agent has attempted to fix these newly reported issues, but they require user verification.
+However, the user is currently unable to build the app locally due to a critical native build failure (CMake/Ninja error). This build issue is blocking the verification of all recent fixes, most importantly the fix for the persistent Firebase Authentication failure which prevents any user from signing in or signing up. The user has recently switched to a new Firebase project and provided an updated .
 
 **Last working item**:
-    - Last item agent was working: Fixing a critical crash on the . User logs showed the error , indicating an object was being rendered directly as a text component. The agent modified  to correctly format the location object into a displayable string.
-    - Status: USER VERIFICATION PENDING
+    - Last item agent was working: Assisting the user to resolve a local Android build failure. The build process is failing with a  and , which indicates a corrupted native build cache. The agent instructed the user to perform a full clean of the android build directories (, ) and then attempt to rebuild.
+    - Status: IN PROGRESS
     - Agent Testing Done: N
-    - Which testing method agent to use? Frontend testing agent, with specific focus on reproducing and verifying the fix for the  crash.
+    - Which testing method agent to use? Manual testing by user. The agent must first guide the user to a successful local build.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1:  (P0) Firebase Auth initialization error ().
-  - Issue 2:  (P0)  crashes the app.
-  - Issue 3:  (P1) Creating a new available chore removes all other default chores from the list.
-  - Issue 4:  (P1)  is not loading.
-  - Issue 5:  (P1) AI Receipt Scanner fails with a generic failed to add items error.
-  - Issue 6:  (P1) Goal title on the dashboard incorrectly says updated goal title instead of the actual goal's title.
-  - Issue 7:  (P2) Push notification token error ().
-  - Issue 8:  (P2) Map screen loads but shows no map image.
-  - Issue 9:  (P2) Family Wall interactions (likes, polls) cause a screen redirect/refresh.
+  - Issue 1:  (P0) Local Android build fails with CMake/Ninja error.
+  - Issue 2:  (P0) Firebase Authentication is not working. User reports cant sign in, says authentication service unavailable.
+  - Issue 3:  (P1) Poll voting on Family Wall causes a screen redirect instead of updating in-place.
+  - Issue 4:  (P2) The map screen loads but does not display a map image.
+  - Issue 5:  (P2) App crashes when the Pixie AI assistant is dragged.
   
   Issues Detail:
   - Issue 1: 
-     - Attempted fixes: The agent made the initialization logic in  more robust with a try-catch block and a fallback. However, user logs from message #570 confirm the error is identical and still occurring.
+     - Attempted fixes: The user's  command failed with a CMake error. The agent identified this as a corrupted native build cache and provided a sequence of commands to manually delete all build-related directories (, , ) and regenerate the native project with .
      - Next debug checklist: 
-        1. **Abandon Expo Go:** The persistence mechanism for Firebase Auth is known to be unreliable in Expo Go. The next agent MUST guide the user to create and use a development build ().
-        2. **Review Initialization Order:** Scrutinize the entire app startup from  ->  -> . Ensure  is the very first thing that runs, before any other component that might import a Firebase service.
-        3. **Check :** Ensure the  section correctly configures Firebase.
-     - Why fix this issue and what will be achieved with the fix? This is the root cause of all authentication problems, lack of session persistence, and real-time feature failures. Fixing it is the highest priority for app stability.
+        1. Guide the user to execute the remaining cleanup commands.
+        2. Instruct the user to run the release build command again: .
+        3. If it still fails, analyze the new build logs for errors.
+     - Why fix this issue and what will be achieved with the fix? This is a P0 blocker. The user cannot create an APK to test the app or verify any of the implemented fixes until this is resolved.
      - Status:  IN PROGRESS
      - Is recurring issue? Y
-     - Should Test frontend/backend/both after fix? Frontend.
-     - Blocked on other issue: This issue blocks reliable functionality of most of the app.
+     - Should Test frontend/backend/both after fix? Frontend (successful build).
+     - Blocked on other issue: This issue blocks ALL other issues.
   - Issue 2: 
-     - Attempted fixes: The agent identified an object being rendered as a React child and modified  to format the location object to a string before rendering.
+     - Attempted fixes: Agent implemented multiple fixes: corrected  import path, made initialization logic in  more robust, updated  with the user's new file, and guided the user on adding SHA-1/SHA-256 fingerprints to their new Firebase project ().
      - Next debug checklist: 
-        1. User needs to test the fix on their device.
-        2. If it still crashes, wrap the entire  function in  with a  block and use  to log the exact  object that causes the crash.
-     - Why fix this issue and what will be achieved with the fix? This is a critical crash that makes a core feature unusable.
-     - Status:  USER VERIFICATION PENDING
+        1. Resolve the P0 build issue first.
+        2. Have the user test sign-in/sign-up on the newly built APK.
+        3. Verify the correct  is being used and that Email/Password and Google providers are enabled in the Firebase console.
+     - Why fix this issue and what will be achieved with the fix? This is the most critical functional bug. Fixing it will allow users to actually use the app.
+     - Status:  BLOCKED
      - Is recurring issue? Y
      - Should Test frontend/backend/both after fix? Frontend.
-     - Blocked on other issue: None.
+     - Blocked on other issue: Issue 1: Local Android build fails with CMake/Ninja error.
   - Issue 3: 
-     - Attempted fixes: Agent identified that the  endpoint was only returning family-specific chores after a new one was added. The agent modified the endpoint in  to return a combination of family-specific chores and default chores.
-     - Next debug checklist: User needs to test this by adding a new chore type and verifying the full list still appears.
-     - Why fix this issue and what will be achieved with the fix? It restores core functionality for parents managing chores.
-     - Status:  USER VERIFICATION PENDING
-     - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? Both (API logic and frontend display).
-     - Blocked on other issue: None.
-  - Issue 4: 
-     - Attempted fixes: Agent updated  to use  hook to get user data directly instead of relying on route props, which may be missing.
-     - Next debug checklist: User needs to test if the screen now loads correctly.
-     - Why fix this issue and what will be achieved with the fix? Makes the achievements feature accessible.
-     - Status:  USER VERIFICATION PENDING
+     - Attempted fixes: Agent wrapped the  for poll options in  inside another  and used  to prevent the event from bubbling up and triggering navigation.
+     - Next debug checklist: User needs to test this on a working build.
+     - Why fix this issue and what will be achieved with the fix? It will fix a disruptive UX bug on a core feature screen.
+     - Status:  BLOCKED
      - Is recurring issue? N
      - Should Test frontend/backend/both after fix? Frontend.
-     - Blocked on other issue: None.
-  - Issue 5: 
-     - Attempted fixes: Agent found a missing  in  for the receipt parsing logic and added it, along with more detailed error handling on the  endpoint.
-     - Next debug checklist: User needs to test the receipt scanning flow again.
-     - Why fix this issue and what will be achieved with the fix? Fixes a major new feature.
-     - Status:  USER VERIFICATION PENDING
-     - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? Both (API logic and frontend feedback).
-     - Blocked on other issue: None.
-  - Issue 6: 
-     - Attempted fixes: Agent investigated and concluded this is due to placeholder sample data in the user's database, not a code bug. The agent did not modify the sample data.
+     - Blocked on other issue: Issue 1: Local Android build fails with CMake/Ninja error.
+  - Issue 4: 
+     - Attempted fixes: None in this or the previous session.
      - Next debug checklist: 
-        1. Create a new endpoint  that removes all documents created by the  function.
-        2. Instruct the user to call this or manually clear the goals in-app.
-     - Why fix this issue and what will be achieved with the fix? Removes confusing placeholder data and improves UX.
+        1. Verify Google Maps API key is correctly configured in .
+        2. Check for any console errors on the map screen.
+        3. Ensure the  component is being rendered with valid region/coordinate data.
+     - Why fix this issue and what will be achieved with the fix? It will restore a core feature of the app.
      - Status:  NOT STARTED
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix? Frontend.
+     - Blocked on other issue: None, but should be lower priority than build/auth issues.
+  - Issue 5: 
+     - Attempted fixes: Agent modified the  handler in  to use  and  instead of directly accessing , which is not recommended.
+     - Next debug checklist: User needs to test this on a working build.
+     - Why fix this issue and what will be achieved with the fix? Prevents a crash when interacting with the AI assistant.
+     - Status:  BLOCKED
      - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? Backend.
-     - Blocked on other issue: None.
+     - Should Test frontend/backend/both after fix? Frontend.
+     - Blocked on other issue: Issue 1: Local Android build fails with CMake/Ninja error.
 
 **In progress Task List**:
-  - None
+  - Task 1:  Refactor  into a modular router structure.
+     - Where to resume: The  directory contains placeholder files. The next agent should systematically move route groups (e.g., chores, family, users) from the monolithic  into their respective router files and include them in the main  app instance.
+     - What will be achieved with this? Greatly improve backend code maintainability, readability, and scalability.
+     - Status:  NOT STARTED
+     - Should Test frontend/backend/both after fix? Backend.
+     - Blocked on something: Higher priority bug fixes.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - (P1) **Build UI for Parent Management of Goals/Achievements/Badges:** The user requested parents be able to add/edit goals, achievements, and badges. The agent built the backend endpoints, but the frontend interface for this is missing. This needs to be added, likely in a new settings screen or within the .
-    - (P1) **Integrate AI Suggestions for Achievements:** The backend endpoint  exists. A button or feature needs to be added to the new management UI to call this and display AI-recommended achievements for parents.
+    - (P1) **Implement Parent Management UI:** Build out the UI in  to allow parents to create, edit, and delete custom Goals, Achievements, and Badges using the existing backend endpoints.
+    - (P1) **Integrate AI Achievement Suggestions:** Add a button to the new Parent Management UI that calls the  endpoint and displays the results for the parent to use.
 - **Future Tasks:**
-    - (P2) Refactor  into a  directory structure for maintainability.
-    - (P2) Integrate voice commands for the Pixie assistant.
+    - (P2) **App Deployment Guide:** Create a detailed guide for the user to submit their app to the Google Play Store and Apple App Store.
+    - (P2) **Voice Commands for Pixie:** Integrate a speech-to-text library to allow voice interaction with the AI assistant.
 
 **Completed work in this session**
-- **Feature - Suggestions System:** Implemented a Suggest a Feature option in settings, complete with a backend endpoint and Resend email integration.
-- **Feature - AI Chore Management:** Parents can now add/delete available chores. The backend uses AI to suggest an icon for new chores. The frontend  was refactored to use this dynamic list.
-- **Feature - Task Claiming:** Children can now Claim and Unclaim tasks from the Earn tab, moving them to a personal list.
-- **Feature - Onboarding Update:** Updated the tutorial content to include all newly added features.
-- **Feature - Pantry & Dinner Planner Sync:** The dinner planner can now use items from the pantry to suggest meals. The UI was updated with a toggle.
-- **Feature - AI Receipt Scanner:** Implemented a full-stack feature for scanning receipts with a camera, using Gemini Vision to parse items, and allowing the user to confirm before adding them to the pantry.
-- **Bug Fix Attempt - Firebase Auth:** Made code more robust, but the underlying issue persists.
-- **Bug Fix - Chore List Refresh:** Fixed a backend bug where adding a new chore type would hide all default ones.
-- **Bug Fix - Check-in Log Crash:** Added a  endpoint and patched the frontend to prevent a crash from rendering an object.
-- **Bug Fix - Achievements Screen Load:** Patched the  to fetch user data directly.
-- **Bug Fix - Receipt Scanner Crash:** Fixed a backend crash by importing the  module.
-- **Enhancement - Point Refresh:** Added  calls to the  to update points after actions.
-- **Enhancement - Parent Role Restrictions:** Hid the Reading Log menu item for parents.
-- **DevOps - Package Management:** Corrected multiple package version mismatches in  and installed missing .
-- **DevOps - Tutorial Reset:** Added a  endpoint to reset the onboarding experience for all users.
+- **Feature - Production Readiness:**
+  - Removed all Dev Login UI and logic from .
+  - Configured  to increase build memory () and  to disable lint on release builds, resolving a build-time memory error.
+- **Feature - 'homehub' Role:**
+  - Added 'homehub' as a supported role in .
+  - Created a dedicated tab navigator () in  for this role, excluding points/rewards.
+  - Added 'homehub' to the role selection UI in .
+- **Feature - Quick Meal Ideas CRUD:**
+  - Implemented a modal and state management in  to allow users to add, edit, and delete custom meal ideas.
+- **Feature - Pixie Assistant Camera:**
+  - Added buttons and  logic to  to allow sending images from the camera or gallery to the AI.
+- **Bug Fix Attempts:**
+  - **Firebase Auth:** Numerous attempts to fix initialization, culminating in updating the  and guiding the user to add SHA fingerprints to their new Firebase project.
+  - **Checkin Log UI:** Modified  to only display member profile pictures instead of larger chips with names.
+  - **Push Notification :** Fixed a hardcoded  in  to use the dynamic value from .
+- **DevOps - Build Troubleshooting:**
+  - Guided the user through resolving multiple local build failures, from EAS CLI limits to Gradle out-of-memory errors and finally the current CMake cache corruption.
 
 **Earlier issues found/mentioned but not fixed**
-   - **: Invalid uuid:** This error appears in user logs when fetching a push notification token. It points to a misconfiguration in  or the Expo project setup itself. The agent did not address this.
-   - **Map not showing image:** This issue from the initial handoff was not addressed.
+   - **Map not showing image:** Originally reported in a previous session, this issue persists and has not been investigated.
+     - Debug checklist: Check Google Maps API key in , check for console errors on the map screen, verify  component is rendered with valid data.
+     - Why to solve this issue and what will be achieved with this? Restores a core location-based feature.
+     - Should Test frontend/backend/both after fix: Frontend.
+     - Is recurring issue? Y
 
 **Known issue recurrence from previous fork**
-  - **Issue recurrence in previous fork:** Mobile App Stability and Firebase Integration.
-  - **Recurrence count:** High
-  - **Status:** IN PROGRESS. The core  error remains unresolved and is the primary source of instability.
+  - **Issue recurrence in previous fork:** Firebase Authentication initialization.
+  - **Recurrence count:** High.
+  - **Status:** BLOCKED. The core  error and the user-facing authentication service unavailable error persist. The fix is blocked by the user's inability to build the app.
 
 **Code Architecture**
 
@@ -150,113 +147,77 @@ However, the application remains highly unstable. Critical issues from the previ
 -   **Frontend (Mobile):** React Native, Expo, React Navigation, .
 -   **Backend:** FastAPI (Python), Pydantic.
 -   **Database:** MongoDB.
--   **Key Integrations:** Firebase (Auth, Realtime DB, Storage), Google Maps, DiceBear, Resend (for email), Gemini Pro Vision (via ).
+-   **Key Integrations:** Firebase (Auth, Realtime DB, Storage), Google Maps, Gemini Pro Vision.
+-   **Build System:** Gradle (for local Android builds).
 
 **key DB schema**
-- ****: Modified to include  to distinguish custom from default chores.
-- ****: Modified to include  (user_id) and  (timestamp) fields.
-- ****: Modified to include  boolean.
-- ****: New collection to store family-specific achievements created by parents.
-- ****: New collection to store family-specific badges.
+  - **users**: The  field was updated to accept a new enum value: homehub.
 
 **changes in tech stack**
-  - **Resend:** Added for sending emails for bug reports and suggestions.
-  - **Gemini Pro Vision:** Integrated via  for the AI receipt scanner feature.
+  - None.
 
 **All files of reference**
--    (The monolithic backend file, heavily modified with all new endpoints and logic fixes).
--    (Created receipt scanner UI/logic).
--    (Refactored to handle dynamic chore types from the backend).
--    (Added Bug Report and Suggestion features).
--    (Added task claiming logic).
--    (Modified to fix a crash).
--    (Added event approval workflow).
--    (Added pantry sync UI).
--    (Modified in a failed attempt to fix auth).
--    (Updated with completed tasks).
+-    (Replaced with user's new file for project ).
+-    (Multiple attempts to fix auth initialization).
+-    (Removed development features to make it production-ready).
+-    (Added camera feature and attempted a crash fix).
+-    (Added widget toggle setting and location-based weather).
+-    (Modified to support the new homehub role).
+-    &  (Modified to fix build memory/linting issues).
 
 **Areas that need refactoring**:
--   **:** This file has grown to an unmanageable size (nearly 7000 lines). It is critical to refactor it by splitting endpoints into separate files under a  directory.
--   **Firebase Initialization:** The entire auth flow is broken. It needs to be refactored with a clear, single point of initialization that is guaranteed to run first, and it must be tested on a development build, not Expo Go.
+-   **:** This ~7000-line file is critically oversized. A plan to refactor it into the existing  directory was started but deferred and should be prioritized for long-term maintainability.
+-   **Firebase Initialization:** The entire auth flow is still fragile. A definitive, reliable initialization pattern needs to be established and confirmed on a working build.
 
 **key api endpoints**
-- **Bug/Suggestion Reporting:**
-  - 
-  - 
-- **Chore Management:**
-  -  (Add custom chore type)
-  - 
-  -  (Enhanced)
-- **Task Claiming:**
-  - 
-  - 
-- **Calendar Approval:**
-  - 
-- **Receipt Scanner:**
-  - 
-  - 
-- **Dinner Planner:**
-  -  (Enhanced)
-- **Achievement/Goal Management:**
-  - 
-  - 
-  - 
-  - 
-  - 
-- **Check-ins:**
-  -  (New endpoint to fix crash)
-- **Dev:**
-  - 
+- No new API endpoints were created. Existing endpoints related to user creation and roles were implicitly affected by the addition of the homehub role.
 
 **Critical Info for New Agent**
--   **THE #1 BLOCKER IS FIREBASE AUTH.** Do not attempt other features until this is solved. User logs repeatedly confirm . The issue is not a simple missing import; it's a deeper initialization or environment problem.
--   **STOP USING EXPO GO FOR TESTING.** Guide the user to create and use a development build (). Expo Go has known limitations with native modules like AsyncStorage and Notifications, which are causing the persistent auth failures and push token errors.
--   **VERIFY ALL FIXES.** The previous agent implemented many fixes that the user immediately reported as still broken. Do not assume a fix is working until the user confirms it on their device.
--   **PRIORITIZE STABILITY OVER FEATURES.** The app is feature-rich but extremely buggy. The user is reporting crashes and basic features not working. The next priority list should be exclusively bug fixes from the Pending Issues list, starting with the P0 items.
+-   **The user is 100% blocked by a local Android build failure.** Your absolute first priority is to help the user resolve the  /  build issue. The last instruction was to clear all native build caches and re-run the build. You must follow up on this.
+-   **Authentication is the #1 functional bug.** Once the user can build the app, verifying the entire sign-in/sign-up flow is the next priority. Confirm that the new Firebase project () has Email/Password and Google sign-in enabled, and that the SHA fingerprints are correctly added.
+-   **Do not use EAS cloud builds.** The user has hit their free limit and prefers to build locally and sideload APKs. All instructions should be for local  or  commands.
+-   The user is building a  variant. Ensure all build instructions and troubleshooting steps are targeted for release builds (e.g., ).
 
 **documents and test reports created in this job**
-  -  (Updated)
+  - 
+  -  (updated)
+  -  (updated)
 
 **Last 10 User Messages and any pending HUMAN messages** 
--  10. **User:** Reported the Check-in Log screen crashes the app again and provided new logs. (PENDING - Agent attempted a fix).
--  9. **User:** Confirmed the Check-in Log crash kicks them out of the app. (COMPLETED).
--  8. **User:** Requested to have dev profiles reset to see the new onboarding screen. (COMPLETED - Agent created and called an endpoint).
--  7. **User:** Reported multiple new bugs: Goal title is wrong, achievements screen isn't loading, and receipt scanner gives an error. (PENDING - Agent attempted fixes for all).
--  6. **User:** Reported that adding a new available chore removes all other chores and that the check-in log has a render error. Provided logs. (PENDING - Agent attempted fixes for both).
--  5. **User:** Ran into a local path error when trying to run commands. (COMPLETED - Agent corrected the path).
--  4. **User:** Reported a missing  package error when trying to run the app. (COMPLETED - Agent installed the package).
--  3. **User:** Successfully stashed local changes. (COMPLETED).
--  2. **User:** Reported a git merge conflict in . (COMPLETED - Agent provided instructions to resolve).
--  1. **User:** Reported package version mismatch warnings from Expo. (COMPLETED - Agent fixed the versions).
+ -  10. **User:** Provided a new  file after being prompted to check their Firebase project. (COMPLETED - Agent updated the file).
+ -  9. **User:** Ran  and provided the output containing SHA-1 and SHA-256 fingerprints. (COMPLETED - Agent instructed user to add them to Firebase).
+ -  8. **User:** Encountered a  in  during the build process. (COMPLETED - Agent fixed the syntax error).
+ -  7. **User:** Asked for their app domain to configure Firebase. (COMPLETED - Agent provided domains).
+ -  6. **User:** Reported being unable to sign in, with an authentication service unavailable error. (IN PROGRESS - Blocked by build issue).
+ -  5. **User:** Requested to hide development sign-in buttons and prepare the app for production. (COMPLETED - Agent implemented changes).
+ -  4. **User:** Asked what lint is and if it's safe to remove/disable for the build. (COMPLETED - Agent explained and recommended disabling it).
+ -  3. **User:** Provided build logs showing an  during the  task. (COMPLETED - Agent provided a fix by increasing Gradle memory and disabling lint).
+ -  2. **User:** Confirmed their target is APK sideloading for personal use for now. (COMPLETED - Agent provided instructions for release builds).
+ -  1. **User:** Provided a detailed list of new bugs and feature requests: Fix poll voting, add CRUD to Quick Meals, add camera to Pixie, resize child tabs, fix Pixie crash, add homehub role, fix weather location, and fix Firebase. (PARTIALLY COMPLETE - Agent implemented/fixed most, but verification is blocked).
 
 **Project Health Check:**
--   **Broken:** The app is critically unstable. Firebase Authentication is non-functional, leading to a lack of session persistence. Core features like the Check-in Log are actively crashing the app.
+-   **Broken:** The application is in a non-buildable state on the user's machine, making it impossible to test or use. Core functionality like user authentication is confirmed to be broken.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
--   OpenWeatherMap (User API Key)
+-   **Firebase (Critically Broken):**
+    -   The Firebase project has been switched to .
+    -   Authentication is non-functional due to initialization errors, preventing login/signup.
+    -   Realtime Database, Storage are configured but their reliability is questionable without working auth.
 -   Google Maps API (User API Key)
--   Tenor (Free-tier API Key)
--   Expo (React Native, EAS)
--   **Resend:** (New) For email notifications.
--   **Firebase (Partially Broken):**
-    -   Realtime Database — Configured, but likely impacted by auth failures.
-    -   Authentication — Critically broken. Fails to initialize with persistence.
-    -   Storage — Configured.
--   **Gemini Pro & Pro Vision:** (via ) — Used for backend AI features like chore icon generation and receipt scanning.
--   **DiceBear Avatars:** — Integrated as a fallback for profile pictures.
+-   Gemini Pro & Pro Vision (via )
+-   OpenWeatherMap, Tenor, DiceBear Avatars.
 
 **Testing status**
-  - Testing agent used after significant changes: NO
+  - Testing agent used after significant changes: YES, a backend-only test run was performed (), which passed 51/51 tests.
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None
-  - Known regressions: Firebase Auth, Check-in Log crash, Chore list display.
+  - Known regressions: Firebase Authentication.
 
 **Credentials to test flow:**
--   Use the Dev Login buttons on the . Note that sessions will not persist until the Firebase Auth bug is fixed.
+-   Dev Login has been removed. The user must use the sign-up flow on a working build.
 
 **What agent forgot to execute**
--   The agent failed to resolve the core Firebase Authentication issue, despite it being the highest priority.
--   The agent did not address the  error from the user's logs, which affects push notifications.
--   The agent did not build the frontend UI for parents to manage custom goals, achievements, and badges, even though the backend APIs were created.
--   The agent repeatedly declared fixes complete without user verification, leading to rework when the user reported the same issues again.</analysis>
+-   The Map not showing image issue from the previous handoff remains unaddressed.
+-   The UI for the  was scaffolded but the actual implementation of the management interface for Goals/Achievements/Badges was not completed.
+-   The refactoring of  was deferred.</analysis>
