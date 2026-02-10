@@ -1,12 +1,10 @@
-// Firebase Push Notification Service for FamFocus Hub
-// Handles FCM push notifications for chat, chores, rewards, etc.
+// Push Notification Service for FamFocus Hub
+// Uses Expo Notifications with FCM for push notifications
 
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import { getMessaging, getToken, onMessage } from 'firebase/messaging';
-import { getApp } from 'firebase/app';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiService from './api.service';
 
