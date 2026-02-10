@@ -2,6 +2,7 @@
 // Using React Native Firebase (Native implementation)
 
 import auth from '@react-native-firebase/auth';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -13,17 +14,33 @@ class FirebaseAuthService {
     this.unsubscribe = null;
     this.isInitialized = false;
     this.authStateListeners = [];
+    this.auth = null; // Reference to auth instance for external checks
+    this.initializationAttempted = false;
   }
 
   // Initialize Firebase Auth
   async initialize() {
     try {
-      if (this.isInitialized) {
+      if (this.isInitialized && this.auth) {
+        console.log('[AuthService] Already initialized');
         return true;
       }
 
+      console.log('[AuthService] Initializing Firebase Auth...');
+      
+      // Get the auth instance
+      this.auth = auth();
+      
+      if (!this.auth) {
+        console.error('[AuthService] Failed to get auth instance');
+        return false;
+      }
+
+      console.log('[AuthService] Auth instance obtained');
+
       // Set up auth state listener
-      this.unsubscribe = auth().onAuthStateChanged((user) => {
+      this.unsubscribe = this.auth.onAuthStateChanged((user) => {
+        console.log('[AuthService] Auth state changed:', user ? user.email : 'No user');
         this.currentUser = user;
         this.notifyListeners(user);
         
@@ -35,10 +52,12 @@ class FirebaseAuthService {
       });
 
       this.isInitialized = true;
+      this.initializationAttempted = true;
       console.log('[AuthService] Firebase Auth initialized successfully');
       return true;
     } catch (error) {
-      console.error('[AuthService] Initialization error:', error.message);
+      console.error('[AuthService] Initialization error:', error.message, error.code);
+      this.initializationAttempted = true;
       return false;
     }
   }
