@@ -83,13 +83,31 @@ class FirebaseAuthService {
   // Sign in with email and password
   async signInWithEmail(email, password) {
     try {
-      const userCredential = await auth().signInWithEmailAndPassword(email, password);
+      console.log('[AuthService] Attempting email sign in for:', email);
+      
+      // Ensure auth is initialized
+      if (!this.auth) {
+        console.log('[AuthService] Auth not initialized, initializing now...');
+        await this.initialize();
+      }
+      
+      if (!this.auth) {
+        return {
+          success: false,
+          error: 'Authentication service not available. Please restart the app.',
+        };
+      }
+      
+      console.log('[AuthService] Calling signInWithEmailAndPassword...');
+      const userCredential = await this.auth.signInWithEmailAndPassword(email, password);
+      console.log('[AuthService] Sign in successful for:', userCredential.user.email);
+      
       return {
         success: true,
         user: this.formatUser(userCredential.user),
       };
     } catch (error) {
-      console.error('[AuthService] Email sign in error:', error);
+      console.error('[AuthService] Email sign in error:', error.code, error.message);
       return {
         success: false,
         error: this.getErrorMessage(error.code),
@@ -100,7 +118,24 @@ class FirebaseAuthService {
   // Create account with email and password
   async signUpWithEmail(email, password, displayName) {
     try {
-      const userCredential = await auth().createUserWithEmailAndPassword(email, password);
+      console.log('[AuthService] Attempting email sign up for:', email);
+      
+      // Ensure auth is initialized
+      if (!this.auth) {
+        console.log('[AuthService] Auth not initialized, initializing now...');
+        await this.initialize();
+      }
+      
+      if (!this.auth) {
+        return {
+          success: false,
+          error: 'Authentication service not available. Please restart the app.',
+        };
+      }
+      
+      console.log('[AuthService] Calling createUserWithEmailAndPassword...');
+      const userCredential = await this.auth.createUserWithEmailAndPassword(email, password);
+      console.log('[AuthService] Sign up successful for:', userCredential.user.email);
       
       if (displayName) {
         await userCredential.user.updateProfile({ displayName });
@@ -111,7 +146,7 @@ class FirebaseAuthService {
         user: this.formatUser(userCredential.user),
       };
     } catch (error) {
-      console.error('[AuthService] Email sign up error:', error);
+      console.error('[AuthService] Email sign up error:', error.code, error.message);
       return {
         success: false,
         error: this.getErrorMessage(error.code),
@@ -122,16 +157,30 @@ class FirebaseAuthService {
   // Sign in with Google (using credential)
   async signInWithGoogle(idToken) {
     try {
-      const { GoogleAuthProvider } = require('@react-native-firebase/auth');
-      const credential = GoogleAuthProvider.credential(idToken);
-      const userCredential = await auth().signInWithCredential(credential);
+      console.log('[AuthService] Attempting Google sign in...');
+      
+      // Ensure auth is initialized
+      if (!this.auth) {
+        await this.initialize();
+      }
+      
+      if (!this.auth) {
+        return {
+          success: false,
+          error: 'Authentication service not available. Please restart the app.',
+        };
+      }
+      
+      const credential = auth.GoogleAuthProvider.credential(idToken);
+      const userCredential = await this.auth.signInWithCredential(credential);
+      console.log('[AuthService] Google sign in successful for:', userCredential.user.email);
       
       return {
         success: true,
         user: this.formatUser(userCredential.user),
       };
     } catch (error) {
-      console.error('[AuthService] Google sign in error:', error);
+      console.error('[AuthService] Google sign in error:', error.code, error.message);
       return {
         success: false,
         error: this.getErrorMessage(error.code),
