@@ -1,8 +1,7 @@
 // Firebase Storage Service for FamFocus Hub
-// Handles all image/file uploads for profile pictures, chat, family wall, etc.
+// Using React Native Firebase Storage
 
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { getApp } from 'firebase/app';
+import storage from '@react-native-firebase/storage';
 import * as FileSystem from 'expo-file-system';
 
 class FirebaseStorageService {
@@ -13,13 +12,12 @@ class FirebaseStorageService {
 
   initialize() {
     try {
-      const app = getApp();
-      this.storage = getStorage(app);
+      this.storage = storage();
       this.isInitialized = true;
-      console.log('Firebase Storage initialized');
+      console.log('[StorageService] Firebase Storage initialized');
       return true;
     } catch (error) {
-      console.error('Firebase Storage initialization error:', error);
+      console.error('[StorageService] Initialization error:', error);
       return false;
     }
   }
@@ -48,87 +46,92 @@ class FirebaseStorageService {
   // Upload voice message
   async uploadVoiceMessage(familyId, audioUri) {
     const timestamp = Date.now();
-    return this.uploadFile(`chats/${familyId}/voice/${timestamp}.m4a`, audioUri, 'audio/m4a');
+    return this.uploadAudio(`chats/${familyId}/voice/${timestamp}.m4a`, audioUri);
   }
 
   // Generic image upload
   async uploadImage(path, imageUri) {
-    if (!this.isInitialized) {
-      console.error('Firebase Storage not initialized');
-      return null;
+    if (!this.isInitialized || !this.storage) {
+      console.error('[StorageService] Not initialized');
+      return { success: false, error: 'Storage not initialized' };
     }
 
     try {
-      // Read the file as blob
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
+      console.log('[StorageService] Uploading image to:', path);
 
-      // Create reference and upload
-      const storageRef = ref(this.storage, path);
-      const snapshot = await uploadBytes(storageRef, blob);
+      // Handle different URI formats
+      let uri = imageUri;
+      if (uri.startsWith('file://')) {
+        uri = uri.replace('file://', '');
+      }
+
+      // Create reference
+      const reference = this.storage.ref(path);
+
+      // Upload file
+      await reference.putFile(uri);
 
       // Get download URL
-      const downloadUrl = await getDownloadURL(snapshot.ref);
-      console.log('Image uploaded successfully:', downloadUrl);
-      return downloadUrl;
+      const downloadURL = await reference.getDownloadURL();
+
+      console.log('[StorageService] Upload successful:', downloadURL);
+      return { success: true, url: downloadURL };
     } catch (error) {
-      console.error('Image upload error:', error);
-      return null;
+      console.error('[StorageService] Upload error:', error);
+      return { success: false, error: error.message };
     }
   }
 
-  // Generic file upload
-  async uploadFile(path, fileUri, contentType) {
-    if (!this.isInitialized) {
-      console.error('Firebase Storage not initialized');
-      return null;
+  // Generic audio upload
+  async uploadAudio(path, audioUri) {
+    if (!this.isInitialized || !this.storage) {
+      return { success: false, error: 'Storage not initialized' };
     }
 
     try {
-      const response = await fetch(fileUri);
-      const blob = await response.blob();
+      let uri = audioUri;
+      if (uri.startsWith('file://')) {
+        uri = uri.replace('file://', '');
+      }
 
-      const storageRef = ref(this.storage, path);
-      const metadata = { contentType };
-      const snapshot = await uploadBytes(storageRef, blob, metadata);
+      const reference = this.storage.ref(path);
+      await reference.putFile(uri);
+      const downloadURL = await reference.getDownloadURL();
 
-      const downloadUrl = await getDownloadURL(snapshot.ref);
-      return downloadUrl;
+      return { success: true, url: downloadURL };
     } catch (error) {
-      console.error('File upload error:', error);
-      return null;
+      console.error('[StorageService] Audio upload error:', error);
+      return { success: false, error: error.message };
     }
   }
 
-  // Delete a file
+  // Delete file
   async deleteFile(path) {
-    if (!this.isInitialized) return false;
+    if (!this.isInitialized || !this.storage) {
+      return { success: false, error: 'Storage not initialized' };
+    }
 
     try {
-      const storageRef = ref(this.storage, path);
-      await deleteObject(storageRef);
-      return true;
+      const reference = this.storage.ref(path);
+      await reference.delete();
+      return { success: true };
     } catch (error) {
-      console.error('File delete error:', error);
-      return false;
+      console.error('[StorageService] Delete error:', error);
+      return { success: false, error: error.message };
     }
   }
 
-  // Upload base64 image
-  async uploadBase64Image(path, base64Data) {
-    if (!this.isInitialized) return null;
+  // Get download URL for existing file
+  async getDownloadURL(path) {
+    if (!this.isInitialized || !this.storage) {
+      return null;
+    }
 
     try {
-      // Convert base64 to blob
-      const response = await fetch(base64Data);
-      const blob = await response.blob();
-
-      const storageRef = ref(this.storage, path);
-      const snapshot = await uploadBytes(storageRef, blob);
-      const downloadUrl = await getDownloadURL(snapshot.ref);
-      return downloadUrl;
+      const reference = this.storage.ref(path);
+      return await reference.getDownloadURL();
     } catch (error) {
-      console.error('Base64 upload error:', error);
+      console.error('[StorageService] Get URL error:', error);
       return null;
     }
   }
