@@ -117,30 +117,41 @@ export default function LoginScreen({ navigation }) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     try {
+      console.log('[LoginScreen] Starting email login...');
+      
       // Initialize Firebase Auth if needed
       const initResult = await firebaseAuthService.initialize();
+      console.log('[LoginScreen] Firebase init result:', initResult);
       
-      if (!initResult || !firebaseAuthService.auth) {
-        // Retry initialization once
-        await new Promise(resolve => setTimeout(resolve, 500));
-        firebaseAuthService.initializationAttempted = false; // Reset to allow retry
+      if (!initResult) {
+        // Retry initialization once after a delay
+        console.log('[LoginScreen] Init failed, retrying...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        firebaseAuthService.initializationAttempted = false;
+        firebaseAuthService.isInitialized = false;
         const retryResult = await firebaseAuthService.initialize();
+        console.log('[LoginScreen] Firebase retry result:', retryResult);
         
-        if (!retryResult || !firebaseAuthService.auth) {
-          setError('Unable to connect to authentication. Please check your internet connection and restart the app.');
+        if (!retryResult) {
+          setError('Unable to connect to authentication service. Please check your internet connection and restart the app.');
           setLoading(false);
           return;
         }
       }
       
+      console.log('[LoginScreen] Calling signInWithEmail...');
       const result = await firebaseAuthService.signInWithEmail(email, password);
+      console.log('[LoginScreen] Sign in result:', result.success, result.error);
       
       if (result.success) {
+        console.log('[LoginScreen] Getting ID token...');
         // Get Firebase ID token and exchange for session
         const idToken = await firebaseAuthService.getIdToken();
+        console.log('[LoginScreen] ID token obtained:', !!idToken);
         
         // Call backend to create/sync user session
         try {
+          console.log('[LoginScreen] Calling backend firebase-login...');
           const response = await fetch(`${API_BASE_URL}/auth/firebase-login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -150,8 +161,11 @@ export default function LoginScreen({ navigation }) {
             }),
           });
           
+          console.log('[LoginScreen] Backend response status:', response.status);
+          
           if (response.ok) {
             const data = await response.json();
+            console.log('[LoginScreen] Backend login successful, calling context login...');
             await login(data.session_token, data.user);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             
@@ -160,22 +174,24 @@ export default function LoginScreen({ navigation }) {
             }
           } else {
             // Fall back to using Firebase user directly
-            console.log('Backend session failed, using Firebase auth directly');
-            await login(idToken, result.user);
+            const errorText = await response.text();
+            console.log('[LoginScreen] Backend session failed:', errorText, '- using Firebase auth directly');
+            await login(idToken || result.user.uid, result.user);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           }
         } catch (backendError) {
           // If backend fails, still login with Firebase
-          console.log('Backend unavailable, using Firebase auth:', backendError.message);
+          console.log('[LoginScreen] Backend unavailable:', backendError.message, '- using Firebase auth');
           await login(result.user.uid, result.user);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
       } else {
+        console.log('[LoginScreen] Sign in failed:', result.error);
         setError(result.error || 'Login failed. Please check your credentials.');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
     } catch (err) {
-      console.error('Email login error:', err);
+      console.error('[LoginScreen] Email login error:', err.message, err.code);
       setError(err.message || 'Login failed. Please check your credentials.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
