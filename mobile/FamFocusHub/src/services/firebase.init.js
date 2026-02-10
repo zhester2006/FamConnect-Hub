@@ -14,16 +14,22 @@ let isInitialized = false;
 // Initialize Firebase (mostly a no-op since RN Firebase auto-initializes)
 export function initializeFirebase() {
   if (isInitialized) {
+    console.log('[Firebase] Already initialized, returning cached instances');
     return { app: firebase, auth: auth(), database: database(), storage: storage() };
   }
 
   try {
     // Check if Firebase is configured
-    if (firebase.apps.length > 0) {
+    const apps = firebase.apps;
+    console.log('[Firebase] Checking Firebase apps:', apps.length);
+    
+    if (apps.length > 0) {
       console.log('[Firebase] Native Firebase initialized successfully');
+      console.log('[Firebase] App name:', apps[0].name);
+      console.log('[Firebase] App options:', JSON.stringify(apps[0].options, null, 2));
       isInitialized = true;
     } else {
-      console.log('[Firebase] Waiting for native Firebase initialization...');
+      console.warn('[Firebase] No Firebase apps found. Check google-services.json configuration.');
     }
   } catch (error) {
     console.error('[Firebase] Initialization check error:', error.message);
@@ -34,7 +40,15 @@ export function initializeFirebase() {
 
 // Get Firebase Auth instance - synchronous with native Firebase!
 export function initializeFirebaseAuth() {
-  return Promise.resolve(auth());
+  console.log('[Firebase] initializeFirebaseAuth called');
+  try {
+    const authInstance = auth();
+    console.log('[Firebase] Auth instance obtained');
+    return Promise.resolve(authInstance);
+  } catch (error) {
+    console.error('[Firebase] Error getting auth instance:', error.message);
+    return Promise.reject(error);
+  }
 }
 
 export function getFirebaseApp() {
@@ -57,9 +71,11 @@ export function getFirebaseStorage() {
 export function resetFirebase() {
   // Native Firebase manages its own state
   console.log('[Firebase] Reset called');
+  isInitialized = false;
 }
 
 // Initialize immediately
+console.log('[Firebase] Module loaded, initializing...');
 initializeFirebase();
 
 export default { 
