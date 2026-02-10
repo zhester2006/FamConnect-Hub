@@ -221,28 +221,36 @@ export default function LoginScreen({ navigation }) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     try {
+      console.log('[LoginScreen] Starting email signup...');
+      
       // Initialize Firebase Auth if needed with retry
       const initResult = await firebaseAuthService.initialize();
+      console.log('[LoginScreen] Firebase init result for signup:', initResult);
       
-      if (!initResult || !firebaseAuthService.auth) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+      if (!initResult) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
         firebaseAuthService.initializationAttempted = false;
+        firebaseAuthService.isInitialized = false;
         const retryResult = await firebaseAuthService.initialize();
         
-        if (!retryResult || !firebaseAuthService.auth) {
-          setError('Unable to connect to authentication. Please check your internet connection and restart the app.');
+        if (!retryResult) {
+          setError('Unable to connect to authentication service. Please check your internet connection and restart the app.');
           setLoading(false);
           return;
         }
       }
       
+      console.log('[LoginScreen] Calling signUpWithEmail...');
       const result = await firebaseAuthService.signUpWithEmail(email, password, displayName);
+      console.log('[LoginScreen] Sign up result:', result.success, result.error);
       
       if (result.success) {
+        console.log('[LoginScreen] Getting ID token for signup...');
         const idToken = await firebaseAuthService.getIdToken();
         
         // Call backend to create user
         try {
+          console.log('[LoginScreen] Calling backend firebase-signup...');
           const response = await fetch(`${API_BASE_URL}/auth/firebase-signup`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -253,28 +261,33 @@ export default function LoginScreen({ navigation }) {
             }),
           });
           
+          console.log('[LoginScreen] Backend signup response status:', response.status);
+          
           if (response.ok) {
             const data = await response.json();
             await login(data.session_token, data.user);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           } else {
             // Fall back to using Firebase user directly
+            const errorText = await response.text();
+            console.log('[LoginScreen] Backend signup failed:', errorText);
             await login(result.user.uid, result.user);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           }
         } catch (backendError) {
-          console.log('Backend signup failed, using Firebase auth:', backendError.message);
+          console.log('[LoginScreen] Backend signup error:', backendError.message);
           await login(result.user.uid, result.user);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
         
         Alert.alert('Welcome!', 'Your account has been created successfully.');
       } else {
+        console.log('[LoginScreen] Sign up failed:', result.error);
         setError(result.error || 'Sign up failed');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
     } catch (err) {
-      console.error('Signup error:', err);
+      console.error('[LoginScreen] Signup error:', err.message, err.code);
       setError(err.message || 'Signup failed');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
