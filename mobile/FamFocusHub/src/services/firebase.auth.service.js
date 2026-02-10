@@ -254,7 +254,7 @@ class FirebaseAuthService {
 
   // Update user profile
   async updateUserProfile(updates) {
-    const user = auth().currentUser;
+    const user = this.auth?.currentUser;
     if (!user) {
       return { success: false, error: 'Not authenticated' };
     }
@@ -263,7 +263,7 @@ class FirebaseAuthService {
       await user.updateProfile(updates);
       return { success: true };
     } catch (error) {
-      console.error('[AuthService] Update profile error:', error);
+      console.error('[AuthService] Update profile error:', error.code, error.message);
       return {
         success: false,
         error: error.message,
@@ -273,26 +273,29 @@ class FirebaseAuthService {
 
   // Get current user
   getCurrentUser() {
-    const user = auth().currentUser;
+    const user = this.auth?.currentUser;
     return user ? this.formatUser(user) : null;
   }
 
   // Check if user is authenticated
   isAuthenticated() {
-    return !!auth().currentUser;
+    return !!this.auth?.currentUser;
   }
 
   // Get ID token for backend authentication
   async getIdToken() {
-    const user = auth().currentUser;
+    const user = this.auth?.currentUser;
     if (!user) {
+      console.log('[AuthService] No user for getIdToken');
       return null;
     }
 
     try {
-      return await user.getIdToken();
+      const token = await user.getIdToken();
+      console.log('[AuthService] Got ID token successfully');
+      return token;
     } catch (error) {
-      console.error('[AuthService] Get ID token error:', error);
+      console.error('[AuthService] Get ID token error:', error.code, error.message);
       return null;
     }
   }
