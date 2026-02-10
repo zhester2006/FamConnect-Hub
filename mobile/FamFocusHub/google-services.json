@@ -2,7 +2,8 @@
   "project_info": {
     "project_number": "348288030353",
     "project_id": "family-hub-app-d9c04",
-    "storage_bucket": "family-hub-app-d9c04.firebasestorage.app"
+    "storage_bucket": "family-hub-app-d9c04.firebasestorage.app",
+    "firebase_url": "https://family-hub-app-d9c04-default-rtdb.firebaseio.com"
   },
   "client": [
     {
