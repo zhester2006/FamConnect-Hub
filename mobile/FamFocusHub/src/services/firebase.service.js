@@ -1,8 +1,7 @@
 // Firebase Central Service for FamFocus Hub
-// Initializes all Firebase services in one place
+// Using React Native Firebase (Native implementation)
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import firebaseConfig from './firebase.config';
+import firebase from '@react-native-firebase/app';
 import firebaseChatService from './firebase.chat.service';
 import firebaseStorageService from './firebase.storage.service';
 import firebaseAuthService from './firebase.auth.service';
@@ -15,26 +14,29 @@ class FirebaseService {
     this.isInitialized = false;
   }
 
-  // Initialize all Firebase services (except auth - that's handled separately in AuthContext)
+  // Initialize all Firebase services
   async initialize() {
     if (this.isInitialized) {
-      console.log('Firebase services already initialized');
+      console.log('[FirebaseService] Already initialized');
       return true;
     }
 
     try {
-      // Initialize Firebase app
-      if (!getApps().length) {
-        this.app = initializeApp(firebaseConfig);
+      // React Native Firebase auto-initializes from google-services.json
+      const apps = firebase.apps;
+      
+      if (apps.length > 0) {
+        this.app = apps[0];
+        console.log('[FirebaseService] Native Firebase app found:', this.app.name);
       } else {
-        this.app = getApp();
+        console.warn('[FirebaseService] No Firebase apps found');
+        return false;
       }
 
-      // Initialize services (auth is initialized separately via firebase.init.js)
+      // Initialize services
       const results = await Promise.allSettled([
         firebaseChatService.initialize(),
         firebaseStorageService.initialize(),
-        // Auth is initialized in AuthContext first, but we can call it here as a no-op if already done
         firebaseAuthService.initialize(),
         firebaseNotificationService.initialize(),
         firebaseFamilyWallService.initialize(),
@@ -44,15 +46,11 @@ class FirebaseService {
       const successCount = results.filter(r => r.status === 'fulfilled' && r.value !== false).length;
       this.isInitialized = successCount > 0;
       
-      if (this.isInitialized) {
-        console.log(`Firebase services initialized: ${successCount}/${results.length}`);
-      } else {
-        console.warn('Some Firebase services failed to initialize');
-      }
+      console.log(`[FirebaseService] Services initialized: ${successCount}/${results.length}`);
 
       return this.isInitialized;
     } catch (error) {
-      console.error('Firebase initialization error:', error);
+      console.error('[FirebaseService] Initialization error:', error);
       return false;
     }
   }
@@ -68,6 +66,7 @@ class FirebaseService {
     firebaseChatService.reset();
     firebaseFamilyWallService.reset();
     firebaseNotificationService.cleanup();
+    firebaseAuthService.cleanup();
   }
 
   // Get services
