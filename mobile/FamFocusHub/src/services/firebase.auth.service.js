@@ -1,90 +1,56 @@
 // Firebase Auth Service for FamFocus Hub
-// Handles Firebase Authentication with email/password and Google Sign-In
+// Using React Native Firebase (Native implementation)
 
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  GoogleAuthProvider,
-  signInWithCredential,
-  sendPasswordResetEmail,
-  updateProfile,
-  EmailAuthProvider,
-  reauthenticateWithCredential,
-  updatePassword
-} from 'firebase/auth';
+import auth from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
-import { getFirebaseApp, initializeFirebaseAuth } from './firebase.init';
 
 WebBrowser.maybeCompleteAuthSession();
 
 class FirebaseAuthService {
   constructor() {
-    this.app = null;
-    this.auth = null;
     this.currentUser = null;
     this.unsubscribe = null;
     this.isInitialized = false;
-    this.initializationAttempted = false;
     this.authStateListeners = [];
+    this.auth = null;
+    this.initializationAttempted = false;
   }
 
   // Initialize Firebase Auth
   async initialize() {
+    if (this.isInitialized && this.auth) {
+      console.log('[AuthService] Already initialized');
+      return true;
+    }
+
     try {
-      // Already initialized successfully
-      if (this.isInitialized && this.auth) {
-        return true;
-      }
+      console.log('[AuthService] Initializing Firebase Auth...');
+      this.auth = auth();
 
-      // Don't retry if we already attempted and failed
-      if (this.initializationAttempted && !this.auth) {
-        console.log('Firebase Auth init already attempted and failed');
-        return false;
-      }
-
-      this.initializationAttempted = true;
-
-      // Use centralized Firebase initialization
-      this.app = getFirebaseApp();
-      
-      if (!this.app) {
-        console.error('Firebase App not available');
-        return false;
-      }
-
-      // Initialize Auth
-      this.auth = await initializeFirebaseAuth();
-      
       if (!this.auth) {
-        console.error('Firebase Auth initialization returned null');
-        return false;
+        throw new Error('[AuthService] Failed to get Firebase Auth instance.');
       }
-      
-      this.isInitialized = true;
 
       // Listen for auth state changes
-      try {
-        this.unsubscribe = onAuthStateChanged(this.auth, (user) => {
-          this.currentUser = user;
-          this.notifyListeners(user);
-          
-          if (user) {
-            this.persistSession(user);
-          } else {
-            this.clearPersistedSession();
-          }
-        });
-      } catch (listenerError) {
-        console.warn('Could not set up auth state listener:', listenerError.message);
-      }
+      this.unsubscribe = this.auth.onAuthStateChanged((user) => {
+        console.log('[AuthService] Auth state changed:', user ? user.email : 'null');
+        this.currentUser = user;
+        this.notifyListeners(user);
+        if (user) {
+          this.persistSession(user);
+        } else {
+          this.clearPersistedSession();
+        }
+      });
 
-      console.log('Firebase Auth service initialized successfully');
+      this.isInitialized = true;
+      this.initializationAttempted = true;
+      console.log('[AuthService] Firebase Auth initialized successfully');
       return true;
     } catch (error) {
-      console.error('Firebase Auth initialization error:', error);
+      console.error('[AuthService] Initialization error:', error.message);
+      this.initializationAttempted = true;
       return false;
     }
   }
@@ -102,25 +68,26 @@ class FirebaseAuthService {
     this.authStateListeners = this.authStateListeners.filter(l => l !== listener);
   }
 
-  // Notify all listeners
+  // Notify listeners of auth state changes
   notifyListeners(user) {
-    this.authStateListeners.forEach(listener => listener(user));
+    this.authStateListeners.forEach((listener) => listener(user));
   }
 
   // Sign in with email and password
   async signInWithEmail(email, password) {
-    if (!this.auth) {
-      await this.initialize();
-    }
-
     try {
-      const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
+      if (!this.auth) await this.initialize();
+      
+      console.log('[AuthService] Signing in with email:', email);
+      const userCredential = await this.auth.signInWithEmailAndPassword(email, password);
+      console.log('[AuthService] Sign in successful');
+      
       return {
         success: true,
         user: this.formatUser(userCredential.user),
       };
     } catch (error) {
-      console.error('Email sign in error:', error);
+      console.error('[AuthService] Email sign-in error:', error.code, error.message);
       return {
         success: false,
         error: this.getErrorMessage(error.code),
@@ -130,23 +97,24 @@ class FirebaseAuthService {
 
   // Create account with email and password
   async signUpWithEmail(email, password, displayName) {
-    if (!this.auth) {
-      await this.initialize();
-    }
-
     try {
-      const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
+      if (!this.auth) await this.initialize();
       
-      if (displayName) {
-        await updateProfile(userCredential.user, { displayName });
+      console.log('[AuthService] Creating account for:', email);
+      const userCredential = await this.auth.createUserWithEmailAndPassword(email, password);
+      
+      // Update display name if provided
+      if (displayName && userCredential.user) {
+        await userCredential.user.updateProfile({ displayName });
       }
-
+      
+      console.log('[AuthService] Account created successfully');
       return {
         success: true,
         user: this.formatUser(userCredential.user),
       };
     } catch (error) {
-      console.error('Email sign up error:', error);
+      console.error('[AuthService] Email sign-up error:', error.code, error.message);
       return {
         success: false,
         error: this.getErrorMessage(error.code),
@@ -154,26 +122,24 @@ class FirebaseAuthService {
     }
   }
 
-  // Sign in with Google
+  // Sign in with Google (using ID token from Google Sign-In)
   async signInWithGoogle(idToken) {
-    if (!this.auth) {
-      await this.initialize();
-    }
-
     try {
-      const credential = GoogleAuthProvider.credential(idToken);
-      const userCredential = await signInWithCredential(this.auth, credential);
+      if (!this.auth) await this.initialize();
+      if (!idToken) throw new Error('Google ID token is required.');
+
+      console.log('[AuthService] Signing in with Google...');
+      const credential = auth.GoogleAuthProvider.credential(idToken);
+      const userCredential = await this.auth.signInWithCredential(credential);
       
+      console.log('[AuthService] Google sign-in successful');
       return {
         success: true,
         user: this.formatUser(userCredential.user),
       };
     } catch (error) {
-      console.error('Google sign in error:', error);
-      return {
-        success: false,
-        error: this.getErrorMessage(error.code),
-      };
+      console.error('[AuthService] Google sign-in error:', error.message);
+      return { success: false, error: error.message };
     }
   }
 
@@ -181,27 +147,27 @@ class FirebaseAuthService {
   async signOut() {
     try {
       if (this.auth) {
-        await firebaseSignOut(this.auth);
+        await this.auth.signOut();
       }
       await this.clearPersistedSession();
+      console.log('[AuthService] Sign out successful');
       return { success: true };
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error('[AuthService] Sign out error:', error);
       return { success: false, error: error.message };
     }
   }
 
   // Send password reset email
   async sendPasswordReset(email) {
-    if (!this.auth) {
-      await this.initialize();
-    }
-
     try {
-      await sendPasswordResetEmail(this.auth, email);
+      if (!this.auth) await this.initialize();
+      
+      await this.auth.sendPasswordResetEmail(email);
+      console.log('[AuthService] Password reset email sent');
       return { success: true };
     } catch (error) {
-      console.error('Password reset error:', error);
+      console.error('[AuthService] Password reset error:', error);
       return {
         success: false,
         error: this.getErrorMessage(error.code),
@@ -216,16 +182,16 @@ class FirebaseAuthService {
     }
 
     try {
-      const credential = EmailAuthProvider.credential(
-        this.auth.currentUser.email,
-        currentPassword
-      );
-      await reauthenticateWithCredential(this.auth.currentUser, credential);
-      await updatePassword(this.auth.currentUser, newPassword);
+      const user = this.auth.currentUser;
+      const credential = auth.EmailAuthProvider.credential(user.email, currentPassword);
       
+      await user.reauthenticateWithCredential(credential);
+      await user.updatePassword(newPassword);
+      
+      console.log('[AuthService] Password changed successfully');
       return { success: true };
     } catch (error) {
-      console.error('Change password error:', error);
+      console.error('[AuthService] Change password error:', error);
       return {
         success: false,
         error: this.getErrorMessage(error.code),
@@ -240,10 +206,11 @@ class FirebaseAuthService {
     }
 
     try {
-      await updateProfile(this.auth.currentUser, updates);
+      await this.auth.currentUser.updateProfile(updates);
+      console.log('[AuthService] Profile updated successfully');
       return { success: true };
     } catch (error) {
-      console.error('Update profile error:', error);
+      console.error('[AuthService] Update profile error:', error);
       return {
         success: false,
         error: error.message,
@@ -270,7 +237,7 @@ class FirebaseAuthService {
     try {
       return await this.currentUser.getIdToken();
     } catch (error) {
-      console.error('Get ID token error:', error);
+      console.error('[AuthService] Get ID token error:', error);
       return null;
     }
   }
@@ -301,7 +268,7 @@ class FirebaseAuthService {
       };
       await AsyncStorage.setItem('@firebase_session', JSON.stringify(sessionData));
     } catch (error) {
-      console.error('Persist session error:', error);
+      console.error('[AuthService] Persist session error:', error.message);
     }
   }
 
@@ -310,7 +277,7 @@ class FirebaseAuthService {
     try {
       await AsyncStorage.removeItem('@firebase_session');
     } catch (error) {
-      console.error('Clear session error:', error);
+      console.error('[AuthService] Clear session error:', error.message);
     }
   }
 
@@ -320,7 +287,7 @@ class FirebaseAuthService {
       const session = await AsyncStorage.getItem('@firebase_session');
       return session ? JSON.parse(session) : null;
     } catch (error) {
-      console.error('Get persisted session error:', error);
+      console.error('[AuthService] Get persisted session error:', error);
       return null;
     }
   }
@@ -332,6 +299,7 @@ class FirebaseAuthService {
       'auth/user-disabled': 'This account has been disabled',
       'auth/user-not-found': 'No account found with this email',
       'auth/wrong-password': 'Incorrect password',
+      'auth/invalid-credential': 'Invalid email or password',
       'auth/email-already-in-use': 'An account already exists with this email',
       'auth/weak-password': 'Password should be at least 6 characters',
       'auth/network-request-failed': 'Network error. Please check your connection',
@@ -351,6 +319,7 @@ class FirebaseAuthService {
     }
     this.authStateListeners = [];
     this.currentUser = null;
+    this.isInitialized = false;
   }
 }
 
