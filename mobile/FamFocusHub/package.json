@@ -26,7 +26,6 @@
     "expo-battery": "~10.0.8",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "^18.0.13",
-    "expo-dev-client": "~5.0.5",
     "expo-device": "^8.0.10",
     "expo-font": "~14.0.11",
     "expo-haptics": "^15.0.5",
