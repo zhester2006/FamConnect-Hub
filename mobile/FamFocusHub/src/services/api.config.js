@@ -1,16 +1,22 @@
 // API Configuration for FamFocus Hub Mobile App
-// Production API URL - change this when deploying to your own server
+// IMPORTANT: Change this URL to your production server before release
+// For local development, use your computer's IP address (not localhost)
+// Example: 'http://192.168.1.100:8001/api'
 const API_BASE_URL = 'https://family-hub-app-2.preview.emergentagent.com/api';
 
 // Production mode flag - set to true for release builds
 export const IS_PRODUCTION = !__DEV__;
 
-// Disable console logs in production
-if (IS_PRODUCTION) {
-  console.log = () => {};
-  console.warn = () => {};
-  console.info = () => {};
-  // Keep console.error for crash reporting
+// Firebase-only mode: When true, app works without backend server
+// Set to true if you want the app to work with Firebase auth only
+export const FIREBASE_ONLY_MODE = true;
+
+// Disable console logs in production (but keep them for debugging auth issues)
+if (IS_PRODUCTION && !__DEV__) {
+  // Keep logs enabled for now to debug issues
+  // console.log = () => {};
+  // console.warn = () => {};
+  // console.info = () => {};
 }
 
 export const API_ENDPOINTS = {

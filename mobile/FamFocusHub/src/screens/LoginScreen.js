@@ -12,7 +12,7 @@ import * as Haptics from 'expo-haptics';
 import { useAuth } from '../context/AuthContext';
 import biometricService from '../services/biometric.service';
 import firebaseAuthService from '../services/firebase.auth.service';
-import API_BASE_URL from '../services/api.config';
+import API_BASE_URL, { FIREBASE_ONLY_MODE } from '../services/api.config';
 
 const { width, height } = Dimensions.get('window');
 
@@ -127,56 +127,72 @@ export default function LoginScreen({ navigation }) {
         const retryResult = await firebaseAuthService.initialize();
         
         if (!retryResult || !firebaseAuthService.auth) {
-          setError('Unable to connect to authentication. Please check your internet connection and restart the app.');
+          setError('Unable to connect to authentication service. Please check your internet connection and try again.');
           setLoading(false);
           return;
         }
       }
       
+      // Sign in with Firebase
       const result = await firebaseAuthService.signInWithEmail(email, password);
       
       if (result.success) {
-        // Get Firebase ID token and exchange for session
-        const idToken = await firebaseAuthService.getIdToken();
+        console.log('[LoginScreen] Firebase sign-in successful');
         
-        // Call backend to create/sync user session
-        try {
-          const response = await fetch(`${API_BASE_URL}/auth/firebase-login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              idToken,
-              user: result.user 
-            }),
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            await login(data.session_token, data.user);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Create user data from Firebase result
+        const firebaseUserData = {
+          user_id: result.user.uid,
+          email: result.user.email,
+          name: result.user.displayName || result.user.email?.split('@')[0] || 'User',
+          picture: result.user.photoURL,
+          role: 'parent', // Default role
+          points: 0,
+          settings: { theme: 'cosmic_explorer', notifications_enabled: true }
+        };
+        
+        // Try to sync with backend (but don't fail if unavailable)
+        if (!FIREBASE_ONLY_MODE) {
+          try {
+            const idToken = await firebaseAuthService.getIdToken();
+            const response = await fetch(`${API_BASE_URL}/auth/firebase-login`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                idToken,
+                user: result.user 
+              }),
+            });
             
-            if (biometricAvailable && !biometricEnabled) {
-              setTimeout(() => promptEnableBiometric(data.session_token), 1000);
+            if (response.ok) {
+              const data = await response.json();
+              await login(data.session_token, data.user);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              
+              if (biometricAvailable && !biometricEnabled) {
+                setTimeout(() => promptEnableBiometric(data.session_token), 1000);
+              }
+              return;
             }
-          } else {
-            // Fall back to using Firebase user directly
-            console.log('Backend session failed, using Firebase auth directly');
-            await login(idToken, result.user);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          } catch (backendError) {
+            console.log('[LoginScreen] Backend unavailable, using Firebase auth directly:', backendError.message);
           }
-        } catch (backendError) {
-          // If backend fails, still login with Firebase
-          console.log('Backend unavailable, using Firebase auth:', backendError.message);
-          await login(result.user.uid, result.user);
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        
+        // Use Firebase auth directly (Firebase-only mode or backend failed)
+        console.log('[LoginScreen] Using Firebase-only authentication');
+        await login(result.user.uid, firebaseUserData);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        
+        if (biometricAvailable && !biometricEnabled) {
+          setTimeout(() => promptEnableBiometric(result.user.uid), 1000);
         }
       } else {
         setError(result.error || 'Login failed. Please check your credentials.');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
     } catch (err) {
-      console.error('Email login error:', err);
-      setError(err.message || 'Login failed. Please check your credentials.');
+      console.error('[LoginScreen] Email login error:', err);
+      setError(err.message || 'Login failed. Please try again.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setLoading(false);
@@ -214,44 +230,59 @@ export default function LoginScreen({ navigation }) {
         const retryResult = await firebaseAuthService.initialize();
         
         if (!retryResult || !firebaseAuthService.auth) {
-          setError('Unable to connect to authentication. Please check your internet connection and restart the app.');
+          setError('Unable to connect to authentication service. Please check your internet connection and try again.');
           setLoading(false);
           return;
         }
       }
       
+      // Sign up with Firebase
       const result = await firebaseAuthService.signUpWithEmail(email, password, displayName);
       
       if (result.success) {
-        const idToken = await firebaseAuthService.getIdToken();
+        console.log('[LoginScreen] Firebase sign-up successful');
         
-        // Call backend to create user
-        try {
-          const response = await fetch(`${API_BASE_URL}/auth/firebase-signup`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              idToken,
-              user: result.user,
-              displayName
-            }),
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            await login(data.session_token, data.user);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          } else {
-            // Fall back to using Firebase user directly
-            await login(result.user.uid, result.user);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Create user data from Firebase result
+        const firebaseUserData = {
+          user_id: result.user.uid,
+          email: result.user.email,
+          name: displayName || result.user.email?.split('@')[0] || 'User',
+          picture: result.user.photoURL,
+          role: 'parent', // Default role
+          points: 0,
+          settings: { theme: 'cosmic_explorer', notifications_enabled: true }
+        };
+        
+        // Try to sync with backend (but don't fail if unavailable)
+        if (!FIREBASE_ONLY_MODE) {
+          try {
+            const idToken = await firebaseAuthService.getIdToken();
+            const response = await fetch(`${API_BASE_URL}/auth/firebase-signup`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                idToken,
+                user: result.user,
+                displayName
+              }),
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              await login(data.session_token, data.user);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              Alert.alert('Welcome!', 'Your account has been created successfully.');
+              return;
+            }
+          } catch (backendError) {
+            console.log('[LoginScreen] Backend unavailable for signup:', backendError.message);
           }
-        } catch (backendError) {
-          console.log('Backend signup failed, using Firebase auth:', backendError.message);
-          await login(result.user.uid, result.user);
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
         
+        // Use Firebase auth directly (Firebase-only mode or backend failed)
+        console.log('[LoginScreen] Using Firebase-only signup');
+        await login(result.user.uid, firebaseUserData);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert('Welcome!', 'Your account has been created successfully.');
       } else {
         setError(result.error || 'Sign up failed');

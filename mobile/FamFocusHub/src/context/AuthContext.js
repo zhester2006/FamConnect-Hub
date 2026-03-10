@@ -8,6 +8,7 @@ import biometricService from '../services/biometric.service';
 import webSocketService from '../services/websocket.service';
 import firebaseService from '../services/firebase.service';
 import { initializeFirebaseAuth } from '../services/firebase.init';
+import { FIREBASE_ONLY_MODE } from '../services/api.config';
 
 const AuthContext = createContext(null);
 
@@ -99,18 +100,39 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (sessionToken, userData = null) => {
     try {
+      console.log('[AuthContext] Login called with token:', sessionToken ? 'present' : 'missing');
+      console.log('[AuthContext] User data:', userData ? 'present' : 'missing');
+      
+      // In Firebase-only mode, we use the Firebase UID as session token
       await apiService.setSession(sessionToken);
       
       // Use provided userData or fetch from API
       let user = userData;
-      if (!user) {
-        user = await apiService.getCurrentUser();
+      if (!user && !FIREBASE_ONLY_MODE) {
+        try {
+          user = await apiService.getCurrentUser();
+        } catch (apiError) {
+          console.log('[AuthContext] API unavailable, using provided userData');
+        }
       }
       
-      if (!user || !user.user_id) {
-        await apiService.clearSession();
-        throw new Error('Invalid session');
+      // Ensure user object has required fields
+      if (!user) {
+        user = {
+          user_id: sessionToken,
+          email: 'user@example.com',
+          name: 'User',
+          role: 'parent',
+          points: 0
+        };
       }
+      
+      // Ensure user_id exists
+      if (!user.user_id) {
+        user.user_id = sessionToken;
+      }
+      
+      console.log('[AuthContext] Setting user:', user.email || user.name);
       
       setUser(user);
       setIsAuthenticated(true);
