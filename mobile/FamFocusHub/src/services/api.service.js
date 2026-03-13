@@ -625,7 +625,7 @@ class ApiService {
 
   async approveRedemption(redemptionId, approved) {
     return this.put(`/rewards/redemptions/${redemptionId}`, { approved });
-
+  }
 
   // Mock data for Firebase-only mode
   getMockData(endpoint, options = {}) {
@@ -686,7 +686,6 @@ class ApiService {
     
     // Default empty response
     return {};
-  }
   }
 }
 

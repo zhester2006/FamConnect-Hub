@@ -24,109 +24,121 @@ The user wants to create a comprehensive, family-oriented, mobile-friendly app c
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack application with a React Native (Expo) frontend and a FastAPI backend. A vast number of features have been implemented, including a new homehub role, CRUD functionality for Quick Meal Ideas, and camera integration for the AI assistant. The app has also been prepared for production by removing development logins and adding build optimizations.
-
-However, the user is currently unable to build the app locally due to a critical native build failure (CMake/Ninja error). This build issue is blocking the verification of all recent fixes, most importantly the fix for the persistent Firebase Authentication failure which prevents any user from signing in or signing up. The user has recently switched to a new Firebase project and provided an updated .
+A full-stack application with a React Native (Expo) frontend and a FastAPI backend. The frontend has been heavily modified to switch from the Firebase Web SDK to the native  library to fix persistent authentication issues. A  has been introduced to allow the app to function without a backend for testing purposes, which involves mocking API responses. However, the user is still unable to build the app locally. The build process, after resolving numerous Kotlin and Gradle cache issues, is now failing due to a JavaScript syntax error introduced during the last set of fixes.
 
 **Last working item**:
-    - Last item agent was working: Assisting the user to resolve a local Android build failure. The build process is failing with a  and , which indicates a corrupted native build cache. The agent instructed the user to perform a full clean of the android build directories (, ) and then attempt to rebuild.
+    - Last item agent was working: Fixing a JavaScript bundling failure during the Android release build. The build failed with a  in  at line 631, indicating a misplaced function definition for . This error was introduced while trying to fix app crashes by implementing a mock data layer for .
     - Status: IN PROGRESS
     - Agent Testing Done: N
     - Which testing method agent to use? Manual testing by user. The agent must first guide the user to a successful local build.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1:  (P0) Local Android build fails with CMake/Ninja error.
-  - Issue 2:  (P0) Firebase Authentication is not working. User reports cant sign in, says authentication service unavailable.
-  - Issue 3:  (P1) Poll voting on Family Wall causes a screen redirect instead of updating in-place.
-  - Issue 4:  (P2) The map screen loads but does not display a map image.
-  - Issue 5:  (P2) App crashes when the Pixie AI assistant is dragged.
+  - Issue 1:  (P0) Local Android build fails with a .
+  - Issue 2:  (P0) Firebase Authentication is not fully verified.
+  - Issue 3:  (P1) App crashes when clicking on certain tabs.
+  - Issue 4:  (P1) Google Sign-in is not implemented for native Android.
+  - Issue 5:  (P2) Poll voting on Family Wall causes a screen redirect.
+  - Issue 6:  (P2) The map screen loads but does not display a map image.
+  - Issue 7:  (P2) App crashes when the Pixie AI assistant is dragged.
   
   Issues Detail:
   - Issue 1: 
-     - Attempted fixes: The user's  command failed with a CMake error. The agent identified this as a corrupted native build cache and provided a sequence of commands to manually delete all build-related directories (, , ) and regenerate the native project with .
+     - Attempted fixes: The agent successfully guided the user through resolving multiple complex build issues including CMake errors, Kotlin version mismatches, and locked Gradle cache files. The final fix attempt involved a major refactor to use native Firebase, which introduced a new .
      - Next debug checklist: 
-        1. Guide the user to execute the remaining cleanup commands.
-        2. Instruct the user to run the release build command again: .
-        3. If it still fails, analyze the new build logs for errors.
-     - Why fix this issue and what will be achieved with the fix? This is a P0 blocker. The user cannot create an APK to test the app or verify any of the implemented fixes until this is resolved.
+        1. View .
+        2. Identify the misplaced  function definition around line 631. It was likely inserted inside another class or method.
+        3. Correct the file syntax by moving the function to the correct scope within the  class.
+        4. Instruct the user to run the build again: .
+     - Why fix this issue and what will be achieved with the fix? This is a P0 blocker. The user cannot create an APK to test the app or verify any other fixes until this is resolved.
      - Status:  IN PROGRESS
      - Is recurring issue? Y
      - Should Test frontend/backend/both after fix? Frontend (successful build).
      - Blocked on other issue: This issue blocks ALL other issues.
   - Issue 2: 
-     - Attempted fixes: Agent implemented multiple fixes: corrected  import path, made initialization logic in  more robust, updated  with the user's new file, and guided the user on adding SHA-1/SHA-256 fingerprints to their new Firebase project ().
+     - Attempted fixes: The agent completely refactored the app to use  instead of the web SDK. All service files (, , etc.) were updated. Email/Password sign-up and login are implemented but their functionality couldn't be confirmed due to build failures and subsequent app crashes.
      - Next debug checklist: 
-        1. Resolve the P0 build issue first.
+        1. Resolve the P0 build issue.
         2. Have the user test sign-in/sign-up on the newly built APK.
-        3. Verify the correct  is being used and that Email/Password and Google providers are enabled in the Firebase console.
-     - Why fix this issue and what will be achieved with the fix? This is the most critical functional bug. Fixing it will allow users to actually use the app.
+        3. If login fails, check device logs (e.g., ) for Firebase auth errors.
+     - Why fix this issue and what will be achieved with the fix? This is the core functionality of the app.
      - Status:  BLOCKED
      - Is recurring issue? Y
      - Should Test frontend/backend/both after fix? Frontend.
-     - Blocked on other issue: Issue 1: Local Android build fails with CMake/Ninja error.
+     - Blocked on other issue: Issue 1: Local Android build fails with a SyntaxError.
   - Issue 3: 
-     - Attempted fixes: Agent wrapped the  for poll options in  inside another  and used  to prevent the event from bubbling up and triggering navigation.
-     - Next debug checklist: User needs to test this on a working build.
-     - Why fix this issue and what will be achieved with the fix? It will fix a disruptive UX bug on a core feature screen.
+     - Attempted fixes: The agent diagnosed that crashes were due to failed API calls to a non-existent backend. A  was added to  and  to return mock data. This attempt introduced the P0 build-breaking .
+     - Next debug checklist: Once the build is fixed, test navigation between all tabs to see if the mock data strategy prevents crashes.
+     - Why fix this issue and what will be achieved with the fix? Makes the app usable for frontend testing without a running backend.
      - Status:  BLOCKED
      - Is recurring issue? N
      - Should Test frontend/backend/both after fix? Frontend.
-     - Blocked on other issue: Issue 1: Local Android build fails with CMake/Ninja error.
+     - Blocked on other issue: Issue 1: Local Android build fails with a SyntaxError.
   - Issue 4: 
-     - Attempted fixes: None in this or the previous session.
-     - Next debug checklist: 
-        1. Verify Google Maps API key is correctly configured in .
-        2. Check for any console errors on the map screen.
-        3. Ensure the  component is being rendered with valid region/coordinate data.
-     - Why fix this issue and what will be achieved with the fix? It will restore a core feature of the app.
+     - Attempted fixes: Agent identified that the Google Sign-in flow was using a web-based redirect () which is incorrect for a native Firebase implementation. The code was changed to show an alert that native Google Sign-in needs to be configured.
+     - Next debug checklist: This is a new feature implementation. The next steps would be to install , configure it with the Web Client ID from Google Cloud, and rewrite the  function in .
+     - Why fix this issue and what will be achieved with the fix? Enables a primary authentication method.
+     - Status:  NOT STARTED
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? Frontend.
+     - Blocked on other issue: Issue 1: Local Android build fails with a SyntaxError.
+  - Issue 5: 
+     - Attempted fixes: An earlier fix was attempted () but remains unverified.
+     - Next debug checklist: Test on a working build.
+     - Why fix this issue and what will be achieved with the fix? Improves UX on a core feature.
+     - Status:  BLOCKED
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? Frontend.
+     - Blocked on other issue: Issue 1: Local Android build fails with a SyntaxError.
+  - Issue 6: 
+     - Attempted fixes: None.
+     - Next debug checklist: Verify Google Maps API key in , check for console errors on the map screen, and ensure  is rendered with valid data.
+     - Why fix this issue and what will be achieved with the fix? Restores a core feature.
      - Status:  NOT STARTED
      - Is recurring issue? Y
      - Should Test frontend/backend/both after fix? Frontend.
-     - Blocked on other issue: None, but should be lower priority than build/auth issues.
-  - Issue 5: 
-     - Attempted fixes: Agent modified the  handler in  to use  and  instead of directly accessing , which is not recommended.
-     - Next debug checklist: User needs to test this on a working build.
-     - Why fix this issue and what will be achieved with the fix? Prevents a crash when interacting with the AI assistant.
+     - Blocked on other issue: Issue 1: Local Android build fails with a SyntaxError.
+  - Issue 7: 
+     - Attempted fixes: An earlier fix was attempted but remains unverified.
+     - Next debug checklist: Test on a working build.
+     - Why fix this issue and what will be achieved with the fix? Prevents a crash on a main UI component.
      - Status:  BLOCKED
      - Is recurring issue? N
      - Should Test frontend/backend/both after fix? Frontend.
-     - Blocked on other issue: Issue 1: Local Android build fails with CMake/Ninja error.
+     - Blocked on other issue: Issue 1: Local Android build fails with a SyntaxError.
 
 **In progress Task List**:
   - Task 1:  Refactor  into a modular router structure.
-     - Where to resume: The  directory contains placeholder files. The next agent should systematically move route groups (e.g., chores, family, users) from the monolithic  into their respective router files and include them in the main  app instance.
-     - What will be achieved with this? Greatly improve backend code maintainability, readability, and scalability.
+     - Where to resume: The  directory contains placeholder files. The next agent should systematically move route groups from  into their respective router files.
+     - What will be achieved with this? Improve backend code maintainability and scalability.
      - Status:  NOT STARTED
      - Should Test frontend/backend/both after fix? Backend.
      - Blocked on something: Higher priority bug fixes.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - (P1) **Implement Parent Management UI:** Build out the UI in  to allow parents to create, edit, and delete custom Goals, Achievements, and Badges using the existing backend endpoints.
-    - (P1) **Integrate AI Achievement Suggestions:** Add a button to the new Parent Management UI that calls the  endpoint and displays the results for the parent to use.
+    - (P1) **Implement Google Sign-In (Native):** Install and configure  and update the login flow.
+    - (P1) **Implement Parent Management UI:** Build out the UI in  for custom Goals, Achievements, and Badges.
+    - (P1) **Integrate AI Achievement Suggestions:** Add a button to call the  endpoint.
 - **Future Tasks:**
-    - (P2) **App Deployment Guide:** Create a detailed guide for the user to submit their app to the Google Play Store and Apple App Store.
-    - (P2) **Voice Commands for Pixie:** Integrate a speech-to-text library to allow voice interaction with the AI assistant.
+    - (P2) **App Deployment Guide:** Create a detailed guide for submitting the app to app stores.
+    - (P2) **Voice Commands for Pixie:** Integrate a speech-to-text library.
 
 **Completed work in this session**
-- **Feature - Production Readiness:**
-  - Removed all Dev Login UI and logic from .
-  - Configured  to increase build memory () and  to disable lint on release builds, resolving a build-time memory error.
-- **Feature - 'homehub' Role:**
-  - Added 'homehub' as a supported role in .
-  - Created a dedicated tab navigator () in  for this role, excluding points/rewards.
-  - Added 'homehub' to the role selection UI in .
-- **Feature - Quick Meal Ideas CRUD:**
-  - Implemented a modal and state management in  to allow users to add, edit, and delete custom meal ideas.
-- **Feature - Pixie Assistant Camera:**
-  - Added buttons and  logic to  to allow sending images from the camera or gallery to the AI.
-- **Bug Fix Attempts:**
-  - **Firebase Auth:** Numerous attempts to fix initialization, culminating in updating the  and guiding the user to add SHA fingerprints to their new Firebase project.
-  - **Checkin Log UI:** Modified  to only display member profile pictures instead of larger chips with names.
-  - **Push Notification :** Fixed a hardcoded  in  to use the dynamic value from .
-- **DevOps - Build Troubleshooting:**
-  - Guided the user through resolving multiple local build failures, from EAS CLI limits to Gradle out-of-memory errors and finally the current CMake cache corruption.
+- **Critical Refactor - Firebase SDK Migration:**
+  - Migrated the entire frontend from the Firebase Web SDK () to the native module implementation (, , , ).
+  - Updated all service files: , , , , , .
+  - Updated  and  to use the new native Firebase services.
+- **Dependency & Configuration Overhaul:**
+  - Removed conflicting  (web) and  packages from .
+  - Added  plugin to .
+  - Performed a comprehensive audit and sync of all keys and config values across , , and .
+  - Deleted the unused legacy .
+- **Intensive Build Troubleshooting:**
+  - Guided the user through resolving multiple local Android build failures, including:
+    - Git checkout conflicts.
+    - Kotlin version mismatch errors ().
+    - Gradle file locking issues, requiring killing the Gradle daemon and manually clearing caches.
 
 **Earlier issues found/mentioned but not fixed**
    - **Map not showing image:** Originally reported in a previous session, this issue persists and has not been investigated.
@@ -136,88 +148,87 @@ However, the user is currently unable to build the app locally due to a critical
      - Is recurring issue? Y
 
 **Known issue recurrence from previous fork**
-  - **Issue recurrence in previous fork:** Firebase Authentication initialization.
+  - **Issue recurrence in previous fork:** Firebase Authentication and local Android build failures.
   - **Recurrence count:** High.
-  - **Status:** BLOCKED. The core  error and the user-facing authentication service unavailable error persist. The fix is blocked by the user's inability to build the app.
+  - **Status:** IN PROGRESS. The root causes have shifted from native build errors (CMake/Ninja) to JS bundling errors (), but the end result is the same: the user cannot build a working APK.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Frontend (Mobile):** React Native, Expo, React Navigation, .
+-   **Frontend (Mobile):** React Native, Expo, React Navigation.
 -   **Backend:** FastAPI (Python), Pydantic.
 -   **Database:** MongoDB.
--   **Key Integrations:** Firebase (Auth, Realtime DB, Storage), Google Maps, Gemini Pro Vision.
+-   **Key Integrations:** **@react-native-firebase** (Auth, Realtime DB, Storage), Google Maps, Gemini Pro Vision.
 -   **Build System:** Gradle (for local Android builds).
 
 **key DB schema**
-  - **users**: The  field was updated to accept a new enum value: homehub.
+  - No changes in this session.
 
 **changes in tech stack**
-  - None.
+  - **Major Change:** Migrated from  (Web SDK) to  (Native Modules) for all Firebase interactions on the frontend.
 
 **All files of reference**
--    (Replaced with user's new file for project ).
--    (Multiple attempts to fix auth initialization).
--    (Removed development features to make it production-ready).
--    (Added camera feature and attempted a crash fix).
--    (Added widget toggle setting and location-based weather).
--    (Modified to support the new homehub role).
--    &  (Modified to fix build memory/linting issues).
+-    (Contains the build-breaking SyntaxError).
+-    (Dependencies were updated to use  and remove  and ).
+-    (Added  plugin).
+-    (Confirmed to be correct).
+-   All files in  that start with  (Were refactored).
+-    (Refactored to use native Firebase services).
+-    (Refactored to use native Firebase services).
 
 **Areas that need refactoring**:
--   **:** This ~7000-line file is critically oversized. A plan to refactor it into the existing  directory was started but deferred and should be prioritized for long-term maintainability.
--   **Firebase Initialization:** The entire auth flow is still fragile. A definitive, reliable initialization pattern needs to be established and confirmed on a working build.
+-   **:** Still a ~7000-line monolith that needs to be broken into the  structure.
+-   **:** The introduction of a mock data mode was a quick hack to prevent crashes. This should be revisited to create a more robust offline/backend-less strategy.
 
 **key api endpoints**
-- No new API endpoints were created. Existing endpoints related to user creation and roles were implicitly affected by the addition of the homehub role.
+-   No new endpoints. The focus was on making the frontend independent of the backend endpoints for testing.
 
 **Critical Info for New Agent**
--   **The user is 100% blocked by a local Android build failure.** Your absolute first priority is to help the user resolve the  /  build issue. The last instruction was to clear all native build caches and re-run the build. You must follow up on this.
--   **Authentication is the #1 functional bug.** Once the user can build the app, verifying the entire sign-in/sign-up flow is the next priority. Confirm that the new Firebase project () has Email/Password and Google sign-in enabled, and that the SHA fingerprints are correctly added.
--   **Do not use EAS cloud builds.** The user has hit their free limit and prefers to build locally and sideload APKs. All instructions should be for local  or  commands.
--   The user is building a  variant. Ensure all build instructions and troubleshooting steps are targeted for release builds (e.g., ).
+-   **The user is 100% blocked by a local Android build failure.** Your absolute first priority is to fix the  in . Do not attempt any other task until the user can successfully build an APK.
+-   **The user is building a  APK locally.** All build commands should be for . Do not suggest  unless for debugging, and do not suggest EAS builds.
+-   **The entire Firebase implementation has been switched to native modules ().** Do not re-introduce any web SDK () imports. The context of this massive migration is key to understanding the current state.
+-   **A  was added to get the app running without a backend.** This is the context for the  function that contains the syntax error. You need to fix its implementation in .
+-   **Google Sign-in is not functional.** It requires a separate native library () and configuration. For now, focus on making Email/Password login flawless.
+-   **Be prepared for more build issues.** The user's local environment seems prone to Gradle cache and file locking problems. Be ready to guide them through cleaning steps (, , ).
 
 **documents and test reports created in this job**
-  - 
-  -  (updated)
   -  (updated)
 
 **Last 10 User Messages and any pending HUMAN messages** 
- -  10. **User:** Provided a new  file after being prompted to check their Firebase project. (COMPLETED - Agent updated the file).
- -  9. **User:** Ran  and provided the output containing SHA-1 and SHA-256 fingerprints. (COMPLETED - Agent instructed user to add them to Firebase).
- -  8. **User:** Encountered a  in  during the build process. (COMPLETED - Agent fixed the syntax error).
- -  7. **User:** Asked for their app domain to configure Firebase. (COMPLETED - Agent provided domains).
- -  6. **User:** Reported being unable to sign in, with an authentication service unavailable error. (IN PROGRESS - Blocked by build issue).
- -  5. **User:** Requested to hide development sign-in buttons and prepare the app for production. (COMPLETED - Agent implemented changes).
- -  4. **User:** Asked what lint is and if it's safe to remove/disable for the build. (COMPLETED - Agent explained and recommended disabling it).
- -  3. **User:** Provided build logs showing an  during the  task. (COMPLETED - Agent provided a fix by increasing Gradle memory and disabling lint).
- -  2. **User:** Confirmed their target is APK sideloading for personal use for now. (COMPLETED - Agent provided instructions for release builds).
- -  1. **User:** Provided a detailed list of new bugs and feature requests: Fix poll voting, add CRUD to Quick Meals, add camera to Pixie, resize child tabs, fix Pixie crash, add homehub role, fix weather location, and fix Firebase. (PARTIALLY COMPLETE - Agent implemented/fixed most, but verification is blocked).
+ -  10. User reports app crashes on some tabs and Google Sign-in doesn't work. (IN PROGRESS)
+ -  9. User confirms they will proceed with  despite uncommitted changes. (COMPLETED)
+ -  8. User reports  merge conflict when pulling . (COMPLETED - Agent instructed to discard local changes).
+ -  7. User reports build failing due to a  in . (IN PROGRESS - This is the current P0 blocker).
+ -  6. User reports build failing due to  when trying to clean the  directory. (COMPLETED - Agent provided steps to kill Gradle daemon).
+ -  5. User reports build failing with Kotlin version mismatch (). (COMPLETED - Agent identified  as the cause and removed it).
+ -  4. User reports being unable to delete the Gradle cache folder because it's in use. (COMPLETED - Agent provided steps to stop the Gradle daemon).
+ -  3. User confirms all Firebase Console settings are correct and is ready to pull changes. (COMPLETED)
+ -  2. User asks for a detailed walkthrough of the Firebase Console setup. (COMPLETED - Agent provided step-by-step instructions).
+ -  1. User asks the agent to double-check all configurations before they pull the code. (COMPLETED - Agent performed a comprehensive audit).
 
 **Project Health Check:**
--   **Broken:** The application is in a non-buildable state on the user's machine, making it impossible to test or use. Core functionality like user authentication is confirmed to be broken.
--   **Mocked:** None.
+-   **Broken:** The application is in a non-buildable state on the user's machine due to a syntax error in the source code. This prevents any testing or verification of functionality.
 
 **3rd Party Integrations**
--   **Firebase (Critically Broken):**
-    -   The Firebase project has been switched to .
-    -   Authentication is non-functional due to initialization errors, preventing login/signup.
-    -   Realtime Database, Storage are configured but their reliability is questionable without working auth.
+-   **Firebase (Partially Implemented / In-Progress):**
+    -   Project: .
+    -   SDK: Migrated to native  for App, Auth, Database, Storage.
+    -   Authentication: Email/Password login is implemented but unverified. Google Sign-In is not natively implemented.
+    -   Realtime Database & Storage: Configured, but usage is unverified due to build failures.
 -   Google Maps API (User API Key)
 -   Gemini Pro & Pro Vision (via )
 -   OpenWeatherMap, Tenor, DiceBear Avatars.
 
 **Testing status**
-  - Testing agent used after significant changes: YES, a backend-only test run was performed (), which passed 51/51 tests.
+  - Testing agent used after significant changes: NO
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None
-  - Known regressions: Firebase Authentication.
+  - Known regressions: The build was previously succeeding (with warnings) before the last change introduced a .
 
 **Credentials to test flow:**
--   Dev Login has been removed. The user must use the sign-up flow on a working build.
+-   User must use the sign-up flow on a working build. No hardcoded dev logins exist.
 
 **What agent forgot to execute**
--   The Map not showing image issue from the previous handoff remains unaddressed.
--   The UI for the  was scaffolded but the actual implementation of the management interface for Goals/Achievements/Badges was not completed.
--   The refactoring of  was deferred.</analysis>
+-   The agent introduced a build-breaking  in  while attempting to implement mock data. This was a critical oversight.
+-   The agent did not run a linting tool after making significant changes, which would have caught the syntax error before committing.</analysis>
