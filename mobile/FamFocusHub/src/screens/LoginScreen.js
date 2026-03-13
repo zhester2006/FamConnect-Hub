@@ -327,40 +327,37 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
-  // Google Login
+  // Google Login - Using Firebase Native Google Sign-In
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      const redirectUri = AuthSession.makeRedirectUri({
-        scheme: 'famfocushub',
-        path: 'auth/callback',
-      });
+      // Note: Google Sign-In requires additional setup:
+      // 1. Install @react-native-google-signin/google-signin
+      // 2. Configure with your Google OAuth Client ID
+      // For now, show a helpful message
       
-      // Use base URL without /api for OAuth redirect
-      const baseUrl = API_BASE_URL.replace('/api', '');
-      const result = await WebBrowser.openAuthSessionAsync(
-        `https://auth.emergentagent.com/?redirect=${encodeURIComponent(baseUrl + '/dashboard')}`,
-        redirectUri
+      Alert.alert(
+        'Google Sign-In',
+        'Google Sign-In requires additional configuration.\n\nPlease use Email/Password sign-in for now, or contact support to enable Google Sign-In.',
+        [{ text: 'OK' }]
       );
       
-      if (result.type === 'success' && result.url) {
-        const url = new URL(result.url);
-        const token = url.searchParams.get('token') || url.searchParams.get('session_token');
-        
-        if (token) {
-          await login(token);
-          if (biometricAvailable && !biometricEnabled) {
-            setTimeout(() => promptEnableBiometric(token), 1000);
-          }
-        } else {
-          throw new Error('No token received');
-        }
-      }
+      // TODO: Implement proper Google Sign-In with @react-native-google-signin/google-signin
+      // Example implementation:
+      // import { GoogleSignin } from '@react-native-google-signin/google-signin';
+      // 
+      // GoogleSignin.configure({
+      //   webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+      // });
+      // 
+      // const { idToken } = await GoogleSignin.signIn();
+      // const result = await firebaseAuthService.signInWithGoogle(idToken);
+      
     } catch (err) {
-      console.error('Google login error:', err);
-      setError('Failed to sign in with Google');
+      console.error('[LoginScreen] Google login error:', err);
+      setError('Google Sign-In is not configured. Please use Email/Password.');
     } finally {
       setLoading(false);
     }

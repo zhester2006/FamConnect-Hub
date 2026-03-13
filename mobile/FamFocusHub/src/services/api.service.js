@@ -1,5 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
-import API_BASE_URL, { API_ENDPOINTS } from './api.config';
+import API_BASE_URL, { API_ENDPOINTS, FIREBASE_ONLY_MODE } from './api.config';
 import offlineService from './offline.service';
 
 const SESSION_KEY = 'famfocus_session_token';
@@ -7,7 +7,7 @@ const SESSION_KEY = 'famfocus_session_token';
 class ApiService {
   constructor() {
     this.sessionToken = null;
-    this.baseUrl = 'https://family-hub-app-2.preview.emergentagent.com/api';
+    this.baseUrl = API_BASE_URL;
   }
 
   async init() {
@@ -24,12 +24,20 @@ class ApiService {
 
   async setSession(token) {
     this.sessionToken = token;
-    await SecureStore.setItemAsync(SESSION_KEY, token);
+    try {
+      await SecureStore.setItemAsync(SESSION_KEY, token);
+    } catch (error) {
+      console.warn('Failed to save session:', error);
+    }
   }
 
   async clearSession() {
     this.sessionToken = null;
-    await SecureStore.deleteItemAsync(SESSION_KEY);
+    try {
+      await SecureStore.deleteItemAsync(SESSION_KEY);
+    } catch (error) {
+      console.warn('Failed to clear session:', error);
+    }
   }
 
   getHeaders() {
@@ -44,6 +52,11 @@ class ApiService {
   }
 
   async request(endpoint, options = {}, cacheKey = null) {
+    // In Firebase-only mode, return mock data for most endpoints
+    if (FIREBASE_ONLY_MODE) {
+      return this.getMockData(endpoint, options);
+    }
+    
     const url = `${API_BASE_URL}${endpoint}`;
     const config = {
       ...options,
@@ -612,6 +625,68 @@ class ApiService {
 
   async approveRedemption(redemptionId, approved) {
     return this.put(`/rewards/redemptions/${redemptionId}`, { approved });
+
+
+  // Mock data for Firebase-only mode
+  getMockData(endpoint, options = {}) {
+    console.log('[ApiService] Firebase-only mode - returning mock data for:', endpoint);
+    
+    // Return appropriate mock data based on endpoint
+    if (endpoint.includes('/chores')) {
+      return { chores: [], total: 0 };
+    }
+    if (endpoint.includes('/shopping')) {
+      return { items: [], total: 0 };
+    }
+    if (endpoint.includes('/events') || endpoint.includes('/calendar')) {
+      return { events: [], total: 0 };
+    }
+    if (endpoint.includes('/family/members')) {
+      return { members: [] };
+    }
+    if (endpoint.includes('/reading')) {
+      return { logs: [], total: 0 };
+    }
+    if (endpoint.includes('/leaderboard')) {
+      return { leaderboard: [] };
+    }
+    if (endpoint.includes('/rewards')) {
+      return { rewards: [], total: 0 };
+    }
+    if (endpoint.includes('/achievements')) {
+      return { achievements: [], badges: [] };
+    }
+    if (endpoint.includes('/battery')) {
+      return { battery_status: [] };
+    }
+    if (endpoint.includes('/geofences') || endpoint.includes('/location')) {
+      return { geofences: [], locations: [] };
+    }
+    if (endpoint.includes('/user') || endpoint.includes('/profile')) {
+      return { user: null };
+    }
+    if (endpoint.includes('/notifications')) {
+      return { notifications: [] };
+    }
+    if (endpoint.includes('/pantry')) {
+      return { items: [] };
+    }
+    if (endpoint.includes('/recipes')) {
+      return { recipes: [] };
+    }
+    if (endpoint.includes('/meals') || endpoint.includes('/dinner')) {
+      return { meals: [], plan: [] };
+    }
+    if (endpoint.includes('/quotes')) {
+      return { quote: 'Welcome to FamFocus Hub!' };
+    }
+    if (endpoint.includes('/dashboard')) {
+      return { config: {} };
+    }
+    
+    // Default empty response
+    return {};
+  }
   }
 }
 
