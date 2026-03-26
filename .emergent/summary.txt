@@ -1,234 +1,219 @@
-<analysis>**original_problem_statement:**
+<analysis>**original_problem_statement**: 
 The user wants to create a comprehensive, family-oriented, mobile-friendly app called FamFocus Hub.
+PRODUCT REQUIREMENTS:
+- Profiles: Customizable parent and child profiles with nicknames, plus a HomeHub profile for shared devices.
+- Dashboards: Child-specific dashboards and a Parent dashboard. A main Home Hub for large screens.
+- Family Management: Family code system, role assignments (Parent, Child, Member, HomeHub).
+- Core Features: Shared calendar, AI-assisted chores, Live Chat (Firebase/WebSockets), Family Wall (posts, polls, gifs), Shopping List, Points & Rewards, Reading Log, Dinner Planner, AI Assistant (Pixie), Location & Safe zones.
+- Technical: Firebase Auth (Email/Password & Google), vibrant UI, production-ready.
 
-**PRODUCT REQUIREMENTS:**
--   **Profiles:** Customizable parent and child profiles with nicknames.
--   **Dashboards:** Child-specific dashboards and a Parent dashboard for management. A main Home Hub for large screens.
--   **Family Management:** A family code system for joining. Parents can manage members, assign roles (Parent, Child, Member, HomeHub), and send invites.
--   **Core Features:**
-    -   **Calendar:** Shared family calendar. Events added by children require parent approval.
-    -   **Chores:** AI-assisted chore scheduling with parent override, assignments, and approval.
-    -   **Live Chat:** Real-time messenger on Firebase.
-    -   **Family Wall:** A shared social space for posts, photos, polls, and GIFs. Interactions should happen in-place without navigation.
-    -   **Shopping List:** Collaborative list. Items added by children require parent approval.
-    -   **Points & Rewards:** Gamified system (not for 'HomeHub' role).
-    -   **Reading Log:** Children submit book summaries for parent approval.
-    -   **Dinner Planner:** AI-suggested weekly meals with an editable Quick Meal Ideas section.
-    -   **AI Assistant (Pixie):** An app-wide assistant that can accept image/camera input.
-    -   **Location & Check-ins:** Safe zones with Google Maps, location updates, and check-in notifications.
--   **Technical & UX Requirements:**
-    -   **Authentication:** Full Firebase Authentication (Email/Password & Google).
-    -   **UI:** Vibrant, mobile-friendly UI. Profile pictures on all user icons.
-    -   **Production Ready:** The app should be configurable for production (hide dev logins, manage build warnings).
+**User's preferred language**: English (INSTRUCT NEXT AGENT: Respond in English)
 
-**User's preferred language**: English
-
-**what currently exists?**
-A full-stack application with a React Native (Expo) frontend and a FastAPI backend. The frontend has been heavily modified to switch from the Firebase Web SDK to the native  library to fix persistent authentication issues. A  has been introduced to allow the app to function without a backend for testing purposes, which involves mocking API responses. However, the user is still unable to build the app locally. The build process, after resolving numerous Kotlin and Gradle cache issues, is now failing due to a JavaScript syntax error introduced during the last set of fixes.
+**what currently exists?** 
+A full-stack application with a FastAPI backend, a React web frontend, and a React Native (Expo) mobile frontend. The mobile app's critical build-breaking syntax error was fixed, and it has been pointed back to the live backend (). The React web app is highly functional, featuring a Home Hub with 3-day weather forecasts, PIN verification for child actions, child username/password login, Chores quick actions, a Family Wall with updated polls and Bible/Inspiration quotes, and real-time chat. Developer logins have been removed from the frontend for production readiness.
 
 **Last working item**:
-    - Last item agent was working: Fixing a JavaScript bundling failure during the Android release build. The build failed with a  in  at line 631, indicating a misplaced function definition for . This error was introduced while trying to fix app crashes by implementing a mock data layer for .
+    - Last item agent was working: Fixing the Live Chat reconnecting issue, improving the Poll display to show available options and voter names on the Family Wall, and removing the FamFocus Hub logo/name from the top left of the Welcome page.
     - Status: IN PROGRESS
-    - Agent Testing Done: N
-    - Which testing method agent to use? Manual testing by user. The agent must first guide the user to a successful local build.
+    - Agent Testing Done: N (Agent was viewing files to apply the fix before context ended).
+    - Which testing method agent to use? screenshot tool for UI changes (Polls, Welcome page) and manual testing by browser console/network tab for the WebSocket connection in Live Chat.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1:  (P0) Local Android build fails with a .
-  - Issue 2:  (P0) Firebase Authentication is not fully verified.
-  - Issue 3:  (P1) App crashes when clicking on certain tabs.
-  - Issue 4:  (P1) Google Sign-in is not implemented for native Android.
-  - Issue 5:  (P2) Poll voting on Family Wall causes a screen redirect.
-  - Issue 6:  (P2) The map screen loads but does not display a map image.
-  - Issue 7:  (P2) App crashes when the Pixie AI assistant is dragged.
-  
+  Issue 1: (P0) Live Chat shows reconnecting continuously on the Web App.
+  Issue 2: (P1) Improve Poll display on Family Wall (show options and voter names).
+  Issue 3: (P1) Remove FamFocus Hub name/logo from the top left of the Welcome Screen.
+  Issue 4: (P1) Mobile App: Google Sign-in is not implemented natively.
+  Issue 5: (P2) Mobile App: Map screen loads but does not display a map image.
+
   Issues Detail:
-  - Issue 1: 
-     - Attempted fixes: The agent successfully guided the user through resolving multiple complex build issues including CMake errors, Kotlin version mismatches, and locked Gradle cache files. The final fix attempt involved a major refactor to use native Firebase, which introduced a new .
-     - Next debug checklist: 
-        1. View .
-        2. Identify the misplaced  function definition around line 631. It was likely inserted inside another class or method.
-        3. Correct the file syntax by moving the function to the correct scope within the  class.
-        4. Instruct the user to run the build again: .
-     - Why fix this issue and what will be achieved with the fix? This is a P0 blocker. The user cannot create an APK to test the app or verify any other fixes until this is resolved.
-     - Status:  IN PROGRESS
+  - Issue 1:
+     - Attempted fixes: Agent viewed  to inspect the WebSocket connection logic but hasn't applied the fix yet.
+     - Next debug checklist: Check  lines 380-470. Ensure the WebSocket URL correctly maps to  instead of  (or  for localhost). Verify the  and  handlers aren't triggering infinite immediate reconnect loops without backoff.
+     - Why fix this issue and what will be achieved with the fix? Restores core real-time messaging functionality.
+     - Status: IN PROGRESS
      - Is recurring issue? Y
-     - Should Test frontend/backend/both after fix? Frontend (successful build).
-     - Blocked on other issue: This issue blocks ALL other issues.
-  - Issue 2: 
-     - Attempted fixes: The agent completely refactored the app to use  instead of the web SDK. All service files (, , etc.) were updated. Email/Password sign-up and login are implemented but their functionality couldn't be confirmed due to build failures and subsequent app crashes.
-     - Next debug checklist: 
-        1. Resolve the P0 build issue.
-        2. Have the user test sign-in/sign-up on the newly built APK.
-        3. If login fails, check device logs (e.g., ) for Firebase auth errors.
-     - Why fix this issue and what will be achieved with the fix? This is the core functionality of the app.
-     - Status:  BLOCKED
+     - Should Test frontend/backend/both after fix? Frontend (Web).
+     - Blocked on other issue: None.
+  - Issue 2:
+     - Attempted fixes: Agent modified  in  but needs to ensure  state correctly maps user IDs to names.
+     - Next debug checklist: Verify the  rendering logic in .
+     - Why fix this issue and what will be achieved with the fix? Fulfills user's explicit UI request.
+     - Status: IN PROGRESS
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? Frontend (screenshot).
+     - Blocked on other issue: None.
+  - Issue 3:
+     - Attempted fixes: Agent reviewed  to locate the logo.
+     - Next debug checklist: Remove the logo/title block at the top of .
+     - Why fix this issue and what will be achieved with the fix? Fulfills user's explicit UI request.
+     - Status: IN PROGRESS
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? Frontend (screenshot).
+     - Blocked on other issue: None.
+  - Issue 4:
+     - Attempted fixes: Agent identified native flow requirement but postponed it to fix web app priorities.
+     - Next debug checklist: Install  and configure it with the Web Client ID from Google Cloud in .
+     - Why fix this issue and what will be achieved with the fix? Native auth requirement for mobile.
+     - Status: NOT STARTED
      - Is recurring issue? Y
-     - Should Test frontend/backend/both after fix? Frontend.
-     - Blocked on other issue: Issue 1: Local Android build fails with a SyntaxError.
-  - Issue 3: 
-     - Attempted fixes: The agent diagnosed that crashes were due to failed API calls to a non-existent backend. A  was added to  and  to return mock data. This attempt introduced the P0 build-breaking .
-     - Next debug checklist: Once the build is fixed, test navigation between all tabs to see if the mock data strategy prevents crashes.
-     - Why fix this issue and what will be achieved with the fix? Makes the app usable for frontend testing without a running backend.
-     - Status:  BLOCKED
-     - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? Frontend.
-     - Blocked on other issue: Issue 1: Local Android build fails with a SyntaxError.
-  - Issue 4: 
-     - Attempted fixes: Agent identified that the Google Sign-in flow was using a web-based redirect () which is incorrect for a native Firebase implementation. The code was changed to show an alert that native Google Sign-in needs to be configured.
-     - Next debug checklist: This is a new feature implementation. The next steps would be to install , configure it with the Web Client ID from Google Cloud, and rewrite the  function in .
-     - Why fix this issue and what will be achieved with the fix? Enables a primary authentication method.
-     - Status:  NOT STARTED
-     - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? Frontend.
-     - Blocked on other issue: Issue 1: Local Android build fails with a SyntaxError.
-  - Issue 5: 
-     - Attempted fixes: An earlier fix was attempted () but remains unverified.
-     - Next debug checklist: Test on a working build.
-     - Why fix this issue and what will be achieved with the fix? Improves UX on a core feature.
-     - Status:  BLOCKED
-     - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? Frontend.
-     - Blocked on other issue: Issue 1: Local Android build fails with a SyntaxError.
-  - Issue 6: 
-     - Attempted fixes: None.
-     - Next debug checklist: Verify Google Maps API key in , check for console errors on the map screen, and ensure  is rendered with valid data.
-     - Why fix this issue and what will be achieved with the fix? Restores a core feature.
-     - Status:  NOT STARTED
-     - Is recurring issue? Y
-     - Should Test frontend/backend/both after fix? Frontend.
-     - Blocked on other issue: Issue 1: Local Android build fails with a SyntaxError.
-  - Issue 7: 
-     - Attempted fixes: An earlier fix was attempted but remains unverified.
-     - Next debug checklist: Test on a working build.
-     - Why fix this issue and what will be achieved with the fix? Prevents a crash on a main UI component.
-     - Status:  BLOCKED
-     - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? Frontend.
-     - Blocked on other issue: Issue 1: Local Android build fails with a SyntaxError.
+     - Should Test frontend/backend/both after fix? Frontend (Mobile build).
+     - Blocked on other issue: None.
 
 **In progress Task List**:
-  - Task 1:  Refactor  into a modular router structure.
-     - Where to resume: The  directory contains placeholder files. The next agent should systematically move route groups from  into their respective router files.
-     - What will be achieved with this? Improve backend code maintainability and scalability.
-     - Status:  NOT STARTED
+  Task 1: First-time login tutorial UI for children ()
+  Task 2: Refactor  into a modular router structure.
+
+ Task Detail:
+  - Task 1:
+     - Where to resume: The agent created  and routed it, but needs to ensure a child logging in for the first time is automatically redirected there.
+     - What will be achieved with this? Onboarding experience for kids.
+     - Status: IN PROGRESS
+     - Should Test frontend/backend/both after fix? Frontend.
+     - Blocked on something: None.
+  - Task 2:
+     - Where to resume:  directory.
+     - What will be achieved with this? Maintainability (server.py is >7200 lines).
+     - Status: NOT STARTED
      - Should Test frontend/backend/both after fix? Backend.
-     - Blocked on something: Higher priority bug fixes.
+     - Blocked on something: Wait until major feature development stabilizes.
 
 **Upcoming and Future Tasks**
-- **Upcoming Tasks:**
-    - (P1) **Implement Google Sign-In (Native):** Install and configure  and update the login flow.
-    - (P1) **Implement Parent Management UI:** Build out the UI in  for custom Goals, Achievements, and Badges.
-    - (P1) **Integrate AI Achievement Suggestions:** Add a button to call the  endpoint.
-- **Future Tasks:**
-    - (P2) **App Deployment Guide:** Create a detailed guide for submitting the app to app stores.
-    - (P2) **Voice Commands for Pixie:** Integrate a speech-to-text library.
+    Upcoming Tasks:
+    - (P1) Implement Parent Management UI: Custom Goals, Achievements, and Badges on mobile.
+    - (P1) Integrate AI Achievement Suggestions: Button to call .
+    Future Tasks:
+    - (P2) Push Notifications implementation across web and mobile.
+    - (P2) Voice Commands for Pixie using speech-to-text.
+    - (P2) App Deployment Guide for App Stores.
 
 **Completed work in this session**
-- **Critical Refactor - Firebase SDK Migration:**
-  - Migrated the entire frontend from the Firebase Web SDK () to the native module implementation (, , , ).
-  - Updated all service files: , , , , , .
-  - Updated  and  to use the new native Firebase services.
-- **Dependency & Configuration Overhaul:**
-  - Removed conflicting  (web) and  packages from .
-  - Added  plugin to .
-  - Performed a comprehensive audit and sync of all keys and config values across , , and .
-  - Deleted the unused legacy .
-- **Intensive Build Troubleshooting:**
-  - Guided the user through resolving multiple local Android build failures, including:
-    - Git checkout conflicts.
-    - Kotlin version mismatch errors ().
-    - Gradle file locking issues, requiring killing the Gradle daemon and manually clearing caches.
+- Fixed P0  in .
+- Fixed Chat & Family Wall crashes on mobile by gracefully handling Firebase init failures.
+- Changed mobile app from  back to live backend integration.
+- Added  endpoint for 3-day forecast and updated  to display it.
+- Displayed All Events This Month below the calendar grid in .
+- Added Child Profile creation with Username, Password, and 4-digit PIN.
+- Created  component for restricting actions on the shared Home Hub device.
+- Implemented  endpoint and  frontend page.
+- Added a Quick Actions panel on Home Hub for pending chores.
+- Removed developer login buttons from .
+- Added a toggle for Inspiration vs Bible quotes on  and , removing the AI-generated label.
 
 **Earlier issues found/mentioned but not fixed**
-   - **Map not showing image:** Originally reported in a previous session, this issue persists and has not been investigated.
-     - Debug checklist: Check Google Maps API key in , check for console errors on the map screen, verify  component is rendered with valid data.
-     - Why to solve this issue and what will be achieved with this? Restores a core location-based feature.
-     - Should Test frontend/backend/both after fix: Frontend.
-     - Is recurring issue? Y
+   - Issue 1: Mobile App: Map screen loads but does not display a map image.
+   - Debug checklist: Verify Google Maps API key in , check for console errors on the map screen in mobile, ensure  is receiving valid lat/long.
+   - Why to solve this issue and what will be achieved with this? Restores location-based tracking.
+   - Should Test frontend/backend/both after fix: Frontend (Mobile).
+   - Is recurring issue? Y
 
 **Known issue recurrence from previous fork**
-  - **Issue recurrence in previous fork:** Firebase Authentication and local Android build failures.
-  - **Recurrence count:** High.
-  - **Status:** IN PROGRESS. The root causes have shifted from native build errors (CMake/Ninja) to JS bundling errors (), but the end result is the same: the user cannot build a working APK.
+  - Issue recurrence in previous fork: Mobile app local Android build failures.
+  - Recurrence count: High
+  - Status: RESOLVED (Syntax error fixed, though user had minor issues running 
+added 597 packages, and audited 690 packages in 6s
+
+54 packages are looking for funding
+  run `npm fund` for details
+
+5 vulnerabilities (1 moderate, 4 high)
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details. from the wrong directory). Next agent should remind user to run commands from .
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Frontend (Mobile):** React Native, Expo, React Navigation.
--   **Backend:** FastAPI (Python), Pydantic.
--   **Database:** MongoDB.
--   **Key Integrations:** **@react-native-firebase** (Auth, Realtime DB, Storage), Google Maps, Gemini Pro Vision.
--   **Build System:** Gradle (for local Android builds).
+React (Web), React Native & Expo (Mobile), FastAPI (Backend), MongoDB (Database), WebSockets (Chat), Context API.
 
 **key DB schema**
-  - No changes in this session.
+  - : 
 
 **changes in tech stack**
-  - **Major Change:** Migrated from  (Web SDK) to  (Native Modules) for all Firebase interactions on the frontend.
+  - None this session. 
 
 **All files of reference**
--    (Contains the build-breaking SyntaxError).
--    (Dependencies were updated to use  and remove  and ).
--    (Added  plugin).
--    (Confirmed to be correct).
--   All files in  that start with  (Were refactored).
--    (Refactored to use native Firebase services).
--    (Refactored to use native Firebase services).
+-  (Fixed SyntaxError)
+-  (Added  forecast, child auth endpoints)
+-  (Weather forecast, PIN verifier, Quick Actions)
+-  (New file)
+-  (New file)
+-  (New file)
+-  (Updated for Child PIN/username generation)
+-  (Updated for Bible quotes and Poll UI)
+-  (Removed Dev Logins, logo needs removal)
+-  (Currently debugging WebSocket connection)
 
 **Areas that need refactoring**:
--   **:** Still a ~7000-line monolith that needs to be broken into the  structure.
--   **:** The introduction of a mock data mode was a quick hack to prevent crashes. This should be revisited to create a more robust offline/backend-less strategy.
+- : Massively overgrown, needs to be split into modular routers.
 
 **key api endpoints**
--   No new endpoints. The focus was on making the frontend independent of the backend endpoints for testing.
+- : Creates child profile with username, password, and pin.
+- : Child auth using username/password.
+- : Returns simulated/real weather and 3-day forecast.
+- : Fetches Bible quotes.
 
 **Critical Info for New Agent**
--   **The user is 100% blocked by a local Android build failure.** Your absolute first priority is to fix the  in . Do not attempt any other task until the user can successfully build an APK.
--   **The user is building a  APK locally.** All build commands should be for . Do not suggest  unless for debugging, and do not suggest EAS builds.
--   **The entire Firebase implementation has been switched to native modules ().** Do not re-introduce any web SDK () imports. The context of this massive migration is key to understanding the current state.
--   **A  was added to get the app running without a backend.** This is the context for the  function that contains the syntax error. You need to fix its implementation in .
--   **Google Sign-in is not functional.** It requires a separate native library () and configuration. For now, focus on making Email/Password login flawless.
--   **Be prepared for more build issues.** The user's local environment seems prone to Gradle cache and file locking problems. Be ready to guide them through cleaning steps (, , ).
+- **DEV LOGINS REMOVED**: The frontend  no longer has the 1-click developer login buttons. To test authenticated web views, you will either need to manually create/login via backend bash scripts and inject the session token into your headers/cookies, OR temporarily re-add a dev login bypass for your own testing (make sure to remove it before finishing).
+- **WebSockets**: The LiveChat is currently failing to connect/stay connected (reconnecting loop). Focus heavily on  WebSocket URI parsing and connection backoff logic.
+- **Mobile Build**: The syntax error breaking the user's local Android build was fixed. If the user complains about 
+up to date, audited 690 packages in 2s
+
+54 packages are looking for funding
+  run `npm fund` for details
+
+5 vulnerabilities (1 moderate, 4 high)
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details. failing, remind them they must be inside the  directory.
 
 **documents and test reports created in this job**
-  -  (updated)
+  - /app/memory/PRD.md (updated)
 
 **Last 10 User Messages and any pending HUMAN messages** 
- -  10. User reports app crashes on some tabs and Google Sign-in doesn't work. (IN PROGRESS)
- -  9. User confirms they will proceed with  despite uncommitted changes. (COMPLETED)
- -  8. User reports  merge conflict when pulling . (COMPLETED - Agent instructed to discard local changes).
- -  7. User reports build failing due to a  in . (IN PROGRESS - This is the current P0 blocker).
- -  6. User reports build failing due to  when trying to clean the  directory. (COMPLETED - Agent provided steps to kill Gradle daemon).
- -  5. User reports build failing with Kotlin version mismatch (). (COMPLETED - Agent identified  as the cause and removed it).
- -  4. User reports being unable to delete the Gradle cache folder because it's in use. (COMPLETED - Agent provided steps to stop the Gradle daemon).
- -  3. User confirms all Firebase Console settings are correct and is ready to pull changes. (COMPLETED)
- -  2. User asks for a detailed walkthrough of the Firebase Console setup. (COMPLETED - Agent provided step-by-step instructions).
- -  1. User asks the agent to double-check all configurations before they pull the code. (COMPLETED - Agent performed a comprehensive audit).
+ - 10. User states auth issues and app crashes on mobile. (COMPLETED)
+ - 9. User requests to make the app work for live family use and update the web app. (COMPLETED)
+ - 8. User reports 
+up to date, audited 690 packages in 2s
+
+54 packages are looking for funding
+  run `npm fund` for details
+
+5 vulnerabilities (1 moderate, 4 high)
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details. ENOENT error. (COMPLETED - Agent instructed on correct directory).
+ - 7. User requests weather forecast, nature photos, calendar layout update, and a Home Hub PIN system for children. (COMPLETED)
+ - 6. User clarifies Home Hub requirements and PIN limits. (COMPLETED)
+ - 5. User requests child username/password login capability and parent PIN modification. (COMPLETED)
+ - 4. User requests removal of dev login, first-time tutorial for children, and Bible quotes for Daily Inspiration. (COMPLETED)
+ - 3. User requests removal of FamFocus Hub logo/name from the top left of the login screen, improving Poll display (voter names), and states chat shows reconnecting. (IN PROGRESS - Agent was modifying frontend files).
 
 **Project Health Check:**
--   **Broken:** The application is in a non-buildable state on the user's machine due to a syntax error in the source code. This prevents any testing or verification of functionality.
+- Web App: Mostly functional, but Chat WebSocket is Broken.
+- Mobile App: Functional locally but pending user APK build verification.
 
 **3rd Party Integrations**
--   **Firebase (Partially Implemented / In-Progress):**
-    -   Project: .
-    -   SDK: Migrated to native  for App, Auth, Database, Storage.
-    -   Authentication: Email/Password login is implemented but unverified. Google Sign-In is not natively implemented.
-    -   Realtime Database & Storage: Configured, but usage is unverified due to build failures.
--   Google Maps API (User API Key)
--   Gemini Pro & Pro Vision (via )
--   OpenWeatherMap, Tenor, DiceBear Avatars.
+- Firebase Auth & Realtime DB (Mobile) — requires User API Key
+- OpenWeatherMap (Backend) — requires User API Key
+- Emergent LLM Key (Pixie AI) — uses Emergent LLM Key
 
 **Testing status**
-  - Testing agent used after significant changes: NO
+  - Testing agent used after significant changes: NO (Self-tested via screenshots and curl).
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None
-  - Known regressions: The build was previously succeeding (with warnings) before the last change introduced a .
+  - Known regressions: LiveChat WebSocket connection is unstable (reconnecting loop).
 
 **Credentials to test flow:**
--   User must use the sign-up flow on a working build. No hardcoded dev logins exist.
+- Dev logins were removed. Use  with created credentials or manual database token insertion for testing.
 
 **What agent forgot to execute**
--   The agent introduced a build-breaking  in  while attempting to implement mock data. This was a critical oversight.
--   The agent did not run a linting tool after making significant changes, which would have caught the syntax error before committing.</analysis>
+- The agent successfully identified the remaining issues (Logo removal, Poll names, Chat reconnecting) but the context window ended before the file edits could be finalized and tested.
+- The agent created  but did not fully hook up the logic to force new children into the tutorial upon first login.</analysis>

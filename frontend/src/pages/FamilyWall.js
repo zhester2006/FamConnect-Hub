@@ -7,54 +7,103 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 const EMOJI_LIST = ['😀', '😂', '❤️', '👍', '🎉', '🔥', '💪', '⭐', '🌟', '✨', '🏠', '👨‍👩‍👧‍👦', '🍕', '🎮', '📚', '🎨', '⚽', '🎵', '💯', '🙌'];
 
-const PollComponent = ({ poll, user, onVote }) => {
+const PollComponent = ({ poll, user, onVote, familyMembers = [] }) => {
   const totalVotes = poll.poll_options?.reduce((sum, opt) => sum + (opt.votes?.length || 0), 0) || 0;
   const hasVoted = poll.poll_options?.some(opt => opt.votes?.includes(user?.user_id));
 
+  // Helper to get member name by ID
+  const getMemberName = (userId) => {
+    const member = familyMembers.find(m => m.user_id === userId);
+    return member?.name || member?.nickname || userId?.slice(0, 8);
+  };
+
   return (
-    <div className="mt-3 space-y-2">
-      <p className="text-sm text-accent font-bold flex items-center space-x-2">
-        <BarChart2 className="w-4 h-4" />
-        <span>Poll</span>
-      </p>
-      {poll.poll_options?.map((option, idx) => {
-        const voteCount = option.votes?.length || 0;
-        const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
-        const userVoted = option.votes?.includes(user?.user_id);
-        
-        return (
-          <button
-            key={idx}
-            onClick={() => !hasVoted && onVote(poll.post_id, idx)}
-            disabled={hasVoted}
-            className={`w-full relative overflow-hidden rounded-xl p-3 transition-all ${
-              hasVoted ? 'cursor-default' : 'hover:scale-[1.02] cursor-pointer'
-            } ${userVoted ? 'border-2 border-primary' : 'border border-slate-700'}`}
-          >
-            <div 
-              className="absolute inset-0 bg-primary/20 transition-all"
-              style={{ width: `${percentage}%` }}
-            />
-            <div className="relative z-10 flex items-center justify-between">
-              <span className="text-white text-sm font-medium">{option.text}</span>
-              <div className="flex items-center space-x-2">
-                {userVoted && <Check className="w-4 h-4 text-primary" />}
-                <span className="text-slate-400 text-xs">{percentage}%</span>
-              </div>
-            </div>
-            {option.votes?.length > 0 && (
-              <div className="relative z-10 flex -space-x-1 mt-2">
-                {option.votes.slice(0, 5).map((voterId, i) => (
-                  <div key={i} className="w-5 h-5 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-[8px] font-bold text-white border border-slate-900">
-                    {voterId.charAt(0).toUpperCase()}
+    <div className="mt-3 bg-slate-800/50 rounded-xl p-4 border border-slate-700" data-testid="poll-component">
+      {/* Poll Question */}
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center">
+          <BarChart2 className="w-4 h-4 text-accent" />
+        </div>
+        <div>
+          <p className="text-white font-bold">{poll.content || 'Poll'}</p>
+          <p className="text-xs text-slate-400">{totalVotes} vote{totalVotes !== 1 ? 's' : ''} • {hasVoted ? 'You voted' : 'Tap to vote'}</p>
+        </div>
+      </div>
+
+      {/* Poll Options */}
+      <div className="space-y-3">
+        {poll.poll_options?.map((option, idx) => {
+          const voteCount = option.votes?.length || 0;
+          const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+          const userVoted = option.votes?.includes(user?.user_id);
+          
+          return (
+            <div key={idx} className="space-y-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!hasVoted) onVote(poll.post_id, idx);
+                }}
+                disabled={hasVoted}
+                className={`w-full relative overflow-hidden rounded-xl p-4 transition-all ${
+                  hasVoted ? 'cursor-default' : 'hover:scale-[1.01] cursor-pointer active:scale-[0.99]'
+                } ${userVoted ? 'border-2 border-primary bg-primary/10' : 'border border-slate-600 bg-slate-900/50 hover:bg-slate-800/50'}`}
+                data-testid={`poll-option-${idx}`}
+              >
+                {/* Progress bar background */}
+                <div 
+                  className={`absolute inset-0 transition-all ${userVoted ? 'bg-primary/30' : 'bg-slate-700/30'}`}
+                  style={{ width: hasVoted ? `${percentage}%` : '0%' }}
+                />
+                
+                {/* Option content */}
+                <div className="relative z-10 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {!hasVoted && (
+                      <div className="w-5 h-5 rounded-full border-2 border-slate-500 flex items-center justify-center">
+                        {userVoted && <div className="w-3 h-3 rounded-full bg-primary" />}
+                      </div>
+                    )}
+                    <span className="text-white font-medium">{option.text}</span>
                   </div>
-                ))}
-              </div>
-            )}
-          </button>
-        );
-      })}
-      <p className="text-xs text-slate-500 text-center">{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</p>
+                  <div className="flex items-center gap-2">
+                    {userVoted && <Check className="w-5 h-5 text-primary" />}
+                    {hasVoted && (
+                      <span className="text-white font-bold">{percentage}%</span>
+                    )}
+                    <span className="text-slate-400 text-sm">({voteCount})</span>
+                  </div>
+                </div>
+              </button>
+
+              {/* Voter names */}
+              {hasVoted && option.votes?.length > 0 && (
+                <div className="flex flex-wrap gap-1 pl-2">
+                  {option.votes.map((voterId, i) => (
+                    <span 
+                      key={i} 
+                      className={`text-xs px-2 py-0.5 rounded-full ${
+                        voterId === user?.user_id 
+                          ? 'bg-primary/20 text-primary font-medium' 
+                          : 'bg-slate-800 text-slate-400'
+                      }`}
+                    >
+                      {voterId === user?.user_id ? 'You' : getMemberName(voterId)}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Vote instruction */}
+      {!hasVoted && (
+        <p className="text-xs text-slate-500 text-center mt-3">
+          Each family member gets one vote
+        </p>
+      )}
     </div>
   );
 };

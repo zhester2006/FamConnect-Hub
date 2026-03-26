@@ -12,7 +12,7 @@ A comprehensive, family-oriented, mobile-friendly app for managing family activi
 ## Live URLs
 
 ### Web App
-**URL:** https://hub-family-core.preview.emergentagent.com
+**URL:** https://family-dashboard-14.preview.emergentagent.com
 
 ---
 

@@ -65,18 +65,7 @@ export default function WelcomePage() {
       <div className="absolute inset-0 bg-gradient-radial from-primary/10 via-transparent to-transparent" />
       
       <div className="relative z-10 min-h-screen flex flex-col">
-        <header className="p-4 lg:p-6">
-          <div className="flex items-center space-x-3">
-            <img 
-              src="https://customer-assets.emergentagent.com/job_homebridge-5/artifacts/2ku9mapg_app_logo.png.png"
-              alt="FamFocus Hub"
-              className="w-10 h-10 rounded-lg object-contain"
-            />
-            <h1 className="text-xl lg:text-2xl font-black gradient-text tracking-tight">FamFocus Hub</h1>
-          </div>
-        </header>
-
-        <main className="flex-1 flex items-center justify-center px-4 lg:px-6 pb-10">
+        <main className="flex-1 flex items-center justify-center px-4 lg:px-6 pb-10 pt-10">
           <div className="max-w-md w-full space-y-6 text-center">
             <div className="space-y-4">
               <div className="inline-block">
