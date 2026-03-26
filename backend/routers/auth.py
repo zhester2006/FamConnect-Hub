@@ -143,7 +143,9 @@ async def mobile_auth_callback(request: Request, response: Response, data: dict)
 # Development-only mock login for testing
 @router.post("/auth/dev-login")
 async def dev_login(response: Response, data: dict = None):
-    """Mock login for development/testing purposes"""
+    """Mock login for development/testing purposes. Disabled when DISABLE_DEV_LOGIN=true."""
+    if os.environ.get('DISABLE_DEV_LOGIN', '').lower() == 'true':
+        raise HTTPException(status_code=404, detail="Not found")
     role = data.get('role', 'parent') if data else 'parent'
     
     # Find or create a test user
@@ -311,7 +313,6 @@ async def child_login(data: dict, response: Response):
         raise HTTPException(status_code=401, detail="Invalid username or password")
     
     # Verify password
-    import hashlib
     password_hash = hashlib.sha256(password.encode()).hexdigest()
     if user.get('password_hash') != password_hash:
         raise HTTPException(status_code=401, detail="Invalid username or password")
@@ -351,7 +352,7 @@ async def child_login(data: dict, response: Response):
 @router.get("/auth/ws-token")
 async def get_ws_token(request: Request):
     """Return the session token for WebSocket connections (since httpOnly cookies aren't readable by JS)"""
-    current_user = await get_current_user(request)
+    await get_current_user(request)  # validates auth
     token = request.cookies.get('session_token')
     if not token:
         auth = request.headers.get('Authorization', '')

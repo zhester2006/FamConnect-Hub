@@ -1,6 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, APIRouter
 from starlette.middleware.cors import CORSMiddleware
-from deps import db, client, get_current_user
+from deps import db, client, get_current_user, ensure_indexes
 from datetime import datetime, timezone
 from typing import Dict, List
 import os
@@ -197,6 +197,10 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+@app.on_event("startup")
+async def startup():
+    await ensure_indexes()
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

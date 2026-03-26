@@ -20,6 +20,34 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
+# Create indexes for production performance
+async def ensure_indexes():
+    await db.users.create_index("user_id", unique=True)
+    await db.users.create_index("email")
+    await db.users.create_index("parent_id")
+    await db.users.create_index("username")
+    await db.user_sessions.create_index("session_token", unique=True)
+    await db.user_sessions.create_index("user_id")
+    await db.user_sessions.create_index("expires_at", expireAfterSeconds=0)
+    await db.families.create_index("family_id", unique=True)
+    await db.families.create_index("family_code")
+    await db.family_memberships.create_index([("family_id", 1), ("user_id", 1)])
+    await db.messages.create_index("family_id")
+    await db.messages.create_index("message_id")
+    await db.messages.create_index("created_at")
+    await db.chores.create_index("family_id")
+    await db.events.create_index("family_id")
+    await db.events.create_index("date")
+    await db.shopping_items.create_index("family_id")
+    await db.family_wall_posts.create_index("family_id")
+    await db.family_wall_posts.create_index("created_at")
+    await db.rewards.create_index("family_id")
+    await db.dinner_schedule.create_index([("family_id", 1), ("date", 1)])
+    await db.notifications.create_index("user_id")
+    await db.achievements.create_index("user_id")
+    await db.checkins.create_index("user_id")
+    await db.reading_logs.create_index("user_id")
+
 # Resend email setup
 resend.api_key = os.environ.get('RESEND_API_KEY', '')
 SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
