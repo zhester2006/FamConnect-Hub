@@ -222,4 +222,162 @@ async def get_meal_plans(request: Request):
     
     return {"plans": plans}
 
+# ===== Dinner Schedule =====
+
+@router.get("/dinner/schedule")
+async def get_dinner_schedule(request: Request, week_start: Optional[str] = None):
+    """Get the dinner schedule for the week"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    if not week_start:
+        today = datetime.now(timezone.utc).date()
+        # Find Monday of current week
+        monday = today - timedelta(days=today.weekday())
+        week_start = monday.isoformat()
+    
+    sunday = (datetime.fromisoformat(week_start) + timedelta(days=6)).date().isoformat()
+    
+    schedule = await db.dinner_schedule.find(
+        {"family_id": family_id, "date": {"$gte": week_start, "$lte": sunday}},
+        {"_id": 0}
+    ).sort("date", 1).to_list(7)
+    
+    return {"schedule": schedule, "week_start": week_start}
+
+
+@router.post("/dinner/schedule")
+async def add_to_dinner_schedule(request: Request, data: dict):
+    """Add meals to the dinner schedule and auto-create calendar events"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    meals = data.get('meals', [])  # [{date: "2026-03-26", meal_name: "Pasta Night", description: "..."}]
+    added = []
+    
+    for meal in meals:
+        date = meal.get('date')
+        meal_name = meal.get('meal_name', '').strip()
+        if not date or not meal_name:
+            continue
+        
+        schedule_id = f"ds_{uuid.uuid4().hex[:12]}"
+        doc = {
+            "schedule_id": schedule_id,
+            "family_id": family_id,
+            "date": date,
+            "meal_name": meal_name,
+            "description": meal.get('description', ''),
+            "added_by": current_user['user_id'],
+            "added_by_name": current_user.get('name', ''),
+            "source": meal.get('source', 'manual'),
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Upsert — replace existing meal for that date
+        await db.dinner_schedule.update_one(
+            {"family_id": family_id, "date": date},
+            {"$set": doc},
+            upsert=True
+        )
+        
+        # Auto-create calendar event for the meal
+        event_id = f"event_dinner_{date.replace('-', '')}"
+        event_doc = {
+            "event_id": event_id,
+            "family_id": family_id,
+            "title": f"Dinner: {meal_name}",
+            "description": meal.get('description', ''),
+            "event_date": date,
+            "event_time": "18:00",
+            "event_type": "meal",
+            "created_by": current_user['user_id'],
+            "created_by_name": current_user.get('name', ''),
+            "status": "approved",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.events.update_one(
+            {"event_id": event_id},
+            {"$set": event_doc},
+            upsert=True
+        )
+        
+        added.append({"schedule_id": schedule_id, "date": date, "meal_name": meal_name})
+    
+    return {"added": added, "count": len(added)}
+
+
+@router.delete("/dinner/schedule/{date}")
+async def remove_from_dinner_schedule(date: str, request: Request):
+    """Remove a meal from the dinner schedule"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    await db.dinner_schedule.delete_one({"family_id": family_id, "date": date})
+    # Also remove the auto-created calendar event
+    event_id = f"event_dinner_{date.replace('-', '')}"
+    await db.events.delete_one({"event_id": event_id})
+    
+    return {"message": "Removed from schedule"}
+
+
+@router.post("/dinner/schedule/ai-fill")
+async def ai_fill_schedule(request: Request, data: dict):
+    """Get AI suggestions for unplanned days"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    preferences = data.get('preferences', '')
+    unplanned_days = data.get('unplanned_days', [])  # ["2026-03-27", "2026-03-28"]
+    
+    if not unplanned_days:
+        return {"suggestions": []}
+    
+    # Get already planned meals for context
+    planned = await db.dinner_schedule.find(
+        {"family_id": family_id},
+        {"_id": 0, "meal_name": 1, "date": 1}
+    ).sort("date", -1).limit(14).to_list(14)
+    
+    recent_meals = [p['meal_name'] for p in planned]
+    
+    day_names_map = {0: 'Monday', 1: 'Tuesday', 2: 'Wednesday', 3: 'Thursday', 4: 'Friday', 5: 'Saturday', 6: 'Sunday'}
+    day_labels = []
+    for d in unplanned_days:
+        try:
+            dt = datetime.fromisoformat(d)
+            day_labels.append(f"{day_names_map.get(dt.weekday(), 'Day')} ({d})")
+        except:
+            day_labels.append(d)
+    
+    chat = LlmChat(
+        api_key=os.environ['EMERGENT_LLM_KEY'],
+        session_id=f"schedule_{uuid.uuid4().hex[:8]}",
+        system_message="You are a family meal planner. Respond ONLY with valid JSON array."
+    ).with_model("openai", "gpt-5.2")
+    
+    prompt = f"""Suggest dinner meals for these unplanned days: {', '.join(day_labels)}
+Preferences: {preferences if preferences else 'Family-friendly'}
+Recent meals to AVOID repeating: {', '.join(recent_meals[:7]) if recent_meals else 'none'}
+
+Respond ONLY with a JSON array like this:
+[
+  {{"date": "2026-03-27", "meal_name": "Chicken Stir Fry", "description": "Quick and easy Asian-style stir fry with veggies"}},
+  {{"date": "2026-03-28", "meal_name": "Taco Night", "description": "Build-your-own tacos with ground beef and fresh toppings"}}
+]
+Only include the dates I specified. Keep meal names short (2-4 words). Descriptions should be 1 sentence."""
+    
+    response = await chat.send_message(UserMessage(text=prompt))
+    
+    try:
+        clean = response.strip()
+        if clean.startswith('```'):
+            clean = clean.split('```')[1]
+            if clean.startswith('json'):
+                clean = clean[4:]
+        suggestions = json.loads(clean)
+        return {"suggestions": suggestions}
+    except:
+        return {"suggestions": [], "raw": response}
+
 # Get online family members

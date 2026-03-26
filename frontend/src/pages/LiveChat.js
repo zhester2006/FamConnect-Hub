@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Smile, Check, CheckCheck, Wifi, WifiOff, Circle, Mic, MicOff, X, Play, Pause, Heart, ThumbsUp, Laugh, Angry, Frown, Image, Search } from 'lucide-react';
+import { Send, Smile, Check, CheckCheck, Wifi, WifiOff, Circle, Mic, MicOff, X, Play, Pause, Heart, ThumbsUp, Laugh, Angry, Frown, Image, Search, Users } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { toast } from 'sonner';
 
@@ -290,30 +290,35 @@ const VoicePlayer = ({ audioBlob, audioUrl }) => {
   );
 };
 
-// Online Users Bar Component
+// Online Users Bar Component — HomeHub style compact avatars
 const OnlineUsersBar = ({ onlineUsers, familyMembers, currentUserId }) => {
   if (!familyMembers.length) return null;
   const others = familyMembers.filter(m => m.user_id !== currentUserId);
+  const onlineCount = others.filter(m => onlineUsers.includes(m.user_id)).length;
   return (
-    <div className="flex items-center gap-1 py-1.5 px-3 bg-slate-900/50 border-b border-slate-800 overflow-x-auto" data-testid="online-users-bar">
-      {others.map(member => {
-        const isOnline = onlineUsers.includes(member.user_id);
-        const name = member.nickname || member.name || '?';
-        return (
-          <div key={member.user_id} className="relative flex-shrink-0" title={`${name}${isOnline ? ' - online' : ' - offline'}`}>
-            {member.picture && !member.picture.includes('dicebear') ? (
-              <img src={member.picture} alt={name} className={`w-7 h-7 rounded-full object-cover border border-slate-700 ${!isOnline ? 'opacity-40' : ''}`} />
-            ) : (
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white border border-slate-700 ${
-                isOnline ? 'bg-gradient-to-br from-purple-500 to-pink-500' : 'bg-slate-700 opacity-40'
-              }`}>
-                {name[0]?.toUpperCase()}
-              </div>
-            )}
-            <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-slate-900 ${isOnline ? 'bg-green-400' : 'bg-slate-500'}`} />
-          </div>
-        );
-      })}
+    <div className="flex items-center gap-2 py-1.5 px-3 bg-slate-900/50 border-b border-slate-800" data-testid="online-users-bar">
+      <Users className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+      <div className="flex -space-x-2">
+        {others.slice(0, 6).map(member => {
+          const isOnline = onlineUsers.includes(member.user_id);
+          const name = member.nickname || member.name || '?';
+          return (
+            <div key={member.user_id} className="relative" title={`${name}${isOnline ? ' - online' : ' - offline'}`}>
+              {member.picture && !member.picture.includes('dicebear') ? (
+                <img src={member.picture} alt={name} className={`w-7 h-7 rounded-full object-cover border-2 border-slate-950 ${!isOnline ? 'opacity-40' : ''}`} />
+              ) : (
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-slate-950 ${
+                  isOnline ? 'bg-gradient-to-br from-primary to-secondary' : 'bg-slate-700 opacity-40'
+                }`}>
+                  {name[0]?.toUpperCase()}
+                </div>
+              )}
+              <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-950 ${isOnline ? 'bg-green-400' : 'bg-slate-500'}`} />
+            </div>
+          );
+        })}
+      </div>
+      <span className="text-xs text-green-400 font-bold">{onlineCount} online</span>
     </div>
   );
 };

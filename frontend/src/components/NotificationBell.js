@@ -137,7 +137,7 @@ export default function NotificationBell({ user }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 w-72 sm:w-80 max-h-80 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50" data-testid="notification-dropdown" style={{ maxWidth: 'calc(100vw - 2rem)' }}>
+        <div className="fixed left-4 sm:absolute sm:left-0 sm:right-auto top-auto sm:top-12 w-[calc(100vw-2rem)] sm:w-80 max-h-80 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-[60]" data-testid="notification-dropdown">
           <div className="flex items-center justify-between px-3 py-2.5 border-b border-slate-700">
             <h3 className="text-white font-semibold text-sm">Notifications</h3>
             <div className="flex gap-1.5">

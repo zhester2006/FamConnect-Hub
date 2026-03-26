@@ -512,7 +512,7 @@ export default function FamilyWall({ user }) {
         </div>
 
         {/* Sticky Input Bar at Bottom */}
-        <div className={`fixed bottom-0 left-0 right-0 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800 p-3 z-40 transition-all duration-300 ${sidebarCollapsed ? 'lg:left-16' : 'lg:left-64'}`}>
+        <div className={`fixed bottom-20 md:bottom-0 left-0 right-0 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800 p-3 z-40 transition-all duration-300 ${sidebarCollapsed ? 'lg:left-16' : 'lg:left-64'}`}>
           {/* Selected GIF Preview */}
           {selectedGif && (
             <div className="mb-2 relative inline-block">
