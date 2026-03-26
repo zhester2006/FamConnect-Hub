@@ -89,7 +89,7 @@ Respond in this JSON format:
                 clean_response = clean_response[4:]
         parsed = json.loads(clean_response)
         return {"success": True, "data": parsed}
-    except:
+    except Exception:
         return {"success": False, "suggestion": response}
 
 @router.post("/ai/pixie")

@@ -12,6 +12,8 @@ import os
 import base64
 import hashlib
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 @router.get("/weather")

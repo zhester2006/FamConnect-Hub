@@ -74,7 +74,7 @@ async def get_notifications(request: Request):
 @router.put("/notifications/{notification_id}/read")
 async def mark_notification_read(notification_id: str, request: Request):
     """Mark a notification as read"""
-    current_user = await get_current_user(request)
+    await get_current_user(request)  # validates auth
     await db.notifications.update_one(
         {"notification_id": notification_id},
         {"$set": {"read": True}}

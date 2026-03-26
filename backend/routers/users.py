@@ -486,7 +486,7 @@ async def upload_profile_picture(user_id: str, request: Request):
 # General image upload endpoint
 @router.post("/upload/image")
 async def upload_image(request: Request):
-    current_user = await get_current_user(request)
+    await get_current_user(request)  # validates auth
     
     content_type = request.headers.get('content-type', '')
     

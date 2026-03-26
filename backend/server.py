@@ -94,7 +94,7 @@ class ConnectionManager:
             for connection in self.active_connections[family_id]:
                 try:
                     await connection.send_json({"type": "message", "data": message})
-                except:
+                except Exception:
                     pass
 
     async def broadcast_typing(self, family_id: str, user_id: str, user_name: str, is_typing: bool):
@@ -111,7 +111,7 @@ class ConnectionManager:
                         "type": "typing",
                         "data": {"user_id": user_id, "user_name": user_name, "is_typing": is_typing}
                     })
-                except:
+                except Exception:
                     pass
 
     async def broadcast_status(self, family_id: str, user_id: str, status: str):
@@ -122,7 +122,7 @@ class ConnectionManager:
                         "type": "status",
                         "data": {"user_id": user_id, "status": status}
                     })
-                except:
+                except Exception:
                     pass
 
 manager = ConnectionManager()

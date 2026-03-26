@@ -732,7 +732,7 @@ async def submit_bug_report(request: Request, data: dict):
         user_role = current_user.get('role', 'unknown')
         user_email = current_user.get('email', '')
         user_name = current_user.get('nickname') or current_user.get('name', 'User')
-    except:
+    except Exception:
         # Allow anonymous bug reports if user is not authenticated
         user_id = data.get('user_id', 'anonymous')
         user_role = data.get('user_role', 'unknown')
@@ -822,7 +822,7 @@ async def submit_suggestion(request: Request, data: dict):
         user_role = current_user.get('role', 'unknown')
         user_email = current_user.get('email', '')
         user_name = current_user.get('nickname') or current_user.get('name', 'User')
-    except:
+    except Exception:
         # Allow anonymous suggestions if user is not authenticated
         user_id = data.get('user_id', 'anonymous')
         user_role = data.get('user_role', 'unknown')
@@ -948,7 +948,7 @@ async def update_bug_report(report_id: str, request: Request, data: dict):
 
 # Reset tutorial/onboarding for dev users
 @router.post("/dev/reset-tutorial")
-async def reset_tutorial(request: Request):
+async def dev_reset_tutorial(request: Request):
     """Reset tutorial completion status to show onboarding again"""
     # Reset for ALL users (dev endpoint)
     result = await db.users.update_many(

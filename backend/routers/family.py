@@ -385,7 +385,7 @@ async def get_user_families(request: Request):
     return {"families": families}
 
 @router.post("/families")
-async def create_family(request: Request, data: dict):
+async def create_new_family(request: Request, data: dict):
     """Create a new family"""
     current_user = await get_current_user(request)
     
@@ -776,7 +776,7 @@ async def change_member_role(family_id: str, member_id: str, request: Request, d
 
 # Remove member from family
 @router.delete("/families/{family_id}/members/{member_id}")
-async def remove_family_member(family_id: str, member_id: str, request: Request):
+async def delete_family_member(family_id: str, member_id: str, request: Request):
     """Remove a member from the family"""
     current_user = await get_current_user(request)
     

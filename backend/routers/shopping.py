@@ -16,7 +16,7 @@ router = APIRouter()
 
 @router.get("/shopping")
 async def get_shopping_list(request: Request):
-    current_user = await get_current_user(request)
+    await get_current_user(request)  # validates auth
     items = await db.shopping_items.find({}, {"_id": 0}).to_list(1000)
     return {"items": items}
 
@@ -48,7 +48,7 @@ async def update_shopping_item(item_id: str, request: Request, data: dict):
 
 @router.delete("/shopping/{item_id}")
 async def delete_shopping_item(item_id: str, request: Request):
-    current_user = await get_current_user(request)
+    await get_current_user(request)  # validates auth
     result = await db.shopping_items.delete_one({"item_id": item_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Item not found")

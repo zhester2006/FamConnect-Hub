@@ -55,7 +55,7 @@ Keep meal name short (2-5 words). List 5-10 ingredients."""
                 clean = clean[4:]
             clean = clean.strip()
         structured = json.loads(clean)
-    except:
+    except Exception:
         structured = None
     
     return {"suggestion": response, "structured": structured}
@@ -112,7 +112,7 @@ IMPORTANT: Respond ONLY with valid JSON in this exact format:
                 clean_response = clean_response[4:]
         parsed = json.loads(clean_response)
         return {"success": True, "meal": parsed}
-    except:
+    except Exception:
         return {"success": False, "suggestion": response}
 
 
@@ -171,7 +171,7 @@ Include ALL 7 days Monday through Sunday. Keep meal names short (2-5 words). Lis
                 clean = clean[4:]
             clean = clean.strip()
         structured_plan = json.loads(clean)
-    except:
+    except Exception:
         structured_plan = None
     
     # Store the meal plan
@@ -468,7 +468,7 @@ async def ai_fill_schedule(request: Request, data: dict):
         try:
             dt = datetime.fromisoformat(d)
             day_labels.append(f"{day_names_map.get(dt.weekday(), 'Day')} ({d})")
-        except:
+        except Exception:
             day_labels.append(d)
     
     chat = LlmChat(
@@ -498,7 +498,7 @@ Only include the dates I specified. Keep meal names short (2-4 words). Descripti
                 clean = clean[4:]
         suggestions = json.loads(clean)
         return {"suggestions": suggestions}
-    except:
+    except Exception:
         return {"suggestions": [], "raw": response}
 
 # Get online family members

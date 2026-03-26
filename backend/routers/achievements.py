@@ -13,6 +13,8 @@ import os
 import base64
 import hashlib
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 # ============================================
@@ -70,7 +72,7 @@ async def get_all_achievements(request: Request):
 @router.get("/achievements/user/{user_id}")
 async def get_user_achievements(user_id: str, request: Request):
     """Get achievements earned by a specific user"""
-    current_user = await get_current_user(request)
+    await get_current_user(request)  # validates auth
     
     # Get user's earned achievements
     earned = await db.user_achievements.find({"user_id": user_id}, {"_id": 0}).to_list(100)
@@ -205,7 +207,7 @@ async def create_custom_achievement(request: Request, data: dict):
             icon = str(icon_response).strip()[:4]
             if len(icon) > 4 or icon.isalpha():
                 icon = "🏆"
-        except:
+        except Exception:
             icon = "🏆"
     
     achievement_id = f"custom_{uuid.uuid4().hex[:12]}"

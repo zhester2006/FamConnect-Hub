@@ -119,7 +119,6 @@ async def send_voice_message(request: Request, audio: UploadFile = File(...), du
     message_id = f"msg_{uuid.uuid4().hex[:12]}"
     
     # Save audio file
-    import base64
     audio_content = await audio.read()
     audio_base64 = base64.b64encode(audio_content).decode('utf-8')
     
