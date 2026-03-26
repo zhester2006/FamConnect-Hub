@@ -16,59 +16,58 @@ A comprehensive, family-oriented, mobile-friendly app for managing family activi
 
 ---
 
-## Session 6 Updates (March 2026)
+## Session 7 Updates (March 2026)
 
-### Bug Fixes
-1. **Live Chat WebSocket Fix** - WebSocket URL was missing `/api` prefix, causing connections to never reach the backend through Kubernetes ingress. Fixed both frontend URL and backend route.
-2. **Child Login Session Bug** - Sessions were stored in wrong collection (`sessions` instead of `user_sessions`), causing auth failures after child login. Fixed to use correct collection and set session cookie.
-3. **Child Login Redirect** - Was navigating to non-existent `/child-dashboard`. Fixed to redirect to `/space`.
-4. **WebSocket Token Retrieval** - `getSessionToken()` now checks both cookies and localStorage for session tokens.
+### 1. Logo Improvement
+- Welcome page logo enlarged (w-44/h-44, lg:w-52/h-52) with glowing blue drop-shadow effect
+- Subtle pulsing glow behind the logo for visual appeal
 
-### UI Improvements
-5. **Welcome Page Logo Removed** - FamFocus Hub logo/image removed from top of Welcome Screen per user request.
-6. **Poll Voter Names** - FamilyWall's PollComponent now receives `familyMembers` prop and displays voter names.
+### 2. Setup Wizard E2E Verified
+- Full 4-step flow tested: Welcome → Avatar → Theme → Contact → Complete
+- Child login with first_login=true redirects to /setup-wizard correctly
+- Setup completion marks first_login=false and redirects to /space
+
+### 3. Parent Management UI (Achievements)
+- New "Manage" tab on Achievements page (parent-only)
+- **Create Achievement**: Modal with name, description, icon, points reward, type fields
+- **AI Suggestions**: Panel with context input, GPT-5.2 generates 5 creative badge ideas
+- **Award to Children**: Select a child from family members to award a custom badge
+- **Delete Achievement**: Remove custom achievements
+- **Custom Goals & Badges List**: Grid display of all custom achievements with award/delete actions
+
+### 4. AI Achievement Suggestions
+- Uses Emergent LLM Key with GPT-5.2 model
+- Accepts optional theme/context (e.g., "summer", "reading", "kindness")
+- Returns 5 suggestions with name, description, icon, requirement, and points
+- "Use" button pre-fills the Create Achievement form
 
 ---
 
-## Session 5 Updates
+## Session 6 Updates (March 2026)
 
-### 1. Removed Developer Sign-In
-- Dev login buttons removed from welcome page
-- Clean production-ready login experience
-- Only "Sign In with Google" and "Kid's Login" buttons visible
+### Bug Fixes
+1. **Live Chat WebSocket Fix** - WebSocket URL missing `/api` prefix
+2. **Child Login Session Bug** - Wrong collection (`sessions` vs `user_sessions`)
+3. **Child Login Redirect** - Fixed to `/space`
+4. **WebSocket Token Retrieval** - Checks both cookies and localStorage
 
-### 2. First-Time Login Tutorial for Children
-- New Setup Wizard page at `/setup-wizard`
-- 4-step onboarding process:
-  1. Welcome message with overview
-  2. Choose avatar from 8 options
-  3. Pick theme from 6 color schemes
-  4. Add email and phone (optional)
-- Progress bar shows completion percentage
-- Skip option available for steps 2-3
-
-### 3. Daily Inspiration Toggle
-- Toggle between "Inspire" and "Bible"
-- Available on Family Wall and Home Hub
-- Bible verses from Scripture
-- Removed "AI-generated" text
-- Clean, respectful presentation
+### UI Improvements
+5. **Welcome Page Logo** - Managed per user request
+6. **Poll Voter Names** - FamilyWall PollComponent displays voter names
 
 ---
 
 ## Authentication Flow
 
 ### Parent Login
-1. Go to welcome page
-2. Click "Sign In with Google"
-3. Authenticate with Google
-4. Arrive at Parent Dashboard
+1. Go to welcome page → Click "Sign In with Google"
+2. Authenticate with Google → Arrive at Parent Dashboard
 
 ### Child Login
 1. Go to welcome page → Click "Kid's Login"
 2. Enter username and password
-3. If first login → Setup Wizard → Complete 4-step tutorial
-4. Arrive at Child Space (`/space`)
+3. If first login → Setup Wizard (4 steps) → Child Space
+4. If returning → Child Space directly
 
 ---
 
@@ -76,6 +75,8 @@ A comprehensive, family-oriented, mobile-friendly app for managing family activi
 
 ### For Parents
 - Create child profiles with username/password/PIN
+- **Custom Goals & Achievements** (NEW) - Create, manage, award badges
+- **AI Achievement Suggestions** (NEW) - GPT-5.2 powered badge ideas
 - View and manage all family activities
 - AI-powered chore scheduling
 - Approve chores, reading logs, purchases
@@ -83,31 +84,17 @@ A comprehensive, family-oriented, mobile-friendly app for managing family activi
 - Set up Home Hub for shared devices
 
 ### For Children
-- Fun kid-friendly login and onboarding
+- Fun kid-friendly login and onboarding (Setup Wizard)
 - Personal dashboard with chores and points
-- Earn rewards for completing tasks
+- Earn rewards and custom badges for completing tasks
 - Family chat with emoji and GIFs
 - Reading log submissions
 - Leaderboard competition with siblings
 
 ### For Home Hub (Shared Device)
 - PIN verification for all actions
-- Profile dropdown selection
 - Quick Actions to mark chores complete
-- Weather forecast with 3-day view
-- Calendar with monthly events
-- Daily inspiration or Bible verse
-
----
-
-## User Roles
-
-| Role | Access | PIN Required |
-|------|--------|--------------|
-| Parent | Full | No |
-| Child | Limited | No (on own device) |
-| Member | Standard | No |
-| HomeHub | Display | Yes (all actions) |
+- Weather forecast, Calendar, Daily inspiration
 
 ---
 
@@ -115,20 +102,20 @@ A comprehensive, family-oriented, mobile-friendly app for managing family activi
 
 ### Frontend
 - React 18 with Tailwind CSS
-- Shadcn/UI components
-- Sonner for toasts
+- Shadcn/UI components, Sonner for toasts
 - WebSocket for real-time chat (via /api/ws/chat/)
 
 ### Backend  
-- FastAPI (Python)
-- MongoDB database
+- FastAPI (Python), MongoDB database
 - Session-based auth (user_sessions collection)
-- Real-time WebSocket support
+- Emergent LLM Key for AI features (GPT-5.2)
 
-### Mobile App
-- React Native with Expo
-- @react-native-firebase for auth
-- FIREBASE_ONLY_MODE: false
+### Key API Endpoints
+- `POST /api/achievements/custom` - Create custom achievement
+- `GET /api/achievements/custom` - List custom achievements
+- `DELETE /api/achievements/custom/{id}` - Delete
+- `POST /api/achievements/custom/{id}/award` - Award to child
+- `POST /api/achievements/ai-suggestions` - AI suggestions
 
 ---
 
@@ -142,13 +129,8 @@ A comprehensive, family-oriented, mobile-friendly app for managing family activi
 - (P1) Mobile App: Native Google Sign-in not implemented
 - (P2) Mobile App: Map screen doesn't display map image
 
-## In-Progress Tasks
-- (P1) First-time login tutorial: SetupWizard.js created, redirect works, but needs thorough E2E testing
-- (P2) Refactor server.py into modular routers (7200+ lines)
-
 ## Upcoming Tasks
-- (P1) Parent Management UI: Custom Goals, Achievements, Badges
-- (P1) AI Achievement Suggestions integration
 - (P2) Push Notifications (web + mobile)
-- (P2) Voice Commands for Pixie
+- (P2) Voice Commands for Pixie (speech-to-text)
+- (P2) Refactor server.py into modular routers (7200+ lines)
 - (P2) App Store Deployment Guide
