@@ -846,6 +846,25 @@ async def get_family_members(family_id: str, request: Request):
                 "online_status": creator.get('online_status', False)
             })
     
+    # Also include users linked via parent_id (virtual family members)
+    existing_ids = {m['user_id'] for m in members}
+    children_via_parent = await db.users.find(
+        {"parent_id": family_id},
+        {"_id": 0, "password_hash": 0}
+    ).to_list(100)
+    for child in children_via_parent:
+        if child['user_id'] not in existing_ids:
+            members.append({
+                "user_id": child['user_id'],
+                "name": child.get('name', 'Unknown'),
+                "email": child.get('email', ''),
+                "role": child.get('role', 'child'),
+                "picture": child.get('picture'),
+                "username": child.get('username'),
+                "has_pin": bool(child.get('pin')),
+                "online_status": child.get('online_status', False)
+            })
+    
     return {"members": members}
 
 # Change member role
