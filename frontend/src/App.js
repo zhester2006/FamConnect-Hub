@@ -21,6 +21,7 @@ import CheckIns from '@/pages/CheckIns';
 import Analytics from '@/pages/Analytics';
 import ChoreScheduler from '@/pages/ChoreScheduler';
 import Achievements from '@/pages/Achievements';
+import ChildLogin from '@/pages/ChildLogin';
 import WelcomeTutorial from '@/components/WelcomeTutorial';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { NotificationPanel } from '@/components/NotificationBell';
@@ -143,6 +144,7 @@ function AppRouter() {
   return (
     <Routes>
       <Route path="/login" element={<WelcomePage />} />
+      <Route path="/child-login" element={<ChildLogin />} />
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/dashboard" element={<ProtectedRoute><ParentDashboard /></ProtectedRoute>} />
       <Route path="/space" element={<ProtectedRoute><ChildSpace /></ProtectedRoute>} />

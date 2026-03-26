@@ -39,8 +39,9 @@ export default function FamilyManagement({ user }) {
   const [modal, setModal] = useState({ type: null, data: null });
   const [formData, setFormData] = useState({ name: '', email: '', role: 'child' });
   const [processing, setProcessing] = useState(null);
-  const [childFormData, setChildFormData] = useState({ name: '', pin: '', picture: '' });
+  const [childFormData, setChildFormData] = useState({ name: '', pin: '', picture: '', username: '', password: '' });
   const [createdInviteLink, setCreatedInviteLink] = useState(null);
+  const [editCredentialsModal, setEditCredentialsModal] = useState(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -183,6 +184,14 @@ export default function FamilyManagement({ user }) {
       toast.error('Please enter a name for the child'); 
       return; 
     }
+    if (!childFormData.username || childFormData.username.length < 3) {
+      toast.error('Please enter a username (at least 3 characters)');
+      return;
+    }
+    if (!childFormData.password || childFormData.password.length < 4) {
+      toast.error('Please enter a password (at least 4 characters)');
+      return;
+    }
     if (!childFormData.pin || childFormData.pin.length !== 4 || !/^\d+$/.test(childFormData.pin)) {
       toast.error('Please enter a 4-digit PIN');
       return;
@@ -201,6 +210,8 @@ export default function FamilyManagement({ user }) {
         body: JSON.stringify({
           name: childFormData.name,
           pin: childFormData.pin,
+          username: childFormData.username,
+          password: childFormData.password,
           picture: childFormData.picture || null
         })
       });
@@ -215,7 +226,6 @@ export default function FamilyManagement({ user }) {
           setCreatedInviteLink(fullLink);
         }
         
-        setChildFormData({ name: '', pin: '', picture: '' });
         fetchData();
       } else {
         const data = await res.json();
@@ -269,6 +279,52 @@ export default function FamilyManagement({ user }) {
     if (createdInviteLink) {
       navigator.clipboard.writeText(createdInviteLink);
       toast.success('Invite link copied to clipboard!');
+    }
+  };
+
+  const handleUpdateCredentials = async () => {
+    if (!editCredentialsModal) return;
+    
+    const { user_id, username, password, pin } = editCredentialsModal;
+    
+    if (username && (username.length < 3 || !/^[a-z0-9]+$/.test(username))) {
+      toast.error('Username must be at least 3 alphanumeric characters');
+      return;
+    }
+    if (password && password.length < 4) {
+      toast.error('Password must be at least 4 characters');
+      return;
+    }
+    if (pin && (pin.length !== 4 || !/^\d+$/.test(pin))) {
+      toast.error('PIN must be exactly 4 digits');
+      return;
+    }
+    
+    setProcessing('updateCreds');
+    try {
+      const token = localStorage.getItem('dev_session_token');
+      const res = await fetch(`${BACKEND_URL}/api/users/${user_id}/credentials`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include',
+        body: JSON.stringify({ username, password, pin })
+      });
+      
+      if (res.ok) {
+        toast.success('Credentials updated successfully!');
+        setEditCredentialsModal(null);
+        fetchData();
+      } else {
+        const data = await res.json();
+        toast.error(data.detail || 'Failed to update credentials');
+      }
+    } catch (error) {
+      toast.error('Failed to update credentials');
+    } finally {
+      setProcessing(null);
     }
   };
 
@@ -441,6 +497,21 @@ export default function FamilyManagement({ user }) {
                           
                           {isAdmin && !isCurrentUser && (
                             <div className="flex items-center gap-1">
+                              {member.role === 'child' && (
+                                <button 
+                                  onClick={() => setEditCredentialsModal({ 
+                                    user_id: member.user_id, 
+                                    name: member.name,
+                                    username: member.username || '', 
+                                    password: '', 
+                                    pin: '' 
+                                  })}
+                                  className="p-2 hover:bg-primary/20 rounded-lg text-primary transition-all"
+                                  title="Edit login credentials"
+                                >
+                                  <User className="w-4 h-4" />
+                                </button>
+                              )}
                               <button 
                                 onClick={() => handleSetMemberPin(member.user_id)}
                                 disabled={processing === member.user_id}
@@ -635,10 +706,12 @@ export default function FamilyManagement({ user }) {
       {modal.type === 'addChild' && (
         <Modal title="Add Child Profile" icon={<Baby className="w-5 h-5 text-pink-400" />} onClose={() => { setModal({ type: null }); setCreatedInviteLink(null); }}>
           {!createdInviteLink ? (
-            <>
+            <div className="max-h-[70vh] overflow-y-auto">
               <p className="text-sm text-slate-400 mb-4">
-                Create a profile for your child. They can finish setup on their own device using the invite link.
+                Create a profile for your child. They'll use these credentials to login on their own device.
               </p>
+              
+              {/* Basic Info */}
               <input 
                 type="text" 
                 placeholder="Child's Name" 
@@ -647,9 +720,33 @@ export default function FamilyManagement({ user }) {
                 className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-pink-500 mb-4"
                 autoFocus
               />
+              
+              {/* Login Credentials */}
+              <div className="bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-700">
+                <h4 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                  <User className="w-4 h-4 text-primary" /> Login Credentials
+                </h4>
+                <input 
+                  type="text" 
+                  placeholder="Username (for app login)" 
+                  value={childFormData.username} 
+                  onChange={(e) => setChildFormData({ ...childFormData, username: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') })}
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-primary mb-3"
+                />
+                <input 
+                  type="password" 
+                  placeholder="Password" 
+                  value={childFormData.password} 
+                  onChange={(e) => setChildFormData({ ...childFormData, password: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-primary"
+                />
+                <p className="text-xs text-slate-500 mt-2">Child will use these to login on their phone</p>
+              </div>
+              
+              {/* PIN for Home Hub */}
               <div className="mb-4">
                 <label className="text-sm text-slate-400 mb-2 block flex items-center gap-2">
-                  <Lock className="w-4 h-4" /> Set a 4-digit PIN (for Home Hub verification)
+                  <Lock className="w-4 h-4" /> 4-digit PIN (for Home Hub)
                 </label>
                 <input 
                   type="password" 
@@ -663,8 +760,9 @@ export default function FamilyManagement({ user }) {
                   }}
                   className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-pink-500 text-center text-2xl tracking-[0.5em]"
                 />
-                <p className="text-xs text-slate-500 mt-1">This PIN will be used on the Home Hub device</p>
+                <p className="text-xs text-slate-500 mt-1">Used for verification on shared Home Hub device</p>
               </div>
+              
               <div className="flex gap-3">
                 <button onClick={() => setModal({ type: null })} className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-white font-medium">Cancel</button>
                 <button 
@@ -676,7 +774,7 @@ export default function FamilyManagement({ user }) {
                   Create Profile
                 </button>
               </div>
-            </>
+            </div>
           ) : (
             <>
               <div className="text-center mb-4">
@@ -684,12 +782,30 @@ export default function FamilyManagement({ user }) {
                   <Check className="w-8 h-8 text-green-400" />
                 </div>
                 <h3 className="text-lg font-bold text-white">Profile Created!</h3>
-                <p className="text-sm text-slate-400 mt-1">Share this link with {childFormData.name} to finish setup</p>
+                <p className="text-sm text-slate-400 mt-1">{childFormData.name} can now login!</p>
               </div>
-              <div className="bg-slate-800 rounded-xl p-3 mb-4">
-                <p className="text-xs text-slate-400 mb-1">Invite Link:</p>
+              
+              {/* Login Info */}
+              <div className="bg-slate-800 rounded-xl p-4 mb-4 space-y-3">
+                <div>
+                  <p className="text-xs text-slate-400">Username:</p>
+                  <p className="text-white font-mono font-bold">{childFormData.username}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400">Password:</p>
+                  <p className="text-white font-mono">{childFormData.password ? '••••••••' : 'Not set'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400">Home Hub PIN:</p>
+                  <p className="text-white font-mono">{childFormData.pin || 'Not set'}</p>
+                </div>
+              </div>
+              
+              {/* Optional Invite Link */}
+              <div className="bg-slate-800/50 rounded-xl p-3 mb-4">
+                <p className="text-xs text-slate-400 mb-1">Optional Invite Link (for setup wizard):</p>
                 <div className="flex items-center gap-2">
-                  <p className="text-sm text-white flex-1 truncate">{createdInviteLink}</p>
+                  <p className="text-xs text-white flex-1 truncate">{createdInviteLink}</p>
                   <button 
                     onClick={copyInviteLink}
                     className="p-2 bg-primary hover:bg-primary/80 rounded-lg text-white transition-all"
@@ -699,17 +815,78 @@ export default function FamilyManagement({ user }) {
                   </button>
                 </div>
               </div>
+              
               <p className="text-xs text-slate-500 text-center mb-4">
-                Link expires in 7 days. They can set their profile picture and theme after joining.
+                Child will add their email and phone during first login.
               </p>
               <button 
-                onClick={() => { setModal({ type: null }); setCreatedInviteLink(null); }}
+                onClick={() => { setModal({ type: null }); setCreatedInviteLink(null); setChildFormData({ name: '', pin: '', picture: '', username: '', password: '' }); }}
                 className="w-full px-4 py-3 bg-primary hover:bg-primary/80 rounded-xl text-white font-bold"
               >
                 Done
               </button>
             </>
           )}
+        </Modal>
+      )}
+
+      {/* Edit Credentials Modal */}
+      {editCredentialsModal && (
+        <Modal title={`Edit ${editCredentialsModal.name}'s Credentials`} icon={<User className="w-5 h-5 text-primary" />} onClose={() => setEditCredentialsModal(null)}>
+          <p className="text-sm text-slate-400 mb-4">
+            Update login credentials for {editCredentialsModal.name}. Leave fields empty to keep current values.
+          </p>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">Username</label>
+              <input 
+                type="text" 
+                placeholder="New username" 
+                value={editCredentialsModal.username} 
+                onChange={(e) => setEditCredentialsModal({ ...editCredentialsModal, username: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') })}
+                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-primary"
+              />
+            </div>
+            
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">New Password</label>
+              <input 
+                type="password" 
+                placeholder="Leave empty to keep current" 
+                value={editCredentialsModal.password} 
+                onChange={(e) => setEditCredentialsModal({ ...editCredentialsModal, password: e.target.value })}
+                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-primary"
+              />
+            </div>
+            
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block flex items-center gap-2">
+                <Lock className="w-3 h-3" /> Home Hub PIN
+              </label>
+              <input 
+                type="password" 
+                inputMode="numeric"
+                maxLength={4}
+                placeholder="Leave empty to keep current" 
+                value={editCredentialsModal.pin} 
+                onChange={(e) => setEditCredentialsModal({ ...editCredentialsModal, pin: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-primary text-center text-xl tracking-[0.5em]"
+              />
+            </div>
+          </div>
+          
+          <div className="flex gap-3 mt-6">
+            <button onClick={() => setEditCredentialsModal(null)} className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-white font-medium">Cancel</button>
+            <button 
+              onClick={handleUpdateCredentials} 
+              disabled={processing === 'updateCreds'}
+              className="flex-1 px-4 py-3 bg-primary hover:bg-primary/80 disabled:opacity-50 rounded-xl text-white font-bold flex items-center justify-center gap-2"
+            >
+              {processing === 'updateCreds' && <Loader2 className="w-4 h-4 animate-spin" />}
+              Save Changes
+            </button>
+          </div>
         </Modal>
       )}
     </div>

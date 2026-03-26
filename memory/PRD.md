@@ -16,195 +16,219 @@ A comprehensive, family-oriented, mobile-friendly app for managing family activi
 
 ---
 
-## New Features Implemented (Session 3)
+## Latest Features (Session 4)
 
-### 1. Weather Forecast
-- Expandable 3-day weather forecast on Home Hub
-- Shows daily high/low temperatures
-- Weather conditions with icons
-- Current humidity display
-- Click weather card to expand/collapse forecast
+### 1. Child Username/Password Login
+- Parents create child profiles with username and password
+- Children login using `/child-login` page
+- Kid-friendly login UI with fun animations
+- Link from welcome page: "Kid's Login (with username) →"
 
-### 2. Nature Photos for Home Hub
-- Added 10 new bright nature photos to screensaver rotation
-- Total of 22 screensaver images now available
-- Categories: Mountains, Beaches, Waterfalls, Aurora, Lavender fields, Forests
+### 2. Quick Actions Panel on Home Hub
+- Shows pending chores grouped by family member
+- Children can mark chores as complete directly
+- PIN verification required on Home Hub devices
+- Shows points earned for each chore
 
-### 3. Calendar - Monthly Events List
-- All events for the current month displayed below calendar
-- Events grouped by date with day name
-- Today's events highlighted with "TODAY" badge
-- Past events shown with reduced opacity
-- Scrollable list with max height
+### 3. Parent Credential Management
+- Parents can modify child's username/password/PIN
+- Edit button appears next to child profiles
+- All credentials can be updated anytime
 
-### 4. Parent-Child Profile Setup (No sign-in required for child)
-- Parents can create child profiles directly
-- Set 4-digit PIN during profile creation
-- Invite link generated automatically
-- Link expires after 7 days
-- Child can complete setup on their own device
-- Child can customize profile picture, theme, nickname
-
-### 5. PIN-based Profile Verification (Home Hub)
-- Home Hub role requires PIN for all actions
-- Profile dropdown when adding events/items
-- 4-digit PIN verification before action
-- Prevents unauthorized changes on shared devices
-- Parents can set/change PINs in Family Management
+### 4. First-Time Login Tutorial
+- Children complete setup wizard on first login
+- Add email address and phone number
+- Customize profile picture and theme
+- `first_login` flag tracks tutorial completion
 
 ---
 
-## API Endpoints (New)
+## API Endpoints (New Session 4)
 
-### Weather
-- `GET /api/weather/forecast?lat=&lon=&days=3` - Multi-day forecast
+### Child Authentication
+- `POST /api/auth/child-login` - Login with username/password
 
-### User/PIN Management
-- `POST /api/users/child` - Create child profile with PIN
-- `POST /api/users/{user_id}/pin` - Set/update user PIN
-- `POST /api/users/verify-pin` - Verify PIN for Home Hub actions
-- `GET /api/users/family-profiles` - Get all family members for dropdown
+### First-Time Setup
+- `POST /api/users/{user_id}/first-login-setup` - Complete tutorial
 
-### Invite System
-- `GET /api/invite/{invite_code}` - Get invite info
-- `POST /api/invite/{invite_code}/complete` - Complete child setup
+### Credential Management
+- `PUT /api/users/{user_id}/credentials` - Update username/password/PIN
+
+### Quick Actions
+- `GET /api/chores/pending-by-member` - Get pending chores grouped by member
 
 ---
 
-## User Roles
+## User Flows
+
+### Parent Creates Child Profile
+1. Go to Family Management
+2. Click "Add Child Profile" (pink button)
+3. Enter:
+   - Child's Name
+   - Username (for app login)
+   - Password
+   - 4-digit PIN (for Home Hub)
+4. Click "Create Profile"
+5. Success screen shows:
+   - Username & PIN confirmation
+   - Optional invite link
+
+### Child First Login
+1. Child goes to `/child-login`
+2. Enters username and password
+3. If first login → Redirected to setup wizard
+4. Adds email, phone, profile picture
+5. Completes tutorial
+6. Arrives at Child Dashboard
+
+### Home Hub Quick Actions
+1. View pending chores by family member
+2. Click chore button to mark complete
+3. If Home Hub role → PIN verification modal
+4. Select profile and enter PIN
+5. Chore marked complete, points awarded
+
+---
+
+## User Schema Updates
+
+```javascript
+{
+  // Existing fields...
+  
+  // New fields:
+  username: String,        // Alphanumeric, lowercase
+  password_hash: String,   // SHA256 hashed
+  first_login: Boolean,    // True until tutorial complete
+  tutorial_completed: Boolean,
+  phone: String           // Added during first login
+}
+```
+
+---
+
+## Frontend Routes
+
+| Route | Component | Access |
+|-------|-----------|--------|
+| `/login` | WelcomePage | Public |
+| `/child-login` | ChildLogin | Public |
+| `/dashboard` | ParentDashboard | Parent |
+| `/space` | ChildSpace | Child |
+| `/hub` | HomeHub | HomeHub/All |
+| `/family` | FamilyManagement | Parent |
+| ... | ... | ... |
+
+---
+
+## Role Permissions
 
 ### Parent
 - Full access to all features
-- Can create child profiles
-- Can set/change PINs for family members
-- Can approve chores, rewards, etc.
+- Create/edit child profiles
+- Set/change PINs for all members
+- Approve chores, rewards, reading logs
 
-### Child
-- Limited access to age-appropriate features
+### Child  
+- Access own dashboard and features
 - Complete chores, earn points
+- Login with username/password
 - No PIN required on personal device
-- PIN required on Home Hub
 
-### Member
-- Standard family access
-- Participate in family activities
-
-### HomeHub (NEW)
-- Display-focused role for shared devices
-- PIN required for ALL actions
-- Anyone can view family data
+### HomeHub
+- Shared family device role
+- **PIN required for ALL actions**
+- View all family data
 - Profile selection + PIN to make changes
 
 ---
 
-## Frontend Components
-
-### ProfilePinVerification Component
-- `/app/frontend/src/components/ProfilePinVerification.js`
-- Profile selection dropdown
-- 4-digit PIN input with auto-focus
-- Error handling for invalid PINs
-- Shows "No PIN" warning for users without PIN
-
----
-
-## File Changes (Session 3)
+## Session 4 File Changes
 
 ### Backend
-- `/app/backend/server.py`:
-  - Added weather forecast endpoint
-  - Added PIN fields to User model
-  - Added child profile creation with PIN
-  - Added PIN verification endpoint
-  - Added family profiles endpoint
-  - Added invite system endpoints
-  - Added homehub role to role validation
+- `server.py`:
+  - Added child-login endpoint
+  - Added first-login-setup endpoint
+  - Added update credentials endpoint
+  - Added pending-chores-by-member endpoint
+  - Updated child profile creation with username/password
 
 ### Frontend
-- `/app/frontend/src/utils/pageBackgrounds.js`:
-  - Added 10 new bright nature photos
-  
-- `/app/frontend/src/pages/HomeHub.js`:
-  - Expandable weather forecast dropdown
-  - PIN verification for Home Hub role actions
-  - Lock icons on action buttons for Home Hub
-  
-- `/app/frontend/src/pages/Calendar.js`:
-  - Monthly events list below calendar
-  
-- `/app/frontend/src/pages/FamilyManagement.js`:
-  - Add Child Profile button and modal
-  - Set PIN functionality for members
-  - HomeHub role in permissions list
-  - Invite link generation and copy
-  
-- `/app/frontend/src/components/ProfilePinVerification.js`:
-  - New component for PIN verification modal
-  
-- `/app/frontend/src/App.css`:
-  - Added fadeIn animation
-
----
-
-## Testing Status
-
-### Verified Features
-- [x] Weather forecast endpoint returns 3-day forecast
-- [x] Weather forecast displays correctly on Home Hub
-- [x] Calendar shows monthly events list
-- [x] Family Management shows "Add Child Profile" button
-- [x] Add Child Profile modal works with PIN input
-- [x] HomeHub role appears in permissions
-- [x] Screensaver images rotating with new photos
-
-### Needs User Testing
-- [ ] Create actual child profile and verify invite link
-- [ ] Complete child setup from invite link
-- [ ] PIN verification on Home Hub device
-- [ ] Mobile app rebuild with FIREBASE_ONLY_MODE=false
-
----
-
-## Mobile App Status
-
-- FIREBASE_ONLY_MODE: `false` (uses live backend)
-- Build required for changes to take effect
-- Firebase services refactored for offline fallback
-- PIN verification not yet implemented in mobile
+- `ChildLogin.js` (NEW) - Kid-friendly login page
+- `WelcomePage.js` - Added "Kid's Login" link
+- `FamilyManagement.js`:
+  - Updated Add Child modal with username/password
+  - Added Edit Credentials modal
+  - Added credential edit button for children
+- `HomeHub.js`:
+  - Added Quick Actions panel
+  - Added handleCompleteChore function
+  - PIN verification for chore completion
+- `App.js` - Added /child-login route
 
 ---
 
 ## Changelog
 
+### December 2024 - Session 4
+- Added child username/password login
+- Added Kid's Login page (/child-login)
+- Added Quick Actions panel on Home Hub
+- Added Edit Credentials modal for parents
+- Added first-time login setup endpoint
+- Updated child profile creation with credentials
+
 ### December 2024 - Session 3
-- Added 3-day weather forecast to Home Hub
-- Added 10 new bright nature screensaver photos
-- Added "All Events - Month" list below calendar
-- Added "Add Child Profile" with PIN setup
-- Added PIN verification system for Home Hub
-- Added HomeHub role to role system
-- Added invite link system for child setup
+- Weather forecast expansion
+- 10 new nature photos
+- Calendar monthly events list
+- PIN verification system
+- HomeHub role
 
 ### December 2024 - Session 2
-- Fixed SyntaxError in api.service.js
-- Added offline mode to Firebase services
-- Enhanced mock data for AI Pixie
+- Fixed build errors
+- Firebase offline mode
 
 ### December 2024 - Session 1
-- Migrated to React Native Firebase
-- Initial feature implementation
+- Initial implementation
 
 ---
 
-## Next Steps
+## Testing Checklist
 
-### For User
-1. Test web app with all new features
-2. Create a child profile to test invite flow
-3. Rebuild mobile app to get latest changes
+### Child Login Flow
+- [ ] Create child with username/password
+- [ ] Child login at /child-login
+- [ ] First-time setup wizard
+- [ ] Subsequent logins bypass wizard
 
-### Future Enhancements
+### Quick Actions
+- [ ] Assign chores to children
+- [ ] View Quick Actions on Home Hub
+- [ ] Mark chore complete (non-HomeHub)
+- [ ] PIN verification on HomeHub
+
+### Credential Management
+- [ ] Edit child username
+- [ ] Change child password
+- [ ] Update child PIN
+
+---
+
+## Future Enhancements
+
+### P1 - High Priority
 - Native Google Sign-In for mobile
-- Voice commands for Pixie
 - Push notifications
+- Voice commands for Pixie
+
+### P2 - Medium Priority
+- App Store deployment guide
+- Offline mode with sync
+- Performance optimization
+
+### P3 - Low Priority
 - Backend modularization
+- Advanced analytics
+- Multi-language support

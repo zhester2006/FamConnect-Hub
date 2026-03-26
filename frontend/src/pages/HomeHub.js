@@ -120,6 +120,8 @@ export default function HomeHub({ user }) {
   const [showPinVerify, setShowPinVerify] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
   const [verifiedUser, setVerifiedUser] = useState(null);
+  const [pendingChoresByMember, setPendingChoresByMember] = useState([]);
+  const [selectedChore, setSelectedChore] = useState(null);
   const [newEvent, setNewEvent] = useState({ 
     title: '', 
     event_date: new Date().toISOString().split('T')[0],
@@ -235,12 +237,16 @@ export default function HomeHub({ user }) {
 
   const fetchHubData = async () => {
     try {
-      const [membersRes, eventsRes, quoteRes, shoppingRes, choresRes] = await Promise.all([
-        fetch(`${BACKEND_URL}/api/family/members`, { credentials: 'include' }),
-        fetch(`${BACKEND_URL}/api/events`, { credentials: 'include' }),
-        fetch(`${BACKEND_URL}/api/family-wall/daily-quote`, { credentials: 'include' }),
-        fetch(`${BACKEND_URL}/api/shopping`, { credentials: 'include' }),
-        fetch(`${BACKEND_URL}/api/chores`, { credentials: 'include' })
+      const token = localStorage.getItem('dev_session_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      
+      const [membersRes, eventsRes, quoteRes, shoppingRes, choresRes, pendingChoresRes] = await Promise.all([
+        fetch(`${BACKEND_URL}/api/family/members`, { credentials: 'include', headers }),
+        fetch(`${BACKEND_URL}/api/events`, { credentials: 'include', headers }),
+        fetch(`${BACKEND_URL}/api/family-wall/daily-quote`, { credentials: 'include', headers }),
+        fetch(`${BACKEND_URL}/api/shopping`, { credentials: 'include', headers }),
+        fetch(`${BACKEND_URL}/api/chores`, { credentials: 'include', headers }),
+        fetch(`${BACKEND_URL}/api/chores/pending-by-member`, { credentials: 'include', headers })
       ]);
 
       const members = await membersRes.json();
@@ -248,11 +254,13 @@ export default function HomeHub({ user }) {
       const quoteData = await quoteRes.json();
       const shopping = await shoppingRes.json();
       const chores = await choresRes.json();
+      const pendingChores = pendingChoresRes.ok ? await pendingChoresRes.json() : { members: [] };
 
       setFamilyMembers(members.members || []);
       setEvents(eventsData.events || []);
       setQuote(quoteData.quote || '');
       setShoppingItems(shopping.items || []);
+      setPendingChoresByMember(pendingChores.members || []);
       
       const today = new Date().toISOString().split('T')[0];
       setTodayChores((chores.chores || []).filter(c => c.scheduled_date === today));
@@ -297,6 +305,29 @@ export default function HomeHub({ user }) {
       fetchHubData();
     } catch (error) {
       toast.error('Failed to add item');
+    }
+  };
+
+  const handleCompleteChore = async (choreId) => {
+    try {
+      const token = localStorage.getItem('dev_session_token');
+      const res = await fetch(`${BACKEND_URL}/api/chores/${choreId}/complete`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      
+      if (res.ok) {
+        toast.success('Chore marked as complete!');
+        setSelectedChore(null);
+        setVerifiedUser(null);
+        fetchHubData();
+      } else {
+        const data = await res.json();
+        toast.error(data.detail || 'Failed to complete chore');
+      }
+    } catch (error) {
+      toast.error('Failed to complete chore');
     }
   };
 
@@ -566,6 +597,55 @@ export default function HomeHub({ user }) {
                   </div>
                 </div>
               </div>
+
+              {/* Quick Actions - Mark Chores Complete */}
+              {pendingChoresByMember.length > 0 && (
+                <div className="glass-card rounded-xl p-3">
+                  <h3 className="text-xs font-bold text-white mb-2 flex items-center gap-2">
+                    <CheckCircle className="w-3 h-3 text-green-400" />
+                    Quick Actions - Complete Your Chores
+                  </h3>
+                  <div className="space-y-2 max-h-[150px] overflow-y-auto">
+                    {pendingChoresByMember.map(member => (
+                      <div key={member.user_id} className="bg-slate-800/50 rounded-lg p-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          {member.picture ? (
+                            <img src={member.picture} alt={member.name} className="w-5 h-5 rounded-full" />
+                          ) : (
+                            <div className="w-5 h-5 rounded-full bg-primary/30 flex items-center justify-center">
+                              <span className="text-[10px] text-white font-bold">{member.name?.charAt(0)}</span>
+                            </div>
+                          )}
+                          <span className="text-[10px] text-white font-medium">{member.name}</span>
+                          <span className="text-[10px] text-slate-400">({member.chores?.length || 0} pending)</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(member.chores || []).slice(0, 3).map(chore => (
+                            <button
+                              key={chore.chore_id}
+                              onClick={() => {
+                                if (user?.role === 'homehub') {
+                                  setSelectedChore(chore);
+                                  setPendingAction('completeChore');
+                                  setShowPinVerify(true);
+                                } else {
+                                  handleCompleteChore(chore.chore_id);
+                                }
+                              }}
+                              className="flex items-center gap-1 px-2 py-1 bg-green-500/20 hover:bg-green-500/40 rounded-lg text-green-400 text-[10px] font-medium transition-all"
+                            >
+                              {user?.role === 'homehub' && <Lock className="w-2.5 h-2.5" />}
+                              <CheckCircle className="w-2.5 h-2.5" />
+                              <span className="truncate max-w-[80px]">{chore.title}</span>
+                              <span className="text-green-300">+{chore.points}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -725,6 +805,7 @@ export default function HomeHub({ user }) {
         onClose={() => {
           setShowPinVerify(false);
           setPendingAction(null);
+          setSelectedChore(null);
         }}
         onVerified={(user) => {
           setVerifiedUser(user);
@@ -734,6 +815,8 @@ export default function HomeHub({ user }) {
             setShowAddEvent(true);
           } else if (pendingAction === 'addItem') {
             setShowAddItem(true);
+          } else if (pendingAction === 'completeChore' && selectedChore) {
+            handleCompleteChore(selectedChore.chore_id);
           }
           setPendingAction(null);
         }}

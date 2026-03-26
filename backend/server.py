@@ -935,7 +935,23 @@ async def create_child_profile(request: Request, data: dict):
     invite_expires = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
     
     # Get family_id from current user
-    family_id = current_user.get('family_id') or current_user.get('parent_id')
+    family_id = current_user.get('family_id') or current_user.get('parent_id') or current_user.get('user_id')
+    
+    # Validate username if provided
+    username = data.get('username')
+    if username:
+        # Check username is alphanumeric and not taken
+        if not username.isalnum() or len(username) < 3:
+            raise HTTPException(status_code=400, detail="Username must be at least 3 alphanumeric characters")
+        existing = await db.users.find_one({"username": username.lower()})
+        if existing:
+            raise HTTPException(status_code=400, detail="Username already taken")
+    
+    # Hash password if provided
+    password_hash = None
+    if data.get('password'):
+        import hashlib
+        password_hash = hashlib.sha256(data['password'].encode()).hexdigest()
     
     child_doc = {
         "user_id": child_id,
@@ -951,12 +967,17 @@ async def create_child_profile(request: Request, data: dict):
         "created_at": datetime.now(timezone.utc).isoformat(),
         "online_status": False,
         "last_seen": None,
-        "pin": data.get('pin'),  # Parent sets initial PIN
+        "pin": data.get('pin'),
+        "username": username.lower() if username else None,
+        "password_hash": password_hash,
         "invite_code": invite_code,
-        "invite_expires": invite_expires
+        "invite_expires": invite_expires,
+        "first_login": True,  # Will be set to False after tutorial completion
+        "phone": None,  # Child will add during first login
+        "tutorial_completed": False
     }
     await db.users.insert_one(child_doc)
-    result = await db.users.find_one({"user_id": child_id}, {"_id": 0})
+    result = await db.users.find_one({"user_id": child_id}, {"_id": 0, "password_hash": 0})
     result['invite_link'] = f"/join/{invite_code}"
     return result
 
@@ -1099,6 +1120,134 @@ async def complete_invite_setup(invite_code: str, data: dict):
         "user": updated_user
     }
 
+@api_router.post("/auth/child-login")
+async def child_login(data: dict):
+    """Login for children using username and password"""
+    username = data.get('username', '').lower().strip()
+    password = data.get('password', '')
+    
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Username and password required")
+    
+    # Find user by username
+    user = await db.users.find_one({"username": username})
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    # Verify password
+    import hashlib
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    if user.get('password_hash') != password_hash:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    # Create session
+    session_token = str(uuid.uuid4())
+    await db.sessions.insert_one({
+        "session_id": session_token,
+        "user_id": user['user_id'],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "expires_at": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+    })
+    
+    # Return user without sensitive fields
+    user_data = await db.users.find_one({"user_id": user['user_id']}, {"_id": 0, "password_hash": 0, "pin": 0})
+    
+    return {
+        "success": True,
+        "session_token": session_token,
+        "user": user_data,
+        "first_login": user.get('first_login', False),
+        "tutorial_completed": user.get('tutorial_completed', True)
+    }
+
+@api_router.post("/users/{user_id}/first-login-setup")
+async def complete_first_login_setup(user_id: str, request: Request, data: dict):
+    """Complete first-time login setup for child - add email, phone, etc."""
+    current_user = await get_current_user(request)
+    
+    # Verify user is updating their own profile
+    if current_user['user_id'] != user_id:
+        raise HTTPException(status_code=403, detail="Can only update your own profile")
+    
+    updates = {
+        "first_login": False,
+        "tutorial_completed": True
+    }
+    
+    if data.get('email'):
+        # Validate email format
+        import re
+        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', data['email']):
+            raise HTTPException(status_code=400, detail="Invalid email format")
+        updates['email'] = data['email']
+    
+    if data.get('phone'):
+        # Basic phone validation
+        phone = re.sub(r'\D', '', data['phone'])
+        if len(phone) < 10:
+            raise HTTPException(status_code=400, detail="Invalid phone number")
+        updates['phone'] = data['phone']
+    
+    if data.get('picture'):
+        updates['picture'] = data['picture']
+    
+    if data.get('theme'):
+        updates['settings.theme'] = data['theme']
+    
+    await db.users.update_one({"user_id": user_id}, {"$set": updates})
+    
+    updated_user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0, "pin": 0})
+    return {"success": True, "user": updated_user}
+
+@api_router.put("/users/{user_id}/credentials")
+async def update_child_credentials(user_id: str, request: Request, data: dict):
+    """Parent updates child's username/password/PIN"""
+    current_user = await get_current_user(request)
+    
+    # Verify parent relationship
+    target_user = await db.users.find_one({"user_id": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    is_parent = current_user['role'] == 'parent' and (
+        target_user.get('parent_id') == current_user['user_id'] or
+        target_user.get('family_id') == current_user.get('family_id')
+    )
+    
+    if not is_parent:
+        raise HTTPException(status_code=403, detail="Only parents can modify child credentials")
+    
+    updates = {}
+    
+    # Update username
+    if data.get('username'):
+        username = data['username'].lower().strip()
+        if not username.isalnum() or len(username) < 3:
+            raise HTTPException(status_code=400, detail="Username must be at least 3 alphanumeric characters")
+        # Check if username is taken by another user
+        existing = await db.users.find_one({"username": username, "user_id": {"$ne": user_id}})
+        if existing:
+            raise HTTPException(status_code=400, detail="Username already taken")
+        updates['username'] = username
+    
+    # Update password
+    if data.get('password'):
+        import hashlib
+        if len(data['password']) < 4:
+            raise HTTPException(status_code=400, detail="Password must be at least 4 characters")
+        updates['password_hash'] = hashlib.sha256(data['password'].encode()).hexdigest()
+    
+    # Update PIN
+    if data.get('pin'):
+        if len(data['pin']) != 4 or not data['pin'].isdigit():
+            raise HTTPException(status_code=400, detail="PIN must be exactly 4 digits")
+        updates['pin'] = data['pin']
+    
+    if updates:
+        await db.users.update_one({"user_id": user_id}, {"$set": updates})
+    
+    return {"success": True, "message": "Credentials updated successfully"}
+
 @api_router.put("/users/{user_id}/role")
 async def update_user_role(user_id: str, request: Request, data: dict):
     current_user = await get_current_user(request)
@@ -1203,6 +1352,49 @@ async def get_chores(request: Request, date: Optional[str] = None):
             chore['completed_by_picture'] = completer.get('picture')
     
     return {"chores": chores}
+
+@api_router.get("/chores/pending-by-member")
+async def get_pending_chores_by_member(request: Request):
+    """Get pending chores grouped by family member for Home Hub quick actions"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('family_id') or current_user.get('parent_id') or current_user['user_id']
+    
+    # Get all family members
+    family_members = await db.users.find(
+        {"$or": [{"user_id": family_id}, {"parent_id": family_id}, {"family_id": family_id}]},
+        {"_id": 0, "user_id": 1, "name": 1, "nickname": 1, "picture": 1, "role": 1}
+    ).to_list(100)
+    
+    member_map = {}
+    for m in family_members:
+        m['picture'] = sanitize_picture(m.get('picture'), fallback_name=m.get('nickname') or m.get('name'))
+        member_map[m['user_id']] = m
+    
+    # Get today's pending chores
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    pending_chores = await db.chores.find({
+        "$or": [{"family_id": family_id}, {"created_by": family_id}],
+        "scheduled_date": today,
+        "status": {"$in": ["pending", "in_progress"]}
+    }, {"_id": 0}).to_list(100)
+    
+    # Group by assignee
+    by_member = {}
+    for chore in pending_chores:
+        assignee_id = chore.get('assigned_to')
+        if assignee_id:
+            if assignee_id not in by_member:
+                member = member_map.get(assignee_id, {"name": "Unknown", "user_id": assignee_id})
+                by_member[assignee_id] = {
+                    "user_id": assignee_id,
+                    "name": member.get('nickname') or member.get('name'),
+                    "picture": member.get('picture'),
+                    "role": member.get('role'),
+                    "chores": []
+                }
+            by_member[assignee_id]["chores"].append(chore)
+    
+    return {"members": list(by_member.values())}
 
 @api_router.post("/chores")
 async def create_chore(request: Request, data: dict):

@@ -146,6 +146,14 @@ export default function WelcomePage() {
               </button>
             </div>
 
+            {/* Kid's Login Link */}
+            <a 
+              href="/child-login"
+              className="block text-center mt-4 text-primary hover:text-accent transition-colors font-medium"
+            >
+              Kid's Login (with username) →
+            </a>
+
             <p className="text-xs text-slate-500">
               Secure authentication powered by Google
             </p>
