@@ -574,6 +574,57 @@ async def accept_invite(invite_id: str, request: Request):
     
     return {"success": True, "family_id": invite['family_id']}
 
+# Resolve family by invite code (public — no auth required for lookup)
+@router.get("/families/join/{family_code}")
+async def resolve_family_code(family_code: str):
+    """Look up a family by its invite code. Returns family name for preview."""
+    family = await db.families.find_one({"family_code": family_code}, {"_id": 0})
+    if not family:
+        raise HTTPException(status_code=404, detail="Invalid invite code")
+    return {
+        "family_id": family['family_id'],
+        "family_name": family.get('name', family.get('family_name', 'A Family')),
+        "family_code": family_code
+    }
+
+# Join family by invite code (auth required)
+@router.post("/families/join/{family_code}")
+async def join_family_by_code(family_code: str, request: Request):
+    """Join a family using an invite code"""
+    current_user = await get_current_user(request)
+    
+    family = await db.families.find_one({"family_code": family_code}, {"_id": 0})
+    if not family:
+        raise HTTPException(status_code=404, detail="Invalid invite code")
+    
+    family_id = family['family_id']
+    
+    # Check if already a member
+    existing = await db.family_memberships.find_one({
+        "family_id": family_id,
+        "user_id": current_user['user_id']
+    })
+    if existing or current_user['user_id'] == family_id:
+        return {"success": True, "family_id": family_id, "already_member": True}
+    
+    # Create membership
+    membership_doc = {
+        "membership_id": f"mem_{uuid.uuid4().hex[:12]}",
+        "family_id": family_id,
+        "user_id": current_user['user_id'],
+        "role": "member",
+        "joined_at": datetime.now(timezone.utc).isoformat(),
+        "joined_via": "invite_code"
+    }
+    await db.family_memberships.insert_one(membership_doc)
+    
+    return {
+        "success": True,
+        "family_id": family_id,
+        "family_name": family.get('name', family.get('family_name')),
+        "already_member": False
+    }
+
 @router.post("/families/invites/{invite_id}/decline")
 async def decline_invite(invite_id: str, request: Request):
     """Decline a family invitation"""

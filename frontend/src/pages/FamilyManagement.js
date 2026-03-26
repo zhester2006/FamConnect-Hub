@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Users, Plus, UserPlus, Check, X, Crown, Mail, Loader2, Trash2, Edit2, Baby, User, Shield, Lock, Copy, Link, Home } from 'lucide-react';
+import { Users, Plus, UserPlus, Check, X, Crown, Mail, Loader2, Trash2, Edit2, Baby, User, Shield, Lock, Copy, Link, Home, Share2, MessageCircle } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { Avatar } from '@/components/Avatar';
 import { toast } from 'sonner';
@@ -617,21 +617,71 @@ export default function FamilyManagement({ user }) {
                 <Check className="w-8 h-8 text-green-400 mx-auto mb-2" />
                 <p className="text-green-400 font-semibold">Invite Created!</p>
                 <p className="text-sm text-slate-400 mt-1">
-                  {inviteResult.email_status === 'sent' ? 'Email sent successfully.' : 'Share the code below with them.'}
+                  {inviteResult.email_status === 'sent' ? 'Email sent successfully.' : 'Share the invite link or code below.'}
                 </p>
               </div>
-              {inviteResult.family_code && (
-                <div className="p-4 bg-slate-800 rounded-xl text-center">
-                  <p className="text-xs text-slate-400 mb-2">Family Invite Code</p>
-                  <p className="text-3xl font-black tracking-[0.25em] text-primary">{inviteResult.family_code}</p>
-                  <button 
-                    onClick={() => { navigator.clipboard.writeText(inviteResult.family_code); toast.success('Code copied!'); }}
-                    className="mt-3 px-4 py-2 bg-primary/20 text-primary rounded-lg text-sm flex items-center gap-2 mx-auto hover:bg-primary/30"
-                  >
-                    <Copy className="w-4 h-4" /> Copy Code
-                  </button>
-                </div>
-              )}
+
+              {/* Invite Link */}
+              {inviteResult.family_code && (() => {
+                const inviteLink = `${window.location.origin}/join/${inviteResult.family_code}`;
+                const shareText = `Join ${inviteResult.family_name || 'our family'} on FamFocus Hub! Use this link: ${inviteLink} or enter code: ${inviteResult.family_code}`;
+                return (
+                  <div className="space-y-3">
+                    {/* Deep link */}
+                    <div className="p-3 bg-slate-800 rounded-xl">
+                      <p className="text-xs text-slate-400 mb-2">Invite Link</p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-slate-900 rounded-lg px-3 py-2 text-sm text-primary truncate font-mono">
+                          {inviteLink}
+                        </div>
+                        <button 
+                          onClick={() => { navigator.clipboard.writeText(inviteLink); toast.success('Link copied!'); }}
+                          className="p-2 bg-primary/20 text-primary rounded-lg hover:bg-primary/30 flex-shrink-0"
+                          data-testid="copy-invite-link"
+                        >
+                          <Link className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Code */}
+                    <div className="p-3 bg-slate-800 rounded-xl text-center">
+                      <p className="text-xs text-slate-400 mb-1">Or use code</p>
+                      <p className="text-2xl font-black tracking-[0.2em] text-primary">{inviteResult.family_code}</p>
+                    </div>
+
+                    {/* Share Buttons */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(shareText); toast.success('Copied to clipboard!'); }}
+                        className="flex flex-col items-center gap-1.5 p-3 bg-slate-800 hover:bg-slate-700 rounded-xl transition-all"
+                        data-testid="share-copy"
+                      >
+                        <Copy className="w-5 h-5 text-slate-300" />
+                        <span className="text-xs text-slate-400">Copy All</span>
+                      </button>
+                      <a
+                        href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex flex-col items-center gap-1.5 p-3 bg-green-500/10 hover:bg-green-500/20 rounded-xl transition-all"
+                        data-testid="share-whatsapp"
+                      >
+                        <MessageCircle className="w-5 h-5 text-green-400" />
+                        <span className="text-xs text-green-400">WhatsApp</span>
+                      </a>
+                      <a
+                        href={`sms:?body=${encodeURIComponent(shareText)}`}
+                        className="flex flex-col items-center gap-1.5 p-3 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl transition-all"
+                        data-testid="share-sms"
+                      >
+                        <Share2 className="w-5 h-5 text-blue-400" />
+                        <span className="text-xs text-blue-400">SMS</span>
+                      </a>
+                    </div>
+                  </div>
+                );
+              })()}
               <button onClick={() => { setModal({ type: null }); setInviteResult(null); setFormData({ name: '', email: '', role: 'child' }); }} className="w-full px-4 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-white font-medium">Done</button>
             </div>
           ) : (

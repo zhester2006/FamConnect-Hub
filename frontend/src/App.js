@@ -21,6 +21,7 @@ import CheckIns from '@/pages/CheckIns';
 import Analytics from '@/pages/Analytics';
 import ChoreScheduler from '@/pages/ChoreScheduler';
 import Achievements from '@/pages/Achievements';
+import JoinFamily from '@/pages/JoinFamily';
 import ChildLogin from '@/pages/ChildLogin';
 import SetupWizard from '@/pages/SetupWizard';
 import WelcomeTutorial from '@/components/WelcomeTutorial';
@@ -164,6 +165,7 @@ function AppRouter() {
       <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
       <Route path="/chore-scheduler" element={<ProtectedRoute><ChoreScheduler /></ProtectedRoute>} />
       <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
+      <Route path="/join/:code" element={<JoinFamily />} />
       <Route path="/parent" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
