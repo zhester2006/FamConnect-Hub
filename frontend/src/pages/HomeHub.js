@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Plus, ShoppingCart, CheckCircle, Clock, Users, Sun, Cloud, CloudRain, Wind, Snowflake, CloudLightning, Sparkles, X, ChevronLeft, ChevronRight, Star, Bell, CalendarDays, Briefcase, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
+import { Avatar } from '@/components/Avatar';
 import { toast } from 'sonner';
 import { SCREENSAVER_IMAGES } from '@/utils/pageBackgrounds';
 import ProfilePinVerification from '@/components/ProfilePinVerification';
@@ -441,8 +442,14 @@ export default function HomeHub({ user }) {
               <div className="flex -space-x-2">
                 {familyMembers.slice(0, 5).map(member => (
                   <div key={member.user_id} className="relative" title={member.name}>
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xs font-black text-white border-2 border-slate-950">
-                      {member.name?.charAt(0)}
+                    <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-slate-950 flex-shrink-0">
+                      {member.picture ? (
+                        <img src={member.picture} alt={member.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xs font-black text-white">
+                          {member.name?.charAt(0)}
+                        </div>
+                      )}
                     </div>
                     <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-950 ${member.online_status ? 'bg-green-400' : 'bg-slate-500'}`} />
                   </div>

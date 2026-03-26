@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MapPin, Navigation, Bell, Plus, Trash2, AlertTriangle, CheckCircle, X, ExternalLink, Shield, Wifi, WifiOff, Map } from 'lucide-react';
+import { MapPin, Navigation, Bell, Plus, Trash2, AlertTriangle, CheckCircle, X, ExternalLink, Shield, Wifi, WifiOff, Map, Send } from 'lucide-react';
 import { GoogleMap, useJsApiLoader, Marker, Circle, InfoWindow } from '@react-google-maps/api';
 import Sidebar from '@/components/Sidebar';
+import { Avatar } from '@/components/Avatar';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -164,21 +165,33 @@ export default function CheckIns({ user }) {
 
   const handleAddGeofence = async (e) => {
     e.preventDefault();
+    const lat = parseFloat(newGeofence.latitude);
+    const lng = parseFloat(newGeofence.longitude);
+    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      toast.error('Please enter valid coordinates or use current location');
+      return;
+    }
     try {
-      await fetch(`${BACKEND_URL}/api/geofences`, {
+      const res = await fetch(`${BACKEND_URL}/api/geofences`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          ...newGeofence,
-          latitude: parseFloat(newGeofence.latitude),
-          longitude: parseFloat(newGeofence.longitude)
+          name: newGeofence.name,
+          latitude: lat,
+          longitude: lng,
+          radius_feet: parseInt(newGeofence.radius_feet) || 50
         })
       });
-      toast.success('Safe zone created!');
-      setShowAddGeofence(false);
-      setNewGeofence({ name: '', latitude: '', longitude: '', radius_feet: 50 });
-      fetchData();
+      if (res.ok) {
+        toast.success('Safe zone created!');
+        setShowAddGeofence(false);
+        setNewGeofence({ name: '', latitude: '', longitude: '', radius_feet: 50 });
+        fetchData();
+      } else {
+        const data = await res.json();
+        toast.error(data.detail || 'Failed to create safe zone');
+      }
     } catch (error) {
       toast.error('Failed to create safe zone');
     }
@@ -222,6 +235,23 @@ export default function CheckIns({ user }) {
   }, [showAddGeofence, newGeofence]);
 
   const feetToMeters = (feet) => feet * 0.3048;
+
+  const handleRequestCheckin = async (childId, childName) => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/location/request-checkin/${childId}`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      if (res.ok) {
+        toast.success(`Check-in request sent to ${childName}`);
+      } else {
+        const data = await res.json();
+        toast.error(data.detail || 'Failed to send request');
+      }
+    } catch (error) {
+      toast.error('Failed to send check-in request');
+    }
+  };
 
   return (
     <div className="flex h-screen bg-slate-950">
@@ -509,64 +539,110 @@ export default function CheckIns({ user }) {
           {user?.role === 'parent' && children.length > 0 && (
             <div className="space-y-3">
               <h2 className="text-sm font-bold text-white">Family Members</h2>
-              <div className="flex space-x-2 overflow-x-auto pb-2">
-                {children.map(child => (
-                  <button
-                    key={child.user_id}
-                    onClick={() => { setSelectedChild(child); fetchChildCheckins(child.user_id); }}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-full transition-all flex-shrink-0 ${
-                      selectedChild?.user_id === child.user_id
-                        ? 'bg-primary text-white'
-                        : 'bg-slate-800/50 text-slate-300 hover:bg-slate-800'
-                    }`}
-                  >
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xs font-bold text-white">
-                      {child.name?.charAt(0)}
-                    </div>
-                    <span className="text-sm font-medium">{child.name}</span>
-                  </button>
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {children.map(child => {
+                  const isSelected = selectedChild?.user_id === child.user_id;
+                  return (
+                    <button
+                      key={child.user_id}
+                      onClick={() => { setSelectedChild(child); fetchChildCheckins(child.user_id); }}
+                      className={`flex items-center gap-3 p-3 rounded-xl transition-all text-left ${
+                        isSelected ? 'bg-primary/20 border border-primary/40' : 'glass-card hover:bg-slate-800/70'
+                      }`}
+                      data-testid={`child-profile-${child.user_id}`}
+                    >
+                      <Avatar name={child.name} picture={child.picture} size="md" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-white text-sm truncate">{child.name}</p>
+                        <p className="text-xs text-slate-400">{isSelected ? 'Selected' : 'Tap to view'}</p>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleRequestCheckin(child.user_id, child.name); }}
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-accent/20 hover:bg-accent/40 text-accent rounded-lg text-xs font-bold transition-all flex-shrink-0"
+                        data-testid={`request-checkin-${child.user_id}`}
+                      >
+                        <Send className="w-3 h-3" />
+                        <span>Check-in</span>
+                      </button>
+                    </button>
+                  );
+                })}
               </div>
 
-              {selectedChild && checkins.length > 0 && (
-                <div className="glass-card rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-bold text-white">{selectedChild.name}'s Recent Locations</h3>
-                    <button
-                      onClick={() => openInMaps(checkins[0].latitude, checkins[0].longitude)}
-                      className="bg-primary hover:bg-primary/80 text-white px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center space-x-1"
-                    >
-                      <Navigation className="w-3 h-3" />
-                      <span>Route to Last</span>
-                    </button>
+              {/* Selected Child Current Location Card */}
+              {selectedChild && (
+                <div className="glass-card rounded-xl p-4" data-testid="child-location-card">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Avatar name={selectedChild.name} picture={selectedChild.picture} size="lg" />
+                    <div className="flex-1">
+                      <h3 className="font-bold text-white">{selectedChild.name}'s Location</h3>
+                      <p className="text-xs text-slate-400">
+                        {checkins.length > 0 
+                          ? `Last seen: ${new Date(checkins[0].created_at).toLocaleString()}`
+                          : 'No location data yet'}
+                      </p>
+                    </div>
+                    {checkins.length > 0 && (
+                      <button
+                        onClick={() => openInMaps(checkins[0].latitude, checkins[0].longitude)}
+                        className="bg-primary hover:bg-primary/80 text-white px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1"
+                      >
+                        <Navigation className="w-3 h-3" />
+                        Navigate
+                      </button>
+                    )}
                   </div>
-                  <div className="space-y-2">
-                    {checkins.slice(0, 5).map((checkin, i) => (
-                      <div key={checkin.checkin_id} className="flex items-center justify-between py-2 border-b border-slate-800 last:border-0">
-                        <div className="flex items-center space-x-2">
-                          <CheckCircle className={`w-4 h-4 ${i === 0 ? 'text-green-400' : 'text-slate-500'}`} />
-                          <div>
-                            <p className="text-white text-sm">{checkin.address || `${checkin.latitude.toFixed(4)}, ${checkin.longitude.toFixed(4)}`}</p>
-                            <p className="text-slate-500 text-xs">{new Date(checkin.created_at).toLocaleString()}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          {checkin.is_offline_update && (
-                            <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">Offline</span>
-                          )}
-                          <button
-                            onClick={() => {
-                              setMapCenter({ lat: checkin.latitude, lng: checkin.longitude });
-                              setShowMap(true);
-                            }}
-                            className="p-1 hover:bg-slate-800 rounded"
-                          >
-                            <Map className="w-3 h-3 text-slate-400" />
-                          </button>
-                        </div>
+                  {checkins.length > 0 && (
+                    <div className="bg-slate-800/50 rounded-lg p-3 mb-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                        <span className="text-xs font-bold text-green-400">Current Location</span>
                       </div>
-                    ))}
-                  </div>
+                      <p className="text-white text-sm">{checkins[0].address || `${checkins[0].latitude.toFixed(5)}, ${checkins[0].longitude.toFixed(5)}`}</p>
+                      <button
+                        onClick={() => { setMapCenter({ lat: checkins[0].latitude, lng: checkins[0].longitude }); setShowMap(true); }}
+                        className="mt-2 text-xs text-primary hover:underline flex items-center gap-1"
+                      >
+                        <Map className="w-3 h-3" /> Show on Map
+                      </button>
+                    </div>
+                  )}
+                  {checkins.length > 1 && (
+                    <div>
+                      <p className="text-xs text-slate-500 mb-2">Recent Check-ins</p>
+                      <div className="space-y-1.5">
+                        {checkins.slice(1, 5).map((checkin) => (
+                          <div key={checkin.checkin_id} className="flex items-center justify-between py-1.5 border-b border-slate-800/50 last:border-0">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-3.5 h-3.5 text-slate-500" />
+                              <div>
+                                <p className="text-white text-xs">{checkin.address || `${checkin.latitude.toFixed(4)}, ${checkin.longitude.toFixed(4)}`}</p>
+                                <p className="text-slate-500 text-[10px]">{new Date(checkin.created_at).toLocaleString()}</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => { setMapCenter({ lat: checkin.latitude, lng: checkin.longitude }); setShowMap(true); }}
+                              className="p-1 hover:bg-slate-800 rounded"
+                            >
+                              <Map className="w-3 h-3 text-slate-400" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {checkins.length === 0 && (
+                    <div className="text-center py-4">
+                      <MapPin className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                      <p className="text-sm text-slate-500">No location data for {selectedChild.name} yet.</p>
+                      <button
+                        onClick={() => handleRequestCheckin(selectedChild.user_id, selectedChild.name)}
+                        className="mt-2 px-4 py-2 bg-accent/20 text-accent rounded-lg text-xs font-bold hover:bg-accent/30"
+                      >
+                        <Send className="w-3 h-3 inline mr-1" /> Request Check-in
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

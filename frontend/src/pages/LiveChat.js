@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, Smile, Check, CheckCheck, Wifi, WifiOff, Circle, Mic, MicOff, X, Play, Pause, Heart, ThumbsUp, Laugh, Angry, Frown, Image, Search, Users } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
+import { Avatar } from '@/components/Avatar';
 import { toast } from 'sonner';
 
 // Emoji Reactions Configuration
@@ -300,8 +301,14 @@ const OnlineUsersBar = ({ onlineUsers, familyMembers, currentUserId }) => {
       <div className="flex -space-x-2">
         {familyMembers.slice(0, 5).map(member => (
           <div key={member.user_id} className="relative" title={member.nickname || member.name}>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xs font-black text-white border-2 border-slate-950">
-              {(member.nickname || member.name || '?').charAt(0)}
+            <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-slate-950 flex-shrink-0">
+              {member.picture ? (
+                <img src={member.picture} alt={member.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xs font-black text-white">
+                  {(member.nickname || member.name || '?').charAt(0)}
+                </div>
+              )}
             </div>
             <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-950 ${onlineUsers.includes(member.user_id) ? 'bg-green-400' : 'bg-slate-500'}`} />
           </div>

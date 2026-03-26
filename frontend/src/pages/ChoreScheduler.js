@@ -4,6 +4,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { Calendar as CalendarIcon, Users, GripVertical, Check, X, Plus, ArrowLeft, Sparkles, Save, Loader2, Trash2 } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
+import { Avatar } from '@/components/Avatar';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -112,9 +113,7 @@ function DroppableChild({ child, chores, onRemoveChore }) {
       data-testid={`child-row-${child.user_id}`}
     >
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold">
-          {child.name?.charAt(0)}
-        </div>
+        <Avatar name={child.name} picture={child.picture} size="md" />
         <div>
           <h3 className="font-bold text-white">{child.nickname || child.name}</h3>
           <p className="text-xs text-slate-400">{chores.length} chores assigned</p>
@@ -496,9 +495,7 @@ export default function ChoreScheduler({ user }) {
                               }`}
                               data-testid={`select-child-${child.user_id}`}
                             >
-                              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center text-white text-xs font-bold">
-                                {child.name?.charAt(0)}
-                              </div>
+                              <Avatar name={child.name} picture={child.picture} size="xs" />
                               {child.nickname || child.name}
                             </button>
                           ))}

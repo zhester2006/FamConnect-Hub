@@ -353,9 +353,13 @@ async def get_user_families(request: Request):
     # Check if user is a parent (owns a family)
     if current_user.get('role') == 'parent':
         member_count = await db.users.count_documents({"parent_id": user_id})
+        # Check if a real family doc exists for this virtual family
+        saved_family = await db.families.find_one({"family_id": user_id}, {"_id": 0})
+        family_name = (saved_family or {}).get('name') or (saved_family or {}).get('family_name') or current_user.get('family_name', f"{current_user['name']}'s Family")
         families.append({
             "family_id": user_id,
-            "name": current_user.get('family_name', f"{current_user['name']}'s Family"),
+            "name": family_name,
+            "family_code": (saved_family or {}).get('family_code', ''),
             "role": "parent",
             "member_count": member_count + 1,
             "is_current": True
@@ -414,7 +418,7 @@ async def create_new_family(request: Request, data: dict):
 
 @router.post("/families/{family_id}/invite")
 async def invite_to_family(family_id: str, request: Request, data: dict):
-    """Invite someone to join a family"""
+    """Invite someone to join a family — sends email if configured, always returns invite code"""
     current_user = await get_current_user(request)
     
     # Check if user has permission to invite
@@ -427,8 +431,25 @@ async def invite_to_family(family_id: str, request: Request, data: dict):
     if not membership and current_user['user_id'] != family_id:
         raise HTTPException(status_code=403, detail="Not authorized to invite members")
     
-    invite_email = data.get('email')
+    invite_email = data.get('email', '').strip()
     invite_role = data.get('role', 'member')
+    
+    # Get or create family with code
+    family = await db.families.find_one({"family_id": family_id}, {"_id": 0})
+    if not family:
+        family_code = generate_family_code()
+        family = {
+            "family_id": family_id,
+            "name": f"{current_user.get('name', 'My')}'s Family",
+            "family_code": family_code,
+            "created_by": current_user['user_id'],
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.families.insert_one(family)
+    elif not family.get('family_code'):
+        family_code = generate_family_code()
+        await db.families.update_one({"family_id": family_id}, {"$set": {"family_code": family_code}})
+        family['family_code'] = family_code
     
     invite_doc = {
         "invite_id": f"inv_{uuid.uuid4().hex[:12]}",
@@ -441,7 +462,33 @@ async def invite_to_family(family_id: str, request: Request, data: dict):
     }
     await db.family_invites.insert_one(invite_doc)
     
-    return {"invite_id": invite_doc['invite_id'], "status": "pending"}
+    family_name = family.get('name', family.get('family_name', 'Our Family'))
+    family_code = family.get('family_code', '')
+    
+    # Try to send email if configured
+    email_status = "not_sent"
+    if invite_email:
+        html = f"""
+        <div style="font-family:sans-serif;max-width:500px;margin:auto;padding:24px;background:#0f172a;border-radius:16px;color:#fff;">
+            <h2 style="margin:0 0 16px;">You're invited to join {family_name}!</h2>
+            <p style="color:#94a3b8;">{current_user['name']} has invited you to join their family on FamFocus Hub as a <strong>{invite_role}</strong>.</p>
+            <div style="background:#1e293b;border-radius:12px;padding:16px;margin:16px 0;text-align:center;">
+                <p style="color:#94a3b8;margin:0 0 8px;font-size:14px;">Your family code:</p>
+                <p style="font-size:28px;font-weight:900;color:#6366f1;margin:0;letter-spacing:4px;">{family_code}</p>
+            </div>
+            <p style="color:#64748b;font-size:13px;">Enter this code in FamFocus Hub to join the family.</p>
+        </div>
+        """
+        result = await send_email_async(invite_email, f"Join {family_name} on FamFocus Hub!", html)
+        email_status = result.get('status', 'error')
+    
+    return {
+        "invite_id": invite_doc['invite_id'],
+        "status": "pending",
+        "family_code": family_code,
+        "family_name": family_name,
+        "email_status": email_status
+    }
 
 @router.post("/families/switch/{family_id}")
 async def switch_family(family_id: str, request: Request):
@@ -575,34 +622,54 @@ async def leave_family(family_id: str, request: Request):
 # Edit family name
 @router.put("/families/{family_id}")
 async def update_family(family_id: str, request: Request, data: dict):
-    """Update family details (name)"""
+    """Update family details (name). Handles both real and virtual families."""
     current_user = await get_current_user(request)
-    
-    # Check if user is admin/parent of this family
-    family = await db.families.find_one({"family_id": family_id})
-    if not family:
-        raise HTTPException(status_code=404, detail="Family not found")
-    
-    if family.get('created_by') != current_user['user_id']:
-        # Check if user is parent member
-        membership = await db.family_memberships.find_one({
-            "family_id": family_id,
-            "user_id": current_user['user_id'],
-            "role": {"$in": ["parent", "admin"]}
-        })
-        if not membership:
-            raise HTTPException(status_code=403, detail="Only parents can edit family")
     
     new_name = data.get('name', '').strip()
     if not new_name:
         raise HTTPException(status_code=400, detail="Family name is required")
     
-    await db.families.update_one(
-        {"family_id": family_id},
-        {"$set": {"name": new_name}}
+    # Check if this is a "virtual" family (family_id = parent's user_id)
+    family = await db.families.find_one({"family_id": family_id})
+    
+    if family:
+        # Real family — check permissions
+        if family.get('created_by') != current_user['user_id']:
+            membership = await db.family_memberships.find_one({
+                "family_id": family_id,
+                "user_id": current_user['user_id'],
+                "role": {"$in": ["parent", "admin"]}
+            })
+            if not membership:
+                raise HTTPException(status_code=403, detail="Only parents can edit family")
+        
+        await db.families.update_one(
+            {"family_id": family_id},
+            {"$set": {"name": new_name, "family_name": new_name}}
+        )
+    else:
+        # Virtual family — the family_id IS the parent's user_id
+        if current_user['user_id'] != family_id and current_user.get('role') != 'parent':
+            raise HTTPException(status_code=403, detail="Only parents can edit family")
+        
+        # Create the family document so it persists
+        family_code = generate_family_code()
+        await db.families.insert_one({
+            "family_id": family_id,
+            "name": new_name,
+            "family_name": new_name,
+            "family_code": family_code,
+            "created_by": current_user['user_id'],
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    # Also update user's family_name field
+    await db.users.update_one(
+        {"user_id": current_user['user_id']},
+        {"$set": {"family_name": new_name}}
     )
     
-    return {"success": True}
+    return {"success": True, "name": new_name}
 
 # Delete family
 @router.delete("/families/{family_id}")

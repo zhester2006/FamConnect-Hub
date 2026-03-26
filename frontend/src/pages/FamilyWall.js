@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Heart, MessageCircle, Image as ImageIcon, Plus, TrendingUp, Smile, Send, X, BarChart2, Check, Search, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
+import { Avatar } from '@/components/Avatar';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -466,9 +467,7 @@ export default function FamilyWall({ user }) {
               {posts.map((post) => (
                 <div key={post.post_id} className="glass-card rounded-2xl p-4" data-testid="wall-post">
                   <div className="flex items-start space-x-3 mb-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-sm font-black text-white flex-shrink-0">
-                      {post.user_name?.charAt(0)}
-                    </div>
+                    <Avatar name={post.user_name} picture={post.author_picture || post.user_picture} size="md" />
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-white text-sm">{post.user_name}</h3>
                       <p className="text-xs text-slate-400">

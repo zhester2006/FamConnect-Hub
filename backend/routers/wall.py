@@ -25,6 +25,12 @@ async def get_family_wall(request: Request):
         # Sanitize author picture to prevent large base64 data
         post['author_picture'] = sanitize_picture(post.get('author_picture'), fallback_name=post.get('author_name'))
         
+        # Normalize field names for frontend compatibility
+        if not post.get('user_name'):
+            post['user_name'] = post.get('author_name', 'Unknown')
+        if not post.get('user_picture'):
+            post['user_picture'] = post.get('author_picture')
+        
         # Normalize type field (some docs use 'type', others 'post_type')
         if not post.get('post_type'):
             post['post_type'] = post.get('type', 'text')

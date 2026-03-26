@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, CheckCircle, Clock, AlertCircle, TrendingUp, Calendar as CalendarIcon, MapPin, Eye, Book, Award, Settings, X, ChevronRight, ToggleLeft, ToggleRight, Sparkles, Loader2, Battery, BatteryCharging, BatteryLow, BatteryWarning, GripVertical } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import DailyDigest from '@/components/DailyDigest';
+import { Avatar } from '@/components/Avatar';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -404,9 +405,7 @@ export default function ParentDashboard({ user }) {
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center space-x-3">
                         <div className="relative">
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-lg font-black text-white">
-                            {child.name?.charAt(0)}
-                          </div>
+                          <Avatar name={child.name} picture={child.picture} size="lg" />
                           {child.online_status && (
                             <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-400 border-2 border-slate-950 rounded-full" />
                           )}
@@ -518,9 +517,7 @@ export default function ParentDashboard({ user }) {
           <div className="glass-card rounded-2xl p-5 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-lg font-black text-white">
-                  {selectedChild.name?.charAt(0)}
-                </div>
+                <Avatar name={selectedChild.name} picture={selectedChild.picture} size="lg" />
                 <div>
                   <h2 className="text-lg font-black text-white">{selectedChild.name}</h2>
                   <p className="text-accent text-sm font-bold">{selectedChild.points || 0} points</p>

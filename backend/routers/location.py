@@ -301,5 +301,32 @@ async def report_gps_disabled(request: Request, data: dict):
     await db.notifications.insert_one(notification_doc)
     return {"success": True}
 
-# Get notifications
+# Request Check-in from child
+@router.post("/location/request-checkin/{child_id}")
+async def request_checkin(child_id: str, request: Request):
+    """Parent requests a child to check in with their current location"""
+    current_user = await get_current_user(request)
+    
+    if current_user['role'] != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can request check-ins")
+    
+    child = await db.users.find_one({"user_id": child_id, "parent_id": current_user['user_id']}, {"_id": 0})
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+    
+    notification_doc = {
+        "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+        "type": "checkin_request",
+        "user_id": child_id,
+        "from_user_id": current_user['user_id'],
+        "from_user_name": current_user['name'],
+        "family_id": current_user['user_id'],
+        "title": "Check-in Requested",
+        "message": f"{current_user['name']} is requesting you to check in with your current location",
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.notifications.insert_one(notification_doc)
+    
+    return {"success": True, "message": f"Check-in request sent to {child['name']}"}
 

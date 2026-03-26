@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, Users, CheckCircle, Award, Download, Calendar, Target } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
+import { Avatar } from '@/components/Avatar';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -259,9 +260,7 @@ export default function Analytics({ user }) {
             <div className="space-y-4">
               {analytics?.children?.map((child, i) => (
                 <div key={i} className="flex items-center space-x-4" data-testid={`child-stats-${child.user_id}`}>
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-sm font-black text-white flex-shrink-0">
-                    {child.display_name?.charAt(0)}
-                  </div>
+                  <Avatar name={child.display_name} picture={child.picture} size="md" />
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-bold text-white">{child.display_name}</span>

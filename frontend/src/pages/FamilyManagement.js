@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Users, Plus, UserPlus, Check, X, Crown, Mail, Loader2, Trash2, Edit2, Baby, User, Shield, Lock, Copy, Link, Home } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
+import { Avatar } from '@/components/Avatar';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -41,6 +42,7 @@ export default function FamilyManagement({ user }) {
   const [processing, setProcessing] = useState(null);
   const [childFormData, setChildFormData] = useState({ name: '', pin: '', picture: '', username: '', password: '' });
   const [createdInviteLink, setCreatedInviteLink] = useState(null);
+  const [inviteResult, setInviteResult] = useState(null);
   const [editCredentialsModal, setEditCredentialsModal] = useState(null);
 
   const fetchData = useCallback(async () => {
@@ -120,12 +122,11 @@ export default function FamilyManagement({ user }) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         credentials: 'include', body: JSON.stringify({ email: formData.email, role: formData.role })
       });
+      const data = await res.json();
       if (res.ok) { 
-        toast.success(`Invitation sent! They will join as ${formData.role}`); 
-        setModal({ type: null }); 
-        setFormData({ name: '', email: '', role: 'child' }); 
+        setInviteResult(data);
+        toast.success(data.email_status === 'sent' ? 'Invitation email sent!' : 'Invite code generated!');
       } else { 
-        const data = await res.json(); 
         toast.error(data.detail || 'Failed to send invitation'); 
       }
     } catch (error) { toast.error('Failed to send invitation'); }
@@ -478,9 +479,7 @@ export default function FamilyManagement({ user }) {
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${ROLE_INFO[member.role]?.color || 'from-slate-500 to-slate-600'} flex items-center justify-center text-sm font-bold text-white shadow-md`}>
-                              {member.name?.charAt(0) || '?'}
-                            </div>
+                            <Avatar name={member.name} picture={member.picture} size="md" />
                             <div>
                               <div className="flex items-center gap-2">
                                 <p className="font-semibold text-white">{member.name}</p>
@@ -611,50 +610,77 @@ export default function FamilyManagement({ user }) {
 
       {/* Invite Member Modal */}
       {modal.type === 'invite' && (
-        <Modal title="Invite Family Member" icon={<UserPlus className="w-5 h-5 text-secondary" />} onClose={() => setModal({ type: null })}>
-          <input 
-            type="email" 
-            placeholder="Email address" 
-            value={formData.email} 
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-secondary mb-4"
-            autoFocus
-          />
-          <div className="mb-4">
-            <label className="text-sm text-slate-400 mb-2 block">Invite as:</label>
-            <div className="grid grid-cols-3 gap-2">
-              {(['parent', 'member', 'child']).map((role) => {
-                const info = ROLE_INFO[role];
-                const Icon = info.icon;
-                return (
+        <Modal title="Invite Family Member" icon={<UserPlus className="w-5 h-5 text-secondary" />} onClose={() => { setModal({ type: null }); setInviteResult(null); setFormData({ name: '', email: '', role: 'child' }); }}>
+          {inviteResult ? (
+            <div className="space-y-4">
+              <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-xl text-center">
+                <Check className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                <p className="text-green-400 font-semibold">Invite Created!</p>
+                <p className="text-sm text-slate-400 mt-1">
+                  {inviteResult.email_status === 'sent' ? 'Email sent successfully.' : 'Share the code below with them.'}
+                </p>
+              </div>
+              {inviteResult.family_code && (
+                <div className="p-4 bg-slate-800 rounded-xl text-center">
+                  <p className="text-xs text-slate-400 mb-2">Family Invite Code</p>
+                  <p className="text-3xl font-black tracking-[0.25em] text-primary">{inviteResult.family_code}</p>
                   <button 
-                    key={role} 
-                    onClick={() => setFormData({ ...formData, role })}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-xl text-sm font-medium capitalize transition-all ${
-                      formData.role === role 
-                        ? `bg-gradient-to-br ${info.color} text-white` 
-                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                    }`}
+                    onClick={() => { navigator.clipboard.writeText(inviteResult.family_code); toast.success('Code copied!'); }}
+                    className="mt-3 px-4 py-2 bg-primary/20 text-primary rounded-lg text-sm flex items-center gap-2 mx-auto hover:bg-primary/30"
                   >
-                    <Icon className="w-5 h-5" />
-                    {role}
+                    <Copy className="w-4 h-4" /> Copy Code
                   </button>
-                );
-              })}
+                </div>
+              )}
+              <button onClick={() => { setModal({ type: null }); setInviteResult(null); setFormData({ name: '', email: '', role: 'child' }); }} className="w-full px-4 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-white font-medium">Done</button>
             </div>
-            <p className="text-xs text-slate-500 mt-2">{ROLE_INFO[formData.role]?.description}</p>
-          </div>
-          <div className="flex gap-3">
-            <button onClick={() => setModal({ type: null })} className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-white font-medium">Cancel</button>
-            <button 
-              onClick={handleInvite} 
-              disabled={processing === 'invite'}
-              className="flex-1 px-4 py-3 bg-secondary hover:bg-secondary/80 disabled:opacity-50 rounded-xl text-white font-bold flex items-center justify-center gap-2"
-            >
-              {processing === 'invite' && <Loader2 className="w-4 h-4 animate-spin" />}
-              Send Invite
-            </button>
-          </div>
+          ) : (
+            <>
+              <input 
+                type="email" 
+                placeholder="Email address" 
+                value={formData.email} 
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-secondary mb-4"
+                autoFocus
+              />
+              <div className="mb-4">
+                <label className="text-sm text-slate-400 mb-2 block">Invite as:</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['parent', 'member', 'child']).map((role) => {
+                    const info = ROLE_INFO[role];
+                    const Icon = info.icon;
+                    return (
+                      <button 
+                        key={role} 
+                        onClick={() => setFormData({ ...formData, role })}
+                        className={`flex flex-col items-center gap-2 p-3 rounded-xl text-sm font-medium capitalize transition-all ${
+                          formData.role === role 
+                            ? `bg-gradient-to-br ${info.color} text-white` 
+                            : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                        }`}
+                      >
+                        <Icon className="w-5 h-5" />
+                        {role}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-slate-500 mt-2">{ROLE_INFO[formData.role]?.description}</p>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => { setModal({ type: null }); setInviteResult(null); }} className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-white font-medium">Cancel</button>
+                <button 
+                  onClick={handleInvite} 
+                  disabled={processing === 'invite'}
+                  className="flex-1 px-4 py-3 bg-secondary hover:bg-secondary/80 disabled:opacity-50 rounded-xl text-white font-bold flex items-center justify-center gap-2"
+                >
+                  {processing === 'invite' && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Send Invite
+                </button>
+              </div>
+            </>
+          )}
         </Modal>
       )}
 
@@ -662,9 +688,7 @@ export default function FamilyManagement({ user }) {
       {modal.type === 'member' && modal.data && (
         <Modal title="Change Member Role" icon={<User className="w-5 h-5 text-primary" />} onClose={() => setModal({ type: null })}>
           <div className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl mb-4">
-            <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${ROLE_INFO[modal.data.role]?.color || 'from-slate-500 to-slate-600'} flex items-center justify-center text-lg font-bold text-white`}>
-              {modal.data.name?.charAt(0) || '?'}
-            </div>
+            <Avatar name={modal.data.name} picture={modal.data.picture} size="lg" />
             <div>
               <p className="font-semibold text-white">{modal.data.name}</p>
               <p className="text-xs text-slate-400">Current role: <span className="capitalize text-primary">{modal.data.role}</span></p>
