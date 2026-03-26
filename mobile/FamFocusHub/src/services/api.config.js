@@ -9,7 +9,7 @@ export const IS_PRODUCTION = !__DEV__;
 
 // Firebase-only mode: When true, app works without backend server
 // Set to true if you want the app to work with Firebase auth only
-export const FIREBASE_ONLY_MODE = true;
+export const FIREBASE_ONLY_MODE = false;
 
 // Disable console logs in production (but keep them for debugging auth issues)
 if (IS_PRODUCTION && !__DEV__) {
