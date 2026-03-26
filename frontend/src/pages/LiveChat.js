@@ -375,14 +375,15 @@ export default function LiveChat({ user }) {
   // Common emoji set for quick picker
   const quickEmojis = ['😀', '😂', '❤️', '👍', '🎉', '🔥', '😢', '😡', '🤔', '👏', '💯', '✨'];
 
-  // Get session token from cookies
+  // Get session token from cookies or localStorage
   const getSessionToken = () => {
     const cookies = document.cookie.split(';');
     for (let cookie of cookies) {
       const [name, value] = cookie.trim().split('=');
       if (name === 'session_token') return value;
     }
-    return null;
+    // Fallback to localStorage for child/dev login
+    return localStorage.getItem('dev_session_token') || null;
   };
 
   // Fetch functions defined before useEffect
