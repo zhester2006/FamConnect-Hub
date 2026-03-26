@@ -9,6 +9,16 @@ Family-oriented app for managing activities, chores, rewards, and communication.
 
 ---
 
+## Session 11 Verification (March 2026)
+
+### Child Profile Visibility in Family Management — VERIFIED
+- **Issue**: Newly created child profiles were not appearing in the Family Members list.
+- **Root cause**: Backend `GET /api/families/{family_id}/members` only queried `family_memberships` collection, missing "virtual" family members tied via `parent_id`.
+- **Fix**: Backend updated to also query `users` collection where `parent_id == family_id`.
+- **Status**: VERIFIED — Frontend correctly shows all children (existing and newly created) immediately after creation.
+
+---
+
 ## Session 10 Bug Fixes (March 2026)
 
 ### 1. Live Chat "Reconnecting" Loop — FIXED
@@ -37,13 +47,18 @@ Family-oriented app for managing activities, chores, rewards, and communication.
 - Achievements with Parent Manage tab + AI suggestions
 - NotificationBell with browser push + in-app dropdown
 - Child login with Setup Wizard
+- GIF and Image sharing in Live Chat
+- AI Dinner Planner with weekly schedule + calendar sync
+- Family Management with child profile creation (VERIFIED)
+- Location & Safe Zones with enforcement modal
 
 ## Test Credentials
 - Child: username `testkid`, password `pass123`
 - Parent: `POST /api/auth/dev-login` with `{role: "parent"}`
 
 ## Pending
+- (P1) Voice Commands for Pixie (speech-to-text)
 - (P1) Mobile: Native Google Sign-in
-- (P2) Mobile: Map screen
-- (P2) Voice Commands for Pixie
+- (P2) Mobile: Map screen fix
+- (P2) Weekly Family Leaderboard Recap
 - (P2) App Store Deployment Guide
