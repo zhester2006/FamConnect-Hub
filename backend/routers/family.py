@@ -636,19 +636,62 @@ async def get_family_members(family_id: str, request: Request):
     """Get all members of a family"""
     current_user = await get_current_user(request)
     
-    # Verify user is part of this family
+    # Check if this is a "virtual" family (family_id = parent's user_id)
+    family = await db.families.find_one({"family_id": family_id})
+    is_virtual_family = family is None
+    
+    if is_virtual_family:
+        # Virtual family: family_id is the parent's user_id
+        # Only allow the parent or their children to view
+        if current_user['user_id'] != family_id and current_user.get('parent_id') != family_id:
+            raise HTTPException(status_code=403, detail="Not a member of this family")
+        
+        members = []
+        # Add the parent
+        parent = await db.users.find_one({"user_id": family_id}, {"_id": 0, "password_hash": 0})
+        if parent:
+            members.append({
+                "user_id": parent['user_id'],
+                "name": parent.get('name', 'Unknown'),
+                "email": parent.get('email', ''),
+                "role": "parent",
+                "picture": parent.get('picture'),
+                "username": parent.get('username'),
+                "has_pin": bool(parent.get('pin')),
+                "online_status": parent.get('online_status', False)
+            })
+        
+        # Add all children under this parent
+        children = await db.users.find(
+            {"parent_id": family_id},
+            {"_id": 0, "password_hash": 0}
+        ).to_list(50)
+        
+        for child in children:
+            members.append({
+                "user_id": child['user_id'],
+                "name": child.get('name', 'Unknown'),
+                "email": child.get('email', ''),
+                "role": child.get('role', 'child'),
+                "picture": child.get('picture'),
+                "username": child.get('username'),
+                "has_pin": bool(child.get('pin')),
+                "online_status": child.get('online_status', False)
+            })
+        
+        return {"members": members}
+    
+    # Real family: use family_memberships
     membership = await db.family_memberships.find_one({
         "family_id": family_id,
         "user_id": current_user['user_id']
     })
     
-    family = await db.families.find_one({"family_id": family_id})
-    is_family_owner = family and family.get('created_by') == current_user['user_id']
+    is_family_owner = family.get('created_by') == current_user['user_id']
     
     if not membership and not is_family_owner:
         raise HTTPException(status_code=403, detail="Not a member of this family")
     
-    # Get all members
     memberships = await db.family_memberships.find(
         {"family_id": family_id},
         {"_id": 0}
@@ -656,29 +699,34 @@ async def get_family_members(family_id: str, request: Request):
     
     members = []
     for m in memberships:
-        user = await db.users.find_one({"user_id": m['user_id']}, {"_id": 0, "password": 0})
+        user = await db.users.find_one({"user_id": m['user_id']}, {"_id": 0, "password_hash": 0})
         if user:
             members.append({
                 "user_id": m['user_id'],
                 "name": user.get('name', 'Unknown'),
                 "email": user.get('email', ''),
                 "role": m.get('role', 'member'),
-                "picture": user.get('picture')
+                "picture": user.get('picture'),
+                "username": user.get('username'),
+                "has_pin": bool(user.get('pin')),
+                "online_status": user.get('online_status', False)
             })
     
     # Also add family creator if not already in memberships
-    if family:
-        creator_id = family.get('created_by')
-        if creator_id and not any(m['user_id'] == creator_id for m in members):
-            creator = await db.users.find_one({"user_id": creator_id}, {"_id": 0, "password": 0})
-            if creator:
-                members.append({
-                    "user_id": creator_id,
-                    "name": creator.get('name', 'Unknown'),
-                    "email": creator.get('email', ''),
-                    "role": "parent",
-                    "picture": creator.get('picture')
-                })
+    creator_id = family.get('created_by')
+    if creator_id and not any(m['user_id'] == creator_id for m in members):
+        creator = await db.users.find_one({"user_id": creator_id}, {"_id": 0, "password_hash": 0})
+        if creator:
+            members.append({
+                "user_id": creator_id,
+                "name": creator.get('name', 'Unknown'),
+                "email": creator.get('email', ''),
+                "role": "parent",
+                "picture": creator.get('picture'),
+                "username": creator.get('username'),
+                "has_pin": bool(creator.get('pin')),
+                "online_status": creator.get('online_status', False)
+            })
     
     return {"members": members}
 
