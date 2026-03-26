@@ -14,6 +14,55 @@ import hashlib
 
 router = APIRouter()
 
+# These specific routes MUST come before the catch-all /users/{user_id} route
+@router.get("/users/family-profiles")
+async def get_family_profiles(request: Request):
+    """Get all family member profiles for Home Hub dropdown"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('family_id') or current_user.get('parent_id') or current_user.get('user_id')
+    
+    # Get all family members
+    members = await db.users.find({
+        "$or": [
+            {"family_id": family_id},
+            {"parent_id": family_id},
+            {"user_id": family_id}
+        ]
+    }, {"_id": 0, "pin": 0}).to_list(100)
+    
+    # Add has_pin flag
+    for member in members:
+        member_full = await db.users.find_one({"user_id": member['user_id']})
+        member['has_pin'] = bool(member_full.get('pin'))
+    
+    return {"profiles": members}
+
+@router.post("/users/verify-pin")
+async def verify_user_pin(request: Request, data: dict):
+    """Verify a user's PIN for Home Hub actions"""
+    user_id = data.get('user_id')
+    pin = data.get('pin')
+    
+    if not user_id or not pin:
+        raise HTTPException(status_code=400, detail="User ID and PIN required")
+    
+    user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.get('pin') != pin:
+        raise HTTPException(status_code=401, detail="Invalid PIN")
+    
+    return {
+        "success": True,
+        "user": {
+            "user_id": user['user_id'],
+            "name": user['name'],
+            "role": user['role'],
+            "picture": user.get('picture')
+        }
+    }
+
 # User/Profile endpoints
 @router.get("/users/{user_id}", response_model=User)
 async def get_user(user_id: str, request: Request):
@@ -150,54 +199,6 @@ async def set_user_pin(user_id: str, request: Request, data: dict):
     await db.users.update_one({"user_id": user_id}, {"$set": {"pin": pin}})
     return {"success": True, "message": "PIN updated successfully"}
 
-@router.post("/users/verify-pin")
-async def verify_user_pin(request: Request, data: dict):
-    """Verify a user's PIN for Home Hub actions"""
-    user_id = data.get('user_id')
-    pin = data.get('pin')
-    
-    if not user_id or not pin:
-        raise HTTPException(status_code=400, detail="User ID and PIN required")
-    
-    user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    if user.get('pin') != pin:
-        raise HTTPException(status_code=401, detail="Invalid PIN")
-    
-    return {
-        "success": True,
-        "user": {
-            "user_id": user['user_id'],
-            "name": user['name'],
-            "role": user['role'],
-            "picture": user.get('picture')
-        }
-    }
-
-@router.get("/users/family-profiles")
-async def get_family_profiles(request: Request):
-    """Get all family member profiles for Home Hub dropdown"""
-    current_user = await get_current_user(request)
-    family_id = current_user.get('family_id') or current_user.get('parent_id') or current_user.get('user_id')
-    
-    # Get all family members
-    members = await db.users.find({
-        "$or": [
-            {"family_id": family_id},
-            {"parent_id": family_id},
-            {"user_id": family_id}
-        ]
-    }, {"_id": 0, "pin": 0}).to_list(100)  # Exclude PIN from response
-    
-    # Add has_pin flag
-    for member in members:
-        member_full = await db.users.find_one({"user_id": member['user_id']})
-        member['has_pin'] = bool(member_full.get('pin'))
-    
-    return {"profiles": members}
-
 @router.get("/invite/{invite_code}")
 async def get_invite_info(invite_code: str):
     """Get info about an invite code for child setup"""
@@ -306,10 +307,9 @@ async def complete_first_login_setup(user_id: str, request: Request, data: dict)
 
 @router.put("/users/{user_id}/credentials")
 async def update_child_credentials(user_id: str, request: Request, data: dict):
-    """Parent updates child's username/password/PIN"""
+    """Parent updates a family member's profile info (name, username, password, PIN, email)"""
     current_user = await get_current_user(request)
     
-    # Verify parent relationship
     target_user = await db.users.find_one({"user_id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -318,18 +318,34 @@ async def update_child_credentials(user_id: str, request: Request, data: dict):
         target_user.get('parent_id') == current_user['user_id'] or
         target_user.get('family_id') == current_user.get('family_id')
     )
+    is_self = current_user['user_id'] == user_id
     
-    if not is_parent:
-        raise HTTPException(status_code=403, detail="Only parents can modify child credentials")
+    if not is_parent and not is_self:
+        raise HTTPException(status_code=403, detail="Not authorized to modify this profile")
     
     updates = {}
+    
+    # Update name
+    if data.get('name'):
+        name = data['name'].strip()
+        if len(name) < 1:
+            raise HTTPException(status_code=400, detail="Name cannot be empty")
+        updates['name'] = name
+    
+    # Update email (for future Google sign-in)
+    if 'email' in data and data['email'] is not None:
+        email = data['email'].strip()
+        if email:
+            existing = await db.users.find_one({"email": email, "user_id": {"$ne": user_id}})
+            if existing:
+                raise HTTPException(status_code=400, detail="Email already in use by another account")
+        updates['email'] = email
     
     # Update username
     if data.get('username'):
         username = data['username'].lower().strip()
         if not username.isalnum() or len(username) < 3:
             raise HTTPException(status_code=400, detail="Username must be at least 3 alphanumeric characters")
-        # Check if username is taken by another user
         existing = await db.users.find_one({"username": username, "user_id": {"$ne": user_id}})
         if existing:
             raise HTTPException(status_code=400, detail="Username already taken")
@@ -351,7 +367,7 @@ async def update_child_credentials(user_id: str, request: Request, data: dict):
     if updates:
         await db.users.update_one({"user_id": user_id}, {"$set": updates})
     
-    return {"success": True, "message": "Credentials updated successfully"}
+    return {"success": True, "message": "Profile updated successfully"}
 
 @router.put("/users/{user_id}/role")
 async def update_user_role(user_id: str, request: Request, data: dict):

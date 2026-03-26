@@ -539,26 +539,26 @@ export default function CheckIns({ user }) {
           {user?.role === 'parent' && children.length > 0 && (
             <div className="space-y-3">
               <h2 className="text-sm font-bold text-white">Family Members</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {children.map(child => {
                   const isSelected = selectedChild?.user_id === child.user_id;
                   return (
                     <button
                       key={child.user_id}
                       onClick={() => { setSelectedChild(child); fetchChildCheckins(child.user_id); }}
-                      className={`flex items-center gap-3 p-3 rounded-xl transition-all text-left ${
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl transition-all text-center min-h-[110px] ${
                         isSelected ? 'bg-primary/20 border border-primary/40' : 'glass-card hover:bg-slate-800/70'
                       }`}
                       data-testid={`child-profile-${child.user_id}`}
                     >
                       <Avatar name={child.name} picture={child.picture} size="md" />
-                      <div className="flex-1 min-w-0">
+                      <div className="w-full min-w-0">
                         <p className="font-bold text-white text-sm truncate">{child.name}</p>
                         <p className="text-xs text-slate-400">{isSelected ? 'Selected' : 'Tap to view'}</p>
                       </div>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleRequestCheckin(child.user_id, child.name); }}
-                        className="flex items-center gap-1 px-2.5 py-1.5 bg-accent/20 hover:bg-accent/40 text-accent rounded-lg text-xs font-bold transition-all flex-shrink-0"
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-accent/20 hover:bg-accent/40 text-accent rounded-lg text-xs font-bold transition-all w-full justify-center"
                         data-testid={`request-checkin-${child.user_id}`}
                       >
                         <Send className="w-3 h-3" />

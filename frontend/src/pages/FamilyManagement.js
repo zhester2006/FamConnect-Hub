@@ -105,12 +105,14 @@ export default function FamilyManagement({ user }) {
   const handleEditFamily = async () => {
     if (!formData.name.trim() || !family) return;
     try {
+      const token = localStorage.getItem('dev_session_token');
       const res = await fetch(`${BACKEND_URL}/api/families/${family.family_id}`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        method: 'PUT', 
+        headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
         credentials: 'include', body: JSON.stringify({ name: formData.name })
       });
-      if (res.ok) { toast.success('Family updated!'); setModal({ type: null }); fetchData(); }
-      else { toast.error('Failed to update family'); }
+      if (res.ok) { toast.success('Family name updated!'); setModal({ type: null }); fetchData(); }
+      else { const data = await res.json(); toast.error(data.detail || 'Failed to update family'); }
     } catch (error) { toast.error('Failed to update family'); }
   };
 
@@ -304,7 +306,7 @@ export default function FamilyManagement({ user }) {
   const handleUpdateCredentials = async () => {
     if (!editCredentialsModal) return;
     
-    const { user_id, username, password, pin } = editCredentialsModal;
+    const { user_id, name, email, username, password, pin } = editCredentialsModal;
     
     if (username && (username.length < 3 || !/^[a-z0-9]+$/.test(username))) {
       toast.error('Username must be at least 3 alphanumeric characters');
@@ -329,7 +331,7 @@ export default function FamilyManagement({ user }) {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         credentials: 'include',
-        body: JSON.stringify({ username, password, pin })
+        body: JSON.stringify({ name, email, username, password, pin })
       });
       
       if (res.ok) {
@@ -514,21 +516,21 @@ export default function FamilyManagement({ user }) {
                           
                           {isAdmin && !isCurrentUser && (
                             <div className="flex items-center gap-1">
-                              {member.role === 'child' && (
-                                <button 
-                                  onClick={() => setEditCredentialsModal({ 
-                                    user_id: member.user_id, 
-                                    name: member.name,
-                                    username: member.username || '', 
-                                    password: '', 
-                                    pin: '' 
-                                  })}
-                                  className="p-2 hover:bg-primary/20 rounded-lg text-primary transition-all"
-                                  title="Edit login credentials"
-                                >
-                                  <User className="w-4 h-4" />
-                                </button>
-                              )}
+                              <button 
+                                onClick={() => setEditCredentialsModal({ 
+                                  user_id: member.user_id, 
+                                  name: member.name,
+                                  email: member.email || '',
+                                  username: member.username || '', 
+                                  password: '', 
+                                  pin: '' 
+                                })}
+                                className="p-2 hover:bg-primary/20 rounded-lg text-primary transition-all"
+                                title="Edit profile info"
+                                data-testid={`edit-member-${member.user_id}`}
+                              >
+                                <User className="w-4 h-4" />
+                              </button>}
                               <button 
                                 onClick={() => handleSetMemberPin(member.user_id)}
                                 disabled={processing === member.user_id}
@@ -715,8 +717,8 @@ export default function FamilyManagement({ user }) {
               />
               <div className="mb-4">
                 <label className="text-sm text-slate-400 mb-2 block">Invite as:</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['parent', 'member', 'child']).map((role) => {
+                <div className="grid grid-cols-4 gap-2">
+                  {(['parent', 'member', 'child', 'homehub']).map((role) => {
                     const info = ROLE_INFO[role];
                     const Icon = info.icon;
                     return (
@@ -730,7 +732,7 @@ export default function FamilyManagement({ user }) {
                         }`}
                       >
                         <Icon className="w-5 h-5" />
-                        {role}
+                        {role === 'homehub' ? 'Hub' : role}
                       </button>
                     );
                   })}
@@ -765,8 +767,8 @@ export default function FamilyManagement({ user }) {
           </div>
           <div className="mb-4">
             <label className="text-sm text-slate-400 mb-2 block">Change to:</label>
-            <div className="grid grid-cols-3 gap-2">
-              {(['parent', 'member', 'child']).map((role) => {
+            <div className="grid grid-cols-4 gap-2">
+              {(['parent', 'member', 'child', 'homehub']).map((role) => {
                 const info = ROLE_INFO[role];
                 const Icon = info.icon;
                 const isCurrentRole = modal.data.role === role;
@@ -970,12 +972,39 @@ export default function FamilyManagement({ user }) {
 
       {/* Edit Credentials Modal */}
       {editCredentialsModal && (
-        <Modal title={`Edit ${editCredentialsModal.name}'s Credentials`} icon={<User className="w-5 h-5 text-primary" />} onClose={() => setEditCredentialsModal(null)}>
+        <Modal title={`Edit ${editCredentialsModal.name}'s Profile`} icon={<User className="w-5 h-5 text-primary" />} onClose={() => setEditCredentialsModal(null)}>
           <p className="text-sm text-slate-400 mb-4">
-            Update login credentials for {editCredentialsModal.name}. Leave fields empty to keep current values.
+            Update profile information for {editCredentialsModal.name}. Leave fields empty to keep current values.
           </p>
           
           <div className="space-y-4">
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">Display Name</label>
+              <input 
+                type="text" 
+                placeholder="Full name" 
+                value={editCredentialsModal.name} 
+                onChange={(e) => setEditCredentialsModal({ ...editCredentialsModal, name: e.target.value })}
+                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-primary"
+                data-testid="edit-name-input"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block flex items-center gap-2">
+                <Mail className="w-3 h-3" /> Email (for Google Sign-in)
+              </label>
+              <input 
+                type="email" 
+                placeholder="email@example.com" 
+                value={editCredentialsModal.email || ''} 
+                onChange={(e) => setEditCredentialsModal({ ...editCredentialsModal, email: e.target.value })}
+                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-primary"
+                data-testid="edit-email-input"
+              />
+              <p className="text-xs text-slate-500 mt-1">Attach an email so they can sign in with Google in the future</p>
+            </div>
+
             <div>
               <label className="text-xs text-slate-400 mb-1 block">Username</label>
               <input 
@@ -984,6 +1013,7 @@ export default function FamilyManagement({ user }) {
                 value={editCredentialsModal.username} 
                 onChange={(e) => setEditCredentialsModal({ ...editCredentialsModal, username: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') })}
                 className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-primary"
+                data-testid="edit-username-input"
               />
             </div>
             
@@ -995,6 +1025,7 @@ export default function FamilyManagement({ user }) {
                 value={editCredentialsModal.password} 
                 onChange={(e) => setEditCredentialsModal({ ...editCredentialsModal, password: e.target.value })}
                 className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-primary"
+                data-testid="edit-password-input"
               />
             </div>
             
@@ -1010,6 +1041,7 @@ export default function FamilyManagement({ user }) {
                 value={editCredentialsModal.pin} 
                 onChange={(e) => setEditCredentialsModal({ ...editCredentialsModal, pin: e.target.value.replace(/\D/g, '').slice(0, 4) })}
                 className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-primary text-center text-xl tracking-[0.5em]"
+                data-testid="edit-pin-input"
               />
             </div>
           </div>

@@ -219,6 +219,8 @@ class User(BaseModel):
     pin: Optional[str] = None
     invite_code: Optional[str] = None
     invite_expires: Optional[str] = None
+    username: Optional[str] = None
+    has_pin: Optional[bool] = None
 
 class Chore(BaseModel):
     model_config = ConfigDict(extra="ignore")

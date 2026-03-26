@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Plus, ShoppingCart, CheckCircle, Clock, Users, Sun, Cloud, CloudRain, Wind, Snowflake, CloudLightning, Sparkles, X, ChevronLeft, ChevronRight, Star, Bell, CalendarDays, Briefcase, ChevronDown, ChevronUp, Lock } from 'lucide-react';
+import { Calendar, Plus, ShoppingCart, CheckCircle, Clock, Users, Sun, Cloud, CloudRain, Wind, Snowflake, CloudLightning, Sparkles, X, ChevronLeft, ChevronRight, Star, Bell, CalendarDays, Briefcase, ChevronDown, ChevronUp, Lock, Maximize2, Monitor, Smartphone } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { Avatar } from '@/components/Avatar';
 import { toast } from 'sonner';
@@ -133,6 +133,9 @@ export default function HomeHub({ user }) {
   const [newItem, setNewItem] = useState('');
   const [selectedDay, setSelectedDay] = useState(null);
   const [dayEvents, setDayEvents] = useState([]);
+  
+  // Orientation: 'landscape' (default side-by-side) or 'portrait' (vertical stack)
+  const [orientation, setOrientation] = useState('landscape');
   
   // Screensaver background state
   const [bgIndex, setBgIndex] = useState(() => Math.floor(Math.random() * SCREENSAVER_IMAGES.length));
@@ -436,8 +439,21 @@ export default function HomeHub({ user }) {
               )}
             </div>
 
-            {/* Family Online */}
-            <div className="glass-card rounded-xl px-4 py-2 flex items-center space-x-3">
+            {/* Family Online + Orientation Toggle */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setOrientation(o => o === 'landscape' ? 'portrait' : 'landscape')}
+                className="glass-card rounded-xl px-3 py-2 flex items-center gap-2 hover:bg-slate-800/50 transition-all"
+                title={`Switch to ${orientation === 'landscape' ? 'portrait' : 'landscape'} mode`}
+                data-testid="orientation-toggle"
+              >
+                {orientation === 'landscape' ? (
+                  <Smartphone className="w-4 h-4 text-slate-400" />
+                ) : (
+                  <Monitor className="w-4 h-4 text-slate-400" />
+                )}
+              </button>
+              <div className="glass-card rounded-xl px-4 py-2 flex items-center space-x-3">
               <Users className="w-4 h-4 text-primary" />
               <div className="flex -space-x-2">
                 {familyMembers.slice(0, 5).map(member => (
@@ -456,13 +472,20 @@ export default function HomeHub({ user }) {
                 ))}
               </div>
               <span className="text-xs text-green-400 font-bold">{onlineMembers.length} online</span>
+              </div>
             </div>
           </div>
 
           {/* Main Content Grid - Single Screen */}
-          <div className="flex-1 grid grid-cols-12 gap-3 min-h-0">
+          <div className={`flex-1 gap-3 min-h-0 ${
+            orientation === 'landscape' 
+              ? 'grid grid-cols-12' 
+              : 'flex flex-col overflow-y-auto'
+          }`}>
             {/* Left Column: Calendar */}
-            <div className="col-span-3 flex flex-col gap-3">
+            <div className={`flex flex-col gap-3 ${
+              orientation === 'landscape' ? 'col-span-3' : ''
+            }`}>
               {/* Mini Calendar */}
               <div className="glass-card rounded-xl p-3">
                 <div className="flex items-center justify-between mb-2">
@@ -516,7 +539,9 @@ export default function HomeHub({ user }) {
             </div>
 
             {/* Right Column: Chores, Shopping, Quote */}
-            <div className="col-span-9 flex flex-col gap-3">
+            <div className={`flex flex-col gap-3 ${
+              orientation === 'landscape' ? 'col-span-9' : ''
+            }`}>
               {/* Daily Inspiration */}
               <div className="glass-card rounded-xl p-3 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-20 h-20 bg-accent/10 rounded-full blur-2xl" />

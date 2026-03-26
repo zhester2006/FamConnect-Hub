@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { Palette, Bell, Moon, Sun, ChevronDown, Check, Sparkles, BellRing, BellOff, Camera, User, Image, Battery, BatteryCharging, Shield } from 'lucide-react';
+import { Palette, Bell, Moon, Sun, ChevronDown, Check, Sparkles, BellRing, BellOff, Camera, User, Image, Battery, BatteryCharging, Shield, Lock, KeyRound } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { isPushSupported, getPermissionStatus, subscribeToPush, unsubscribeFromPush, isSubscribed } from '@/utils/pushNotifications';
 
@@ -127,6 +127,15 @@ export default function Settings({ user }) {
   const [batteryLevel, setBatteryLevel] = useState(null);
   const [isCharging, setIsCharging] = useState(false);
 
+  // PIN state
+  const [pinDigits, setPinDigits] = useState(['', '', '', '']);
+  const [confirmPinDigits, setConfirmPinDigits] = useState(['', '', '', '']);
+  const [hasPin, setHasPin] = useState(false);
+  const [pinMode, setPinMode] = useState('idle'); // idle | setting | confirm
+  const [savingPin, setSavingPin] = useState(false);
+  const pinInputRefs = [useRef(), useRef(), useRef(), useRef()];
+  const confirmPinRefs = [useRef(), useRef(), useRef(), useRef()];
+
   useEffect(() => {
     applyTheme(theme, themeMode);
   }, [theme, themeMode]);
@@ -168,6 +177,86 @@ export default function Settings({ user }) {
       setShareBattery(data.permissions?.share_battery || false);
     } catch (error) {
       console.error('Failed to fetch permissions:', error);
+    }
+  };
+
+  // Check if user has a PIN
+  useEffect(() => {
+    if (user?.user_id) {
+      const checkPin = async () => {
+        try {
+          const token = localStorage.getItem('dev_session_token');
+          const res = await fetch(`${BACKEND_URL}/api/users/family-profiles`, {
+            credentials: 'include',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const myProfile = (data.profiles || []).find(p => p.user_id === user.user_id);
+            if (myProfile) setHasPin(!!myProfile.has_pin);
+          }
+        } catch (e) { /* ignore */ }
+      };
+      checkPin();
+    }
+  }, [user?.user_id]);
+
+  const handlePinDigitChange = (index, value, refs, digits, setDigits) => {
+    if (!/^\d*$/.test(value)) return;
+    const updated = [...digits];
+    updated[index] = value.slice(-1);
+    setDigits(updated);
+    if (value && index < 3) refs[index + 1].current?.focus();
+  };
+
+  const handlePinKeyDown = (index, e, refs, digits) => {
+    if (e.key === 'Backspace' && !digits[index] && index > 0) {
+      refs[index - 1].current?.focus();
+    }
+  };
+
+  const handleSetPin = async () => {
+    const newPin = pinDigits.join('');
+    if (newPin.length !== 4) {
+      toast.error('Enter all 4 digits');
+      return;
+    }
+    if (pinMode === 'setting') {
+      setPinMode('confirm');
+      setConfirmPinDigits(['', '', '', '']);
+      setTimeout(() => confirmPinRefs[0].current?.focus(), 100);
+      return;
+    }
+    const confirmPin = confirmPinDigits.join('');
+    if (newPin !== confirmPin) {
+      toast.error('PINs do not match. Try again.');
+      setConfirmPinDigits(['', '', '', '']);
+      confirmPinRefs[0].current?.focus();
+      return;
+    }
+    setSavingPin(true);
+    try {
+      const token = localStorage.getItem('dev_session_token');
+      const res = await fetch(`${BACKEND_URL}/api/users/${user.user_id}/pin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        credentials: 'include',
+        body: JSON.stringify({ pin: newPin })
+      });
+      if (res.ok) {
+        toast.success(hasPin ? 'PIN updated!' : 'PIN created!');
+        setHasPin(true);
+        setPinMode('idle');
+        setPinDigits(['', '', '', '']);
+        setConfirmPinDigits(['', '', '', '']);
+      } else {
+        const data = await res.json();
+        toast.error(data.detail || 'Failed to set PIN');
+      }
+    } catch (e) {
+      toast.error('Failed to set PIN');
+    } finally {
+      setSavingPin(false);
     }
   };
 
@@ -419,6 +508,87 @@ export default function Settings({ user }) {
               <p className="text-sm capitalize" style={{ color: 'var(--color-text)', opacity: 0.6 }}>{user?.role}</p>
               <p className="text-xs mt-1" style={{ color: 'var(--color-text)', opacity: 0.4 }}>{user?.email}</p>
             </div>
+          </div>
+
+          {/* HomeHub PIN Section */}
+          <div className="glass-card rounded-xl p-4" data-testid="pin-section">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <KeyRound className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
+                <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>HomeHub PIN</h2>
+              </div>
+              {hasPin && (
+                <span className="text-xs font-medium px-2 py-1 rounded-full bg-green-500/20 text-green-400">Active</span>
+              )}
+            </div>
+            <p className="text-xs mb-4" style={{ color: 'var(--color-text)', opacity: 0.5 }}>
+              Your PIN is used to verify your identity on the HomeHub shared screen.
+            </p>
+
+            {pinMode === 'idle' ? (
+              <button
+                onClick={() => { setPinMode('setting'); setPinDigits(['', '', '', '']); setTimeout(() => pinInputRefs[0].current?.focus(), 100); }}
+                className="w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2"
+                style={{ backgroundColor: hasPin ? 'var(--color-card)' : 'var(--color-primary)', color: hasPin ? 'var(--color-text)' : 'white', border: hasPin ? '1px solid var(--color-primary)' : 'none' }}
+                data-testid="set-pin-btn"
+              >
+                <Lock className="w-4 h-4" />
+                {hasPin ? 'Change PIN' : 'Set Up PIN'}
+              </button>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-center mb-3" style={{ color: 'var(--color-text)' }}>
+                    {pinMode === 'setting' ? 'Enter new 4-digit PIN' : 'Confirm your PIN'}
+                  </p>
+                  <div className="flex justify-center gap-3">
+                    {(pinMode === 'setting' ? pinDigits : confirmPinDigits).map((digit, idx) => (
+                      <input
+                        key={idx}
+                        ref={(pinMode === 'setting' ? pinInputRefs : confirmPinRefs)[idx]}
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handlePinDigitChange(
+                          idx, e.target.value,
+                          pinMode === 'setting' ? pinInputRefs : confirmPinRefs,
+                          pinMode === 'setting' ? pinDigits : confirmPinDigits,
+                          pinMode === 'setting' ? setPinDigits : setConfirmPinDigits
+                        )}
+                        onKeyDown={(e) => handlePinKeyDown(
+                          idx, e,
+                          pinMode === 'setting' ? pinInputRefs : confirmPinRefs,
+                          pinMode === 'setting' ? pinDigits : confirmPinDigits
+                        )}
+                        className="w-14 h-14 text-center text-2xl font-bold rounded-xl outline-none transition-all"
+                        style={{ backgroundColor: 'var(--color-bg)', border: '2px solid var(--color-primary)', color: 'var(--color-text)' }}
+                        data-testid={`pin-input-${idx}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setPinMode('idle'); setPinDigits(['', '', '', '']); setConfirmPinDigits(['', '', '', '']); }}
+                    className="flex-1 py-3 rounded-xl font-bold text-sm transition-all"
+                    style={{ backgroundColor: 'var(--color-card)', color: 'var(--color-text)' }}
+                    data-testid="cancel-pin-btn"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSetPin}
+                    disabled={savingPin}
+                    className="flex-1 py-3 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-50"
+                    style={{ backgroundColor: 'var(--color-primary)' }}
+                    data-testid="confirm-pin-btn"
+                  >
+                    {savingPin ? 'Saving...' : pinMode === 'setting' ? 'Next' : 'Save PIN'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Battery Sharing (for children only) */}
