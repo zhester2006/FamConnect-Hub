@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Plus, ShoppingCart, CheckCircle, Clock, Users, Sun, Cloud, CloudRain, Wind, Snowflake, CloudLightning, Sparkles, X, ChevronLeft, ChevronRight, Star, Bell, CalendarDays, Briefcase } from 'lucide-react';
+import { Calendar, Plus, ShoppingCart, CheckCircle, Clock, Users, Sun, Cloud, CloudRain, Wind, Snowflake, CloudLightning, Sparkles, X, ChevronLeft, ChevronRight, Star, Bell, CalendarDays, Briefcase, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { toast } from 'sonner';
 import { SCREENSAVER_IMAGES } from '@/utils/pageBackgrounds';
+import ProfilePinVerification from '@/components/ProfilePinVerification';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -112,8 +113,13 @@ export default function HomeHub({ user }) {
   const [shoppingItems, setShoppingItems] = useState([]);
   const [todayChores, setTodayChores] = useState([]);
   const [weather, setWeather] = useState({ condition: 'sunny', temp: 72 });
+  const [weatherForecast, setWeatherForecast] = useState([]);
+  const [showForecast, setShowForecast] = useState(false);
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [showAddItem, setShowAddItem] = useState(false);
+  const [showPinVerify, setShowPinVerify] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
+  const [verifiedUser, setVerifiedUser] = useState(null);
   const [newEvent, setNewEvent] = useState({ 
     title: '', 
     event_date: new Date().toISOString().split('T')[0],
@@ -156,48 +162,69 @@ export default function HomeHub({ user }) {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           async (position) => {
-            const res = await fetch(
-              `${BACKEND_URL}/api/weather?lat=${position.coords.latitude}&lon=${position.coords.longitude}`,
-              { credentials: 'include' }
-            );
-            if (res.ok) {
-              const data = await res.json();
+            const [weatherRes, forecastRes] = await Promise.all([
+              fetch(`${BACKEND_URL}/api/weather?lat=${position.coords.latitude}&lon=${position.coords.longitude}`, { credentials: 'include' }),
+              fetch(`${BACKEND_URL}/api/weather/forecast?lat=${position.coords.latitude}&lon=${position.coords.longitude}&days=3`, { credentials: 'include' })
+            ]);
+            if (weatherRes.ok) {
+              const data = await weatherRes.json();
               setWeather({
                 condition: data.condition || 'sunny',
                 temp: data.temp || 72,
                 description: data.description,
                 city: data.city,
+                humidity: data.humidity,
                 isMocked: data.is_mocked
               });
+            }
+            if (forecastRes.ok) {
+              const forecastData = await forecastRes.json();
+              setWeatherForecast(forecastData.forecast || []);
             }
           },
           async () => {
             // Fallback to default location if geolocation fails
-            const res = await fetch(`${BACKEND_URL}/api/weather`, { credentials: 'include' });
-            if (res.ok) {
-              const data = await res.json();
+            const [weatherRes, forecastRes] = await Promise.all([
+              fetch(`${BACKEND_URL}/api/weather`, { credentials: 'include' }),
+              fetch(`${BACKEND_URL}/api/weather/forecast?days=3`, { credentials: 'include' })
+            ]);
+            if (weatherRes.ok) {
+              const data = await weatherRes.json();
               setWeather({
                 condition: data.condition || 'sunny',
                 temp: data.temp || 72,
                 description: data.description,
                 city: data.city,
+                humidity: data.humidity,
                 isMocked: data.is_mocked
               });
+            }
+            if (forecastRes.ok) {
+              const forecastData = await forecastRes.json();
+              setWeatherForecast(forecastData.forecast || []);
             }
           }
         );
       } else {
         // No geolocation, use default
-        const res = await fetch(`${BACKEND_URL}/api/weather`, { credentials: 'include' });
-        if (res.ok) {
-          const data = await res.json();
+        const [weatherRes, forecastRes] = await Promise.all([
+          fetch(`${BACKEND_URL}/api/weather`, { credentials: 'include' }),
+          fetch(`${BACKEND_URL}/api/weather/forecast?days=3`, { credentials: 'include' })
+        ]);
+        if (weatherRes.ok) {
+          const data = await weatherRes.json();
           setWeather({
             condition: data.condition || 'sunny',
             temp: data.temp || 72,
             description: data.description,
             city: data.city,
+            humidity: data.humidity,
             isMocked: data.is_mocked
           });
+        }
+        if (forecastRes.ok) {
+          const forecastData = await forecastRes.json();
+          setWeatherForecast(forecastData.forecast || []);
         }
       }
     } catch (error) {
@@ -315,16 +342,65 @@ export default function HomeHub({ user }) {
         <div className="h-full p-3 flex flex-col" data-testid="home-hub">
           {/* Top Bar: Weather + Family Online Status */}
           <div className="flex items-center justify-between gap-3 mb-3">
-            {/* Weather & Time */}
-            <div className="glass-card rounded-xl px-4 py-2 flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <WeatherIcon condition={weather.condition} size="sm" />
-                <span className="text-xl font-black text-white">{weather.temp}°F</span>
-              </div>
-              <div className="border-l border-slate-700 pl-4">
-                <p className="text-lg font-black text-white">{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                <p className="text-[10px] text-slate-400">{time.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
-              </div>
+            {/* Weather & Time - Expandable */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowForecast(!showForecast)}
+                className="glass-card rounded-xl px-4 py-2 flex items-center space-x-4 hover:bg-slate-800/50 transition-all"
+              >
+                <div className="flex items-center space-x-2">
+                  <WeatherIcon condition={weather.condition} size="sm" />
+                  <div>
+                    <span className="text-xl font-black text-white">{weather.temp}°F</span>
+                    {weather.city && <p className="text-[10px] text-slate-400">{weather.city}</p>}
+                  </div>
+                </div>
+                <div className="border-l border-slate-700 pl-4">
+                  <p className="text-lg font-black text-white">{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                  <p className="text-[10px] text-slate-400">{time.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                </div>
+                {showForecast ? (
+                  <ChevronUp className="w-4 h-4 text-slate-400" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                )}
+              </button>
+              
+              {/* Weather Forecast Dropdown */}
+              {showForecast && (
+                <div className="absolute top-full left-0 mt-2 glass-card rounded-xl p-3 z-50 min-w-[280px] animate-fadeIn">
+                  <h4 className="text-xs font-bold text-white mb-2 flex items-center gap-2">
+                    <Sun className="w-3 h-3 text-yellow-400" />
+                    {weatherForecast.length > 0 ? `${weatherForecast.length}-Day Forecast` : '3-Day Forecast'}
+                  </h4>
+                  <div className="space-y-2">
+                    {weatherForecast.length > 0 ? (
+                      weatherForecast.map((day, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-slate-800/50">
+                          <div className="flex items-center gap-2">
+                            <WeatherIcon condition={day.condition} size="sm" />
+                            <div>
+                              <p className="text-xs font-bold text-white">{day.day_name}</p>
+                              <p className="text-[10px] text-slate-400 capitalize">{day.description || day.condition}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-white">{day.temp_high}°</p>
+                            <p className="text-[10px] text-slate-400">{day.temp_low}°</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-slate-400 text-center py-2">Loading forecast...</p>
+                    )}
+                  </div>
+                  {weather.humidity && (
+                    <p className="text-[10px] text-slate-500 mt-2 text-center">
+                      Current humidity: {weather.humidity}%
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Family Online */}
@@ -355,7 +431,19 @@ export default function HomeHub({ user }) {
                     <Calendar className="w-3 h-3 text-secondary" />
                     <span>Calendar</span>
                   </h3>
-                  <button onClick={() => setShowAddEvent(true)} className="p-1 bg-secondary/20 hover:bg-secondary/40 rounded transition-all" data-testid="add-event-btn">
+                  <button 
+                    onClick={() => {
+                      if (user?.role === 'homehub') {
+                        setPendingAction('addEvent');
+                        setShowPinVerify(true);
+                      } else {
+                        setShowAddEvent(true);
+                      }
+                    }} 
+                    className="p-1 bg-secondary/20 hover:bg-secondary/40 rounded transition-all flex items-center gap-1" 
+                    data-testid="add-event-btn"
+                  >
+                    {user?.role === 'homehub' && <Lock className="w-2 h-2 text-secondary" />}
                     <Plus className="w-3 h-3 text-secondary" />
                   </button>
                 </div>
@@ -443,7 +531,19 @@ export default function HomeHub({ user }) {
                       <ShoppingCart className="w-3 h-3 text-blue-400" />
                       <span>Shopping</span>
                     </h3>
-                    <button onClick={() => setShowAddItem(true)} className="p-1 bg-blue-500/20 hover:bg-blue-500/40 rounded transition-all" data-testid="add-item-btn">
+                    <button 
+                      onClick={() => {
+                        if (user?.role === 'homehub') {
+                          setPendingAction('addItem');
+                          setShowPinVerify(true);
+                        } else {
+                          setShowAddItem(true);
+                        }
+                      }} 
+                      className="p-1 bg-blue-500/20 hover:bg-blue-500/40 rounded transition-all flex items-center gap-1" 
+                      data-testid="add-item-btn"
+                    >
+                      {user?.role === 'homehub' && <Lock className="w-2 h-2 text-blue-400" />}
                       <Plus className="w-3 h-3 text-blue-400" />
                     </button>
                   </div>
@@ -618,6 +718,28 @@ export default function HomeHub({ user }) {
           </div>
         </div>
       )}
+
+      {/* PIN Verification Modal */}
+      <ProfilePinVerification
+        isOpen={showPinVerify}
+        onClose={() => {
+          setShowPinVerify(false);
+          setPendingAction(null);
+        }}
+        onVerified={(user) => {
+          setVerifiedUser(user);
+          toast.success(`Welcome, ${user.name}!`);
+          // Execute pending action
+          if (pendingAction === 'addEvent') {
+            setShowAddEvent(true);
+          } else if (pendingAction === 'addItem') {
+            setShowAddItem(true);
+          }
+          setPendingAction(null);
+        }}
+        actionLabel="Verify & Continue"
+        title="Who's making this request?"
+      />
     </div>
   );
 }

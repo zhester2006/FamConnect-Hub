@@ -136,7 +136,7 @@ class User(BaseModel):
     email: str
     name: str
     picture: Optional[str] = None
-    role: str = "parent"  # parent, child, member
+    role: str = "parent"  # parent, child, member, homehub
     profile_icon: Optional[str] = None
     profile_background: Optional[str] = None
     points: int = 0
@@ -149,6 +149,9 @@ class User(BaseModel):
     last_seen: Optional[str] = None
     nickname: Optional[str] = None
     bio: Optional[str] = None
+    pin: Optional[str] = None  # 4-digit PIN for Home Hub verification
+    invite_code: Optional[str] = None  # Invite code for child setup
+    invite_expires: Optional[str] = None  # When invite expires
 
 class Chore(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -926,6 +929,14 @@ async def create_child_profile(request: Request, data: dict):
         raise HTTPException(status_code=403, detail="Only parents can create child profiles")
     
     child_id = f"user_{uuid.uuid4().hex[:12]}"
+    
+    # Generate invite code for child to complete setup
+    invite_code = uuid.uuid4().hex[:8].upper()
+    invite_expires = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    
+    # Get family_id from current user
+    family_id = current_user.get('family_id') or current_user.get('parent_id')
+    
     child_doc = {
         "user_id": child_id,
         "email": data.get('email', f"child_{child_id}@family.local"),
@@ -933,15 +944,160 @@ async def create_child_profile(request: Request, data: dict):
         "picture": data.get('picture'),
         "role": "child",
         "parent_id": current_user['user_id'],
+        "family_id": family_id,
         "points": 0,
         "badges": [],
         "settings": {"theme": "cosmic_explorer", "notifications_enabled": True, "excluded_chores": []},
         "created_at": datetime.now(timezone.utc).isoformat(),
         "online_status": False,
-        "last_seen": None
+        "last_seen": None,
+        "pin": data.get('pin'),  # Parent sets initial PIN
+        "invite_code": invite_code,
+        "invite_expires": invite_expires
     }
     await db.users.insert_one(child_doc)
-    return await db.users.find_one({"user_id": child_id}, {"_id": 0})
+    result = await db.users.find_one({"user_id": child_id}, {"_id": 0})
+    result['invite_link'] = f"/join/{invite_code}"
+    return result
+
+@api_router.post("/users/{user_id}/pin")
+async def set_user_pin(user_id: str, request: Request, data: dict):
+    """Set or update a user's PIN"""
+    current_user = await get_current_user(request)
+    
+    # Parents can set PIN for children, users can set their own
+    target_user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    can_update = (
+        current_user['user_id'] == user_id or  # Own PIN
+        (current_user['role'] == 'parent' and target_user.get('parent_id') == current_user['user_id'])  # Parent setting child's PIN
+    )
+    
+    if not can_update:
+        raise HTTPException(status_code=403, detail="Unauthorized to set this user's PIN")
+    
+    pin = data.get('pin')
+    if not pin or len(pin) != 4 or not pin.isdigit():
+        raise HTTPException(status_code=400, detail="PIN must be exactly 4 digits")
+    
+    await db.users.update_one({"user_id": user_id}, {"$set": {"pin": pin}})
+    return {"success": True, "message": "PIN updated successfully"}
+
+@api_router.post("/users/verify-pin")
+async def verify_user_pin(request: Request, data: dict):
+    """Verify a user's PIN for Home Hub actions"""
+    user_id = data.get('user_id')
+    pin = data.get('pin')
+    
+    if not user_id or not pin:
+        raise HTTPException(status_code=400, detail="User ID and PIN required")
+    
+    user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.get('pin') != pin:
+        raise HTTPException(status_code=401, detail="Invalid PIN")
+    
+    return {
+        "success": True,
+        "user": {
+            "user_id": user['user_id'],
+            "name": user['name'],
+            "role": user['role'],
+            "picture": user.get('picture')
+        }
+    }
+
+@api_router.get("/users/family-profiles")
+async def get_family_profiles(request: Request):
+    """Get all family member profiles for Home Hub dropdown"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('family_id') or current_user.get('parent_id') or current_user.get('user_id')
+    
+    # Get all family members
+    members = await db.users.find({
+        "$or": [
+            {"family_id": family_id},
+            {"parent_id": family_id},
+            {"user_id": family_id}
+        ]
+    }, {"_id": 0, "pin": 0}).to_list(100)  # Exclude PIN from response
+    
+    # Add has_pin flag
+    for member in members:
+        member_full = await db.users.find_one({"user_id": member['user_id']})
+        member['has_pin'] = bool(member_full.get('pin'))
+    
+    return {"profiles": members}
+
+@api_router.get("/invite/{invite_code}")
+async def get_invite_info(invite_code: str):
+    """Get info about an invite code for child setup"""
+    user = await db.users.find_one({"invite_code": invite_code.upper()}, {"_id": 0, "pin": 0})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="Invalid invite code")
+    
+    # Check if expired
+    if user.get('invite_expires'):
+        expires = datetime.fromisoformat(user['invite_expires'].replace('Z', '+00:00'))
+        if datetime.now(timezone.utc) > expires:
+            raise HTTPException(status_code=410, detail="Invite code has expired")
+    
+    return {
+        "user_id": user['user_id'],
+        "name": user['name'],
+        "role": user['role'],
+        "picture": user.get('picture')
+    }
+
+@api_router.post("/invite/{invite_code}/complete")
+async def complete_invite_setup(invite_code: str, data: dict):
+    """Complete child setup from invite link"""
+    user = await db.users.find_one({"invite_code": invite_code.upper()})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="Invalid invite code")
+    
+    # Check if expired
+    if user.get('invite_expires'):
+        expires = datetime.fromisoformat(user['invite_expires'].replace('Z', '+00:00'))
+        if datetime.now(timezone.utc) > expires:
+            raise HTTPException(status_code=410, detail="Invite code has expired")
+    
+    # Update profile with child's preferences
+    updates = {
+        "invite_code": None,  # Clear invite code after use
+        "invite_expires": None
+    }
+    
+    if data.get('picture'):
+        updates['picture'] = data['picture']
+    if data.get('theme'):
+        updates['settings.theme'] = data['theme']
+    if data.get('nickname'):
+        updates['nickname'] = data['nickname']
+    
+    await db.users.update_one({"user_id": user['user_id']}, {"$set": updates})
+    
+    # Return session token for the child
+    session_token = str(uuid.uuid4())
+    await db.sessions.insert_one({
+        "session_id": session_token,
+        "user_id": user['user_id'],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "expires_at": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+    })
+    
+    updated_user = await db.users.find_one({"user_id": user['user_id']}, {"_id": 0, "pin": 0})
+    return {
+        "success": True,
+        "session_token": session_token,
+        "user": updated_user
+    }
 
 @api_router.put("/users/{user_id}/role")
 async def update_user_role(user_id: str, request: Request, data: dict):
@@ -950,8 +1106,8 @@ async def update_user_role(user_id: str, request: Request, data: dict):
         raise HTTPException(status_code=403, detail="Only parents can change roles")
     
     new_role = data.get('role')
-    if new_role not in ['parent', 'child', 'member']:
-        raise HTTPException(status_code=400, detail="Invalid role. Must be 'parent', 'child', or 'member'")
+    if new_role not in ['parent', 'child', 'member', 'homehub']:
+        raise HTTPException(status_code=400, detail="Invalid role. Must be 'parent', 'child', 'member', or 'homehub'")
     
     # Ensure the user being updated is part of the family
     target_user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
@@ -3153,6 +3309,123 @@ async def get_weather(lat: float = 40.7128, lon: float = -74.0060):
             "description": "Weather unavailable",
             "is_mocked": True
         }
+
+@api_router.get("/weather/forecast")
+async def get_weather_forecast(lat: float = 40.7128, lon: float = -74.0060, days: int = 3):
+    """Fetch weather forecast for multiple days from OpenWeatherMap API"""
+    api_key = os.environ.get('OPENWEATHER_API_KEY')
+    
+    condition_map = {
+        'Clear': 'sunny',
+        'Clouds': 'cloudy',
+        'Rain': 'rainy',
+        'Drizzle': 'rainy',
+        'Thunderstorm': 'stormy',
+        'Snow': 'snowy',
+        'Mist': 'cloudy',
+        'Fog': 'cloudy',
+        'Wind': 'windy'
+    }
+    
+    if not api_key:
+        # Return simulated forecast if no API key
+        import random
+        from datetime import datetime, timedelta
+        forecast = []
+        for i in range(days):
+            date = datetime.now() + timedelta(days=i)
+            forecast.append({
+                "date": date.strftime("%Y-%m-%d"),
+                "day_name": date.strftime("%A"),
+                "temp_high": random.randint(70, 85),
+                "temp_low": random.randint(55, 68),
+                "condition": random.choice(['sunny', 'cloudy', 'rainy']),
+                "description": "Simulated forecast"
+            })
+        return {"forecast": forecast, "is_mocked": True}
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            # Use 5-day forecast API (free tier)
+            res = await client.get(
+                "https://api.openweathermap.org/data/2.5/forecast",
+                params={
+                    "lat": lat,
+                    "lon": lon,
+                    "appid": api_key,
+                    "units": "imperial",
+                    "cnt": days * 8  # 8 forecasts per day (3-hour intervals)
+                },
+                timeout=10
+            )
+            res.raise_for_status()
+            data = res.json()
+            
+            # Process forecast data - group by day
+            from datetime import datetime
+            daily_forecasts = {}
+            
+            for item in data.get("list", []):
+                dt = datetime.fromtimestamp(item["dt"])
+                date_str = dt.strftime("%Y-%m-%d")
+                
+                if date_str not in daily_forecasts:
+                    daily_forecasts[date_str] = {
+                        "date": date_str,
+                        "day_name": dt.strftime("%A"),
+                        "temps": [],
+                        "conditions": [],
+                        "descriptions": []
+                    }
+                
+                daily_forecasts[date_str]["temps"].append(item["main"]["temp"])
+                weather_main = item.get("weather", [{}])[0].get("main", "Clear")
+                daily_forecasts[date_str]["conditions"].append(condition_map.get(weather_main, 'cloudy'))
+                daily_forecasts[date_str]["descriptions"].append(item.get("weather", [{}])[0].get("description", ""))
+            
+            # Calculate daily summaries
+            forecast = []
+            for date_str in sorted(daily_forecasts.keys())[:days]:
+                day_data = daily_forecasts[date_str]
+                temps = day_data["temps"]
+                conditions = day_data["conditions"]
+                
+                # Most common condition
+                condition_counts = {}
+                for c in conditions:
+                    condition_counts[c] = condition_counts.get(c, 0) + 1
+                most_common_condition = max(condition_counts, key=condition_counts.get)
+                
+                forecast.append({
+                    "date": day_data["date"],
+                    "day_name": day_data["day_name"],
+                    "temp_high": round(max(temps)),
+                    "temp_low": round(min(temps)),
+                    "condition": most_common_condition,
+                    "description": day_data["descriptions"][0] if day_data["descriptions"] else ""
+                })
+            
+            return {
+                "forecast": forecast,
+                "city": data.get("city", {}).get("name"),
+                "is_mocked": False
+            }
+    except Exception as e:
+        logger.error(f"Weather forecast error: {e}")
+        import random
+        from datetime import datetime, timedelta
+        forecast = []
+        for i in range(days):
+            date = datetime.now() + timedelta(days=i)
+            forecast.append({
+                "date": date.strftime("%Y-%m-%d"),
+                "day_name": date.strftime("%A"),
+                "temp_high": random.randint(70, 85),
+                "temp_low": random.randint(55, 68),
+                "condition": random.choice(['sunny', 'cloudy']),
+                "description": "Forecast unavailable"
+            })
+        return {"forecast": forecast, "is_mocked": True}
 
 # Push Notification Subscription
 class PushSubscription(BaseModel):

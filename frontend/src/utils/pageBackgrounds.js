@@ -157,6 +157,57 @@ export const SCREENSAVER_IMAGES = [
     url: 'https://images.unsplash.com/photo-1549633760-e91f5397021b?w=1920&q=80',
     category: 'aurora',
     description: 'Northern Lights wallpaper'
+  },
+  // NEW: Bright Nature Photos
+  {
+    url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&q=80',
+    category: 'beach',
+    description: 'Bright tropical beach with turquoise water'
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=1920&q=80',
+    category: 'nature',
+    description: 'Bright mountain lake reflection'
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1920&q=80',
+    category: 'nature',
+    description: 'Bright mountain sunrise with rays'
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=1920&q=80',
+    category: 'nature',
+    description: 'Bright green meadow with flowers'
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=1920&q=80',
+    category: 'waterfall',
+    description: 'Bright waterfall in lush forest'
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1518173946687-a4c036bc3c9e?w=1920&q=80',
+    category: 'nature',
+    description: 'Bright lavender field at golden hour'
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1505765050516-f72dcac9c60e?w=1920&q=80',
+    category: 'nature',
+    description: 'Bright autumn forest with colorful leaves'
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1920&q=80',
+    category: 'nature',
+    description: 'Bright golden wheat field at sunset'
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=1920&q=80',
+    category: 'nature',
+    description: 'Bright sunlight through forest trees'
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=1920&q=80',
+    category: 'nature',
+    description: 'Bright cherry blossom trees in spring'
   }
 ];
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Users, Plus, UserPlus, Check, X, Crown, Mail, Loader2, Trash2, Edit2, Baby, User, Shield } from 'lucide-react';
+import { Users, Plus, UserPlus, Check, X, Crown, Mail, Loader2, Trash2, Edit2, Baby, User, Shield, Lock, Copy, Link, Home } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { toast } from 'sonner';
 
@@ -21,6 +21,11 @@ const ROLE_INFO = {
     icon: Baby,
     color: 'from-pink-500 to-purple-500',
     description: 'Limited access: complete chores, earn points, view rewards'
+  },
+  homehub: {
+    icon: Home,
+    color: 'from-green-500 to-teal-500',
+    description: 'Home Hub display: shared family device, PIN required for actions'
   }
 };
 
@@ -34,6 +39,8 @@ export default function FamilyManagement({ user }) {
   const [modal, setModal] = useState({ type: null, data: null });
   const [formData, setFormData] = useState({ name: '', email: '', role: 'child' });
   const [processing, setProcessing] = useState(null);
+  const [childFormData, setChildFormData] = useState({ name: '', pin: '', picture: '' });
+  const [createdInviteLink, setCreatedInviteLink] = useState(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -171,6 +178,100 @@ export default function FamilyManagement({ user }) {
     finally { setProcessing(null); }
   };
 
+  const handleCreateChildProfile = async () => {
+    if (!childFormData.name.trim()) { 
+      toast.error('Please enter a name for the child'); 
+      return; 
+    }
+    if (!childFormData.pin || childFormData.pin.length !== 4 || !/^\d+$/.test(childFormData.pin)) {
+      toast.error('Please enter a 4-digit PIN');
+      return;
+    }
+    
+    setProcessing('createChild');
+    try {
+      const token = localStorage.getItem('dev_session_token');
+      const res = await fetch(`${BACKEND_URL}/api/users/child`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: childFormData.name,
+          pin: childFormData.pin,
+          picture: childFormData.picture || null
+        })
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(`Profile created for ${childFormData.name}!`);
+        
+        // Show the invite link
+        if (data.invite_link) {
+          const fullLink = `${window.location.origin}${data.invite_link}`;
+          setCreatedInviteLink(fullLink);
+        }
+        
+        setChildFormData({ name: '', pin: '', picture: '' });
+        fetchData();
+      } else {
+        const data = await res.json();
+        toast.error(data.detail || 'Failed to create child profile');
+      }
+    } catch (error) {
+      console.error('Create child error:', error);
+      toast.error('Failed to create child profile');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleSetMemberPin = async (memberId) => {
+    const pin = prompt('Enter a 4-digit PIN for this family member:');
+    if (!pin) return;
+    
+    if (pin.length !== 4 || !/^\d+$/.test(pin)) {
+      toast.error('PIN must be exactly 4 digits');
+      return;
+    }
+    
+    setProcessing(memberId);
+    try {
+      const token = localStorage.getItem('dev_session_token');
+      const res = await fetch(`${BACKEND_URL}/api/users/${memberId}/pin`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include',
+        body: JSON.stringify({ pin })
+      });
+      
+      if (res.ok) {
+        toast.success('PIN set successfully!');
+        fetchData();
+      } else {
+        const data = await res.json();
+        toast.error(data.detail || 'Failed to set PIN');
+      }
+    } catch (error) {
+      toast.error('Failed to set PIN');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const copyInviteLink = () => {
+    if (createdInviteLink) {
+      navigator.clipboard.writeText(createdInviteLink);
+      toast.success('Invite link copied to clipboard!');
+    }
+  };
+
   const isAdmin = family?.role === 'parent' || family?.role === 'admin';
   const parentCount = members.filter(m => m.role === 'parent').length;
   const childCount = members.filter(m => m.role === 'child').length;
@@ -289,12 +390,18 @@ export default function FamilyManagement({ user }) {
 
                 {/* Quick Actions */}
                 {isAdmin && (
-                  <div className="p-4 border-b border-white/10 bg-slate-900/30">
+                  <div className="p-4 border-b border-white/10 bg-slate-900/30 flex flex-wrap gap-2">
                     <button 
                       onClick={() => { setFormData({ name: '', email: '', role: 'child' }); setModal({ type: 'invite' }); }}
                       className="flex items-center gap-2 px-4 py-2.5 bg-secondary hover:bg-secondary/80 rounded-xl text-white font-bold transition-all"
                     >
-                      <UserPlus className="w-5 h-5" /> Invite New Member
+                      <UserPlus className="w-5 h-5" /> Invite Member
+                    </button>
+                    <button 
+                      onClick={() => { setChildFormData({ name: '', pin: '', picture: '' }); setCreatedInviteLink(null); setModal({ type: 'addChild' }); }}
+                      className="flex items-center gap-2 px-4 py-2.5 bg-pink-500 hover:bg-pink-500/80 rounded-xl text-white font-bold transition-all"
+                    >
+                      <Baby className="w-5 h-5" /> Add Child Profile
                     </button>
                   </div>
                 )}
@@ -334,6 +441,18 @@ export default function FamilyManagement({ user }) {
                           
                           {isAdmin && !isCurrentUser && (
                             <div className="flex items-center gap-1">
+                              <button 
+                                onClick={() => handleSetMemberPin(member.user_id)}
+                                disabled={processing === member.user_id}
+                                className={`p-2 rounded-lg transition-all ${
+                                  member.has_pin 
+                                    ? 'hover:bg-white/10 text-green-400' 
+                                    : 'hover:bg-yellow-500/20 text-yellow-400'
+                                }`}
+                                title={member.has_pin ? 'Change PIN' : 'Set PIN'}
+                              >
+                                <Lock className="w-4 h-4" />
+                              </button>
                               <button 
                                 onClick={() => setModal({ type: 'member', data: member })}
                                 className="p-2 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all"
@@ -509,6 +628,88 @@ export default function FamilyManagement({ user }) {
           <button onClick={() => setModal({ type: null })} className="w-full px-4 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-white font-medium">
             Close
           </button>
+        </Modal>
+      )}
+
+      {/* Add Child Profile Modal */}
+      {modal.type === 'addChild' && (
+        <Modal title="Add Child Profile" icon={<Baby className="w-5 h-5 text-pink-400" />} onClose={() => { setModal({ type: null }); setCreatedInviteLink(null); }}>
+          {!createdInviteLink ? (
+            <>
+              <p className="text-sm text-slate-400 mb-4">
+                Create a profile for your child. They can finish setup on their own device using the invite link.
+              </p>
+              <input 
+                type="text" 
+                placeholder="Child's Name" 
+                value={childFormData.name} 
+                onChange={(e) => setChildFormData({ ...childFormData, name: e.target.value })}
+                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-pink-500 mb-4"
+                autoFocus
+              />
+              <div className="mb-4">
+                <label className="text-sm text-slate-400 mb-2 block flex items-center gap-2">
+                  <Lock className="w-4 h-4" /> Set a 4-digit PIN (for Home Hub verification)
+                </label>
+                <input 
+                  type="password" 
+                  inputMode="numeric"
+                  maxLength={4}
+                  placeholder="Enter 4-digit PIN" 
+                  value={childFormData.pin} 
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    setChildFormData({ ...childFormData, pin: val });
+                  }}
+                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-pink-500 text-center text-2xl tracking-[0.5em]"
+                />
+                <p className="text-xs text-slate-500 mt-1">This PIN will be used on the Home Hub device</p>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setModal({ type: null })} className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-white font-medium">Cancel</button>
+                <button 
+                  onClick={handleCreateChildProfile} 
+                  disabled={processing === 'createChild'}
+                  className="flex-1 px-4 py-3 bg-pink-500 hover:bg-pink-500/80 disabled:opacity-50 rounded-xl text-white font-bold flex items-center justify-center gap-2"
+                >
+                  {processing === 'createChild' && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Create Profile
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-center mb-4">
+                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Check className="w-8 h-8 text-green-400" />
+                </div>
+                <h3 className="text-lg font-bold text-white">Profile Created!</h3>
+                <p className="text-sm text-slate-400 mt-1">Share this link with {childFormData.name} to finish setup</p>
+              </div>
+              <div className="bg-slate-800 rounded-xl p-3 mb-4">
+                <p className="text-xs text-slate-400 mb-1">Invite Link:</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-white flex-1 truncate">{createdInviteLink}</p>
+                  <button 
+                    onClick={copyInviteLink}
+                    className="p-2 bg-primary hover:bg-primary/80 rounded-lg text-white transition-all"
+                    title="Copy link"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 text-center mb-4">
+                Link expires in 7 days. They can set their profile picture and theme after joining.
+              </p>
+              <button 
+                onClick={() => { setModal({ type: null }); setCreatedInviteLink(null); }}
+                className="w-full px-4 py-3 bg-primary hover:bg-primary/80 rounded-xl text-white font-bold"
+              >
+                Done
+              </button>
+            </>
+          )}
         </Modal>
       )}
     </div>

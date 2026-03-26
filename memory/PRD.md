@@ -3,7 +3,7 @@
 ## Project Overview
 A comprehensive, family-oriented, mobile-friendly app for managing family activities, chores, rewards, and communication.
 
-## Current Status: LIVE AND FULLY FUNCTIONAL
+## Current Status: LIVE WITH NEW FEATURES
 
 ### Last Updated: December 2024
 
@@ -13,232 +13,198 @@ A comprehensive, family-oriented, mobile-friendly app for managing family activi
 
 ### Web App
 **URL:** https://hub-family-core.preview.emergentagent.com
-- Fully functional with all features
-- Login via Google or Dev Login buttons
-- Works on desktop and mobile browsers
-
-### Mobile App
-**Backend URL:** https://hub-family-core.preview.emergentagent.com/api
-- FIREBASE_ONLY_MODE: **false** (uses live backend)
-- Rebuild required to pull latest changes
 
 ---
 
-## Working Features
+## New Features Implemented (Session 3)
 
-### Authentication
-- [x] Google Sign-In (Web)
-- [x] Dev Login (Parent/Child modes for testing)
-- [x] Firebase Auth (Mobile - Email/Password)
-- [x] Session management with tokens
-- [x] Role-based access (Parent, Child, HomeHub)
+### 1. Weather Forecast
+- Expandable 3-day weather forecast on Home Hub
+- Shows daily high/low temperatures
+- Weather conditions with icons
+- Current humidity display
+- Click weather card to expand/collapse forecast
 
-### Parent Dashboard
-- [x] Overview cards (Pending Approvals, Chores Done, Today's Events, Progress)
-- [x] AI Scheduler for auto-generating fair chore schedules
-- [x] Manual Scheduler with drag-and-drop
-- [x] Children overview with points and check-in buttons
-- [x] View Details for each child
+### 2. Nature Photos for Home Hub
+- Added 10 new bright nature photos to screensaver rotation
+- Total of 22 screensaver images now available
+- Categories: Mountains, Beaches, Waterfalls, Aurora, Lavender fields, Forests
 
-### Chore Scheduler
-- [x] Drag-and-drop chore assignment
-- [x] Calendar view by week
-- [x] Filter by children
-- [x] Point values for each chore
-- [x] Save/Clear schedule functionality
+### 3. Calendar - Monthly Events List
+- All events for the current month displayed below calendar
+- Events grouped by date with day name
+- Today's events highlighted with "TODAY" badge
+- Past events shown with reduced opacity
+- Scrollable list with max height
 
-### Family Chat
-- [x] Real-time WebSocket messaging
-- [x] Online/Offline status indicators
-- [x] Read receipts
-- [x] Emoji reactions
-- [x] Voice messages
-- [x] Image/GIF sharing
+### 4. Parent-Child Profile Setup (No sign-in required for child)
+- Parents can create child profiles directly
+- Set 4-digit PIN during profile creation
+- Invite link generated automatically
+- Link expires after 7 days
+- Child can complete setup on their own device
+- Child can customize profile picture, theme, nickname
 
-### Family Wall
-- [x] Posts with likes and comments
-- [x] Polls with voting
-- [x] Photo sharing
-- [x] GIF search and sharing
-- [x] Daily AI-generated inspiration quotes
-
-### Other Features
-- [x] Calendar with event management
-- [x] Shopping list with collaborative editing
-- [x] Leaderboard with points ranking
-- [x] Achievements and badges
-- [x] Dinner Planner with AI suggestions
-- [x] Rewards shop
-- [x] Reading logs
-- [x] Check-ins and location tracking
-- [x] Analytics dashboard
-- [x] Weather widget
-- [x] Settings and profile management
-
-### AI Features (Pixie)
-- [x] Dinner/meal suggestions
-- [x] Activity recommendations
-- [x] Chore tips and motivation
-- [x] Homework help suggestions
-- [x] Weather-based planning
+### 5. PIN-based Profile Verification (Home Hub)
+- Home Hub role requires PIN for all actions
+- Profile dropdown when adding events/items
+- 4-digit PIN verification before action
+- Prevents unauthorized changes on shared devices
+- Parents can set/change PINs in Family Management
 
 ---
 
-## API Endpoints Summary
+## API Endpoints (New)
 
-### Authentication
-- `POST /api/auth/dev-login` - Dev login
-- `GET /api/auth/me` - Get current user
-- `POST /api/auth/firebase-login` - Firebase login
-- `POST /api/auth/firebase-signup` - Firebase signup
+### Weather
+- `GET /api/weather/forecast?lat=&lon=&days=3` - Multi-day forecast
 
-### Family
-- `GET /api/family/members` - Get family members
-- `GET /api/families` - Get user's families
+### User/PIN Management
+- `POST /api/users/child` - Create child profile with PIN
+- `POST /api/users/{user_id}/pin` - Set/update user PIN
+- `POST /api/users/verify-pin` - Verify PIN for Home Hub actions
+- `GET /api/users/family-profiles` - Get all family members for dropdown
 
-### Chores
-- `GET /api/chores` - Get all chores
-- `GET /api/chores/types` - Get chore types
-- `POST /api/chores` - Create chore
-- `POST /api/chores/{id}/complete` - Complete chore
-- `POST /api/chores/{id}/approve` - Approve chore
-
-### Events
-- `GET /api/events` - Get events
-- `POST /api/events` - Create event
-
-### Shopping
-- `GET /api/shopping` - Get shopping list
-- `POST /api/shopping` - Add item
-
-### Family Wall
-- `GET /api/family-wall` - Get posts
-- `POST /api/family-wall` - Create post
-- `GET /api/family-wall/daily-quote` - Get daily quote
-
-### AI
-- `POST /api/ai/pixie` - Chat with Pixie AI
-- `POST /api/ai/meal-plan` - Get meal suggestions
-- `POST /api/chores/ai-schedule` - Generate AI chore schedule
-
-### Other
-- `GET /api/weather` - Get weather
-- `GET /api/leaderboard` - Get leaderboard
-- `GET /api/rewards` - Get rewards
+### Invite System
+- `GET /api/invite/{invite_code}` - Get invite info
+- `POST /api/invite/{invite_code}/complete` - Complete child setup
 
 ---
 
-## Mobile App Build Instructions
+## User Roles
 
-### Prerequisites
-1. Node.js and npm installed
-2. Android Studio with SDK
-3. Firebase project configured (family-hub-app-d9c04)
+### Parent
+- Full access to all features
+- Can create child profiles
+- Can set/change PINs for family members
+- Can approve chores, rewards, etc.
 
-### Build Steps
-```bash
-cd mobile/FamFocusHub
+### Child
+- Limited access to age-appropriate features
+- Complete chores, earn points
+- No PIN required on personal device
+- PIN required on Home Hub
 
-# Clean everything
-cd android && gradlew --stop && cd ..
-rd /s /q android
-rd /s /q node_modules
+### Member
+- Standard family access
+- Participate in family activities
 
-# Install dependencies
-npm install
-
-# Prebuild
-npx expo prebuild --clean
-
-# Build release APK
-cd android
-gradlew assembleRelease -x lint -x lintVitalAnalyzeRelease
-```
-
-### APK Location
-`android/app/build/outputs/apk/release/app-release.apk`
+### HomeHub (NEW)
+- Display-focused role for shared devices
+- PIN required for ALL actions
+- Anyone can view family data
+- Profile selection + PIN to make changes
 
 ---
 
-## Database Schema (MongoDB)
+## Frontend Components
 
-### Collections
-- `users` - User profiles and settings
-- `families` - Family groups
-- `chores` - Chore definitions and assignments
-- `events` - Calendar events
-- `shopping_items` - Shopping list items
-- `messages` - Chat messages
-- `family_wall_posts` - Family wall posts
-- `rewards` - Rewards catalog
-- `achievements` - User achievements
+### ProfilePinVerification Component
+- `/app/frontend/src/components/ProfilePinVerification.js`
+- Profile selection dropdown
+- 4-digit PIN input with auto-focus
+- Error handling for invalid PINs
+- Shows "No PIN" warning for users without PIN
 
 ---
 
-## Tech Stack
-
-### Frontend (Web)
-- React 18
-- Tailwind CSS
-- Lucide React icons
-- Sonner for toasts
-
-### Frontend (Mobile)
-- React Native with Expo
-- @react-native-firebase/* for auth
-- React Navigation
+## File Changes (Session 3)
 
 ### Backend
-- FastAPI (Python)
-- MongoDB
-- WebSocket for real-time features
-- OpenAI/Gemini for AI features
+- `/app/backend/server.py`:
+  - Added weather forecast endpoint
+  - Added PIN fields to User model
+  - Added child profile creation with PIN
+  - Added PIN verification endpoint
+  - Added family profiles endpoint
+  - Added invite system endpoints
+  - Added homehub role to role validation
+
+### Frontend
+- `/app/frontend/src/utils/pageBackgrounds.js`:
+  - Added 10 new bright nature photos
+  
+- `/app/frontend/src/pages/HomeHub.js`:
+  - Expandable weather forecast dropdown
+  - PIN verification for Home Hub role actions
+  - Lock icons on action buttons for Home Hub
+  
+- `/app/frontend/src/pages/Calendar.js`:
+  - Monthly events list below calendar
+  
+- `/app/frontend/src/pages/FamilyManagement.js`:
+  - Add Child Profile button and modal
+  - Set PIN functionality for members
+  - HomeHub role in permissions list
+  - Invite link generation and copy
+  
+- `/app/frontend/src/components/ProfilePinVerification.js`:
+  - New component for PIN verification modal
+  
+- `/app/frontend/src/App.css`:
+  - Added fadeIn animation
 
 ---
 
-## Session 2 Changes
+## Testing Status
 
-1. **Disabled FIREBASE_ONLY_MODE** - App now uses live backend
-2. **Fixed Chat crashes** - Graceful Firebase error handling
-3. **Fixed Family Wall crashes** - Graceful Firebase error handling  
-4. **Enhanced mock data** - Better fallbacks for offline mode
-5. **Verified all API endpoints** - All working correctly
+### Verified Features
+- [x] Weather forecast endpoint returns 3-day forecast
+- [x] Weather forecast displays correctly on Home Hub
+- [x] Calendar shows monthly events list
+- [x] Family Management shows "Add Child Profile" button
+- [x] Add Child Profile modal works with PIN input
+- [x] HomeHub role appears in permissions
+- [x] Screensaver images rotating with new photos
 
----
-
-## Test Credentials
-
-### Dev Login (Web)
-- Click "Dev: Parent Login" or "Dev: Child Login" buttons
-- No password required
-
-### Mobile App
-- Sign up with Email/Password via Firebase
-- Or use the dev login endpoints
+### Needs User Testing
+- [ ] Create actual child profile and verify invite link
+- [ ] Complete child setup from invite link
+- [ ] PIN verification on Home Hub device
+- [ ] Mobile app rebuild with FIREBASE_ONLY_MODE=false
 
 ---
 
-## Known Limitations
+## Mobile App Status
 
-1. **Google Sign-In (Mobile)** - Requires `@react-native-google-signin/google-signin` setup
-2. **Push Notifications** - Requires additional Firebase Cloud Messaging setup
-3. **Location Tracking** - Requires user permission and Google Maps API key
+- FIREBASE_ONLY_MODE: `false` (uses live backend)
+- Build required for changes to take effect
+- Firebase services refactored for offline fallback
+- PIN verification not yet implemented in mobile
 
 ---
 
-## Future Enhancements
+## Changelog
 
-### P1 - High Priority
+### December 2024 - Session 3
+- Added 3-day weather forecast to Home Hub
+- Added 10 new bright nature screensaver photos
+- Added "All Events - Month" list below calendar
+- Added "Add Child Profile" with PIN setup
+- Added PIN verification system for Home Hub
+- Added HomeHub role to role system
+- Added invite link system for child setup
+
+### December 2024 - Session 2
+- Fixed SyntaxError in api.service.js
+- Added offline mode to Firebase services
+- Enhanced mock data for AI Pixie
+
+### December 2024 - Session 1
+- Migrated to React Native Firebase
+- Initial feature implementation
+
+---
+
+## Next Steps
+
+### For User
+1. Test web app with all new features
+2. Create a child profile to test invite flow
+3. Rebuild mobile app to get latest changes
+
+### Future Enhancements
 - Native Google Sign-In for mobile
-- Push notification integration
-- Parent Management UI for custom Goals/Achievements
-
-### P2 - Medium Priority
-- Voice Commands for Pixie
-- Offline mode with sync
-- App Store deployment guide
-
-### P3 - Low Priority
-- Backend refactoring (modular routers)
-- Performance optimization
-- Analytics dashboard improvements
+- Voice commands for Pixie
+- Push notifications
+- Backend modularization

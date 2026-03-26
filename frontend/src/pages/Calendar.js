@@ -267,6 +267,77 @@ export default function Calendar({ user }) {
               )}
             </div>
           )}
+
+          {/* All Events This Month */}
+          <div className="glass-card rounded-2xl p-4">
+            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <CalendarDays className="w-5 h-5 text-primary" />
+              All Events - {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+            </h2>
+            {events.length === 0 ? (
+              <p className="text-slate-400 text-sm text-center py-4">No events this month</p>
+            ) : (
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {events
+                  .filter(event => {
+                    const eventDate = new Date(event.event_date);
+                    return eventDate.getMonth() === currentDate.getMonth() && 
+                           eventDate.getFullYear() === currentDate.getFullYear();
+                  })
+                  .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+                  .map(event => {
+                    const EventIcon = EVENT_TYPES[event.event_type]?.icon || CalendarDays;
+                    const eventDate = new Date(event.event_date + 'T00:00:00');
+                    const isEventToday = eventDate.toDateString() === new Date().toDateString();
+                    const isPast = eventDate < new Date() && !isEventToday;
+                    
+                    return (
+                      <div 
+                        key={event.event_id} 
+                        className={`flex items-center gap-3 p-3 rounded-xl border-l-4 ${
+                          EVENT_TYPES[event.event_type]?.color?.replace('bg-', 'border-') || 'border-primary'
+                        } ${isPast ? 'bg-slate-800/30 opacity-60' : 'bg-slate-800/50'} ${
+                          isEventToday ? 'ring-2 ring-accent/50' : ''
+                        }`}
+                      >
+                        <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center ${
+                          isEventToday ? 'bg-accent/20' : 'bg-slate-700/50'
+                        }`}>
+                          <span className={`text-xs font-bold ${isEventToday ? 'text-accent' : 'text-slate-400'}`}>
+                            {eventDate.toLocaleDateString('en-US', { weekday: 'short' })}
+                          </span>
+                          <span className={`text-lg font-black ${isEventToday ? 'text-accent' : 'text-white'}`}>
+                            {eventDate.getDate()}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <EventIcon className={`w-4 h-4 ${EVENT_TYPES[event.event_type]?.color?.replace('bg-', 'text-') || 'text-primary'}`} />
+                            <h3 className="font-bold text-white truncate">{event.title}</h3>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                            <span>{EVENT_TYPES[event.event_type]?.label}</span>
+                            {event.event_type === 'work_schedule' && event.work_start_time && (
+                              <span className="text-orange-400">
+                                {event.work_start_time} - {event.work_end_time}
+                              </span>
+                            )}
+                            {event.event_time && event.event_type !== 'work_schedule' && (
+                              <span>{event.event_time}</span>
+                            )}
+                          </div>
+                        </div>
+                        {isEventToday && (
+                          <span className="px-2 py-1 text-[10px] font-bold bg-accent/20 text-accent rounded-full">
+                            TODAY
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
         </div>
       </main>
 
