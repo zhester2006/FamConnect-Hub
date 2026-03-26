@@ -3,60 +3,59 @@
 ## Project Overview
 Family-oriented app for managing activities, chores, rewards, and communication.
 
-## Status: PRODUCTION READY | Last Updated: March 2026
+## Status: DEPLOYMENT READY | Last Updated: March 26, 2026
 
 ## Live URL: https://famfocus-preview.preview.emergentagent.com
 
 ---
 
-## Session 11 Verification (March 2026)
+## Deployment Prep (March 26, 2026) — COMPLETE
 
-### Child Profile Visibility in Family Management — VERIFIED
-- **Issue**: Newly created child profiles were not appearing in the Family Members list.
-- **Root cause**: Backend `GET /api/families/{family_id}/members` only queried `family_memberships` collection, missing "virtual" family members tied via `parent_id`.
-- **Fix**: Backend updated to also query `users` collection where `parent_id == family_id`.
-- **Status**: VERIFIED — Frontend correctly shows all children (existing and newly created) immediately after creation.
+### Changes Made
+- **DB Indexes**: Added 25+ MongoDB indexes on startup for all high-frequency query fields (user_id, family_id, session_token, email, etc.). Session TTL index for auto-expiry.
+- **Dev-Login Guard**: `POST /api/auth/dev-login` now checks `DISABLE_DEV_LOGIN` env var. Set to `true` in production to disable.
+- **Lint Clean**: All backend source files pass ruff lint (bare except → Exception, logger defined in all routers, no function name redefinitions, no unused variables).
+- **Frontend Build**: Verified `yarn build` (craco) succeeds.
 
----
-
-## Session 10 Bug Fixes (March 2026)
-
-### 1. Live Chat "Reconnecting" Loop — FIXED
-- **Root cause**: httpOnly cookies can't be read by JavaScript. LiveChat couldn't extract session token for WebSocket URL.
-- **Fix**: Added `GET /api/auth/ws-token` endpoint. LiveChat fetches token via API call, then connects WebSocket. Now shows "Live" status.
-
-### 2. Polls Not Showing on Family Wall — FIXED
-- **Root cause**: Backend stored field as `type: 'poll'` but frontend checked `post_type === 'poll'`.
-- **Fix**: GET `/api/family-wall` now normalizes `post_type` from `type` field. Fixed one existing poll with missing options.
+### Testing (Iteration 31) — 100% PASS
+- Backend: 18/18 tests passed (health, auth, families, events, shopping, wall, dinner, rewards, leaderboard)
+- Frontend: 11/11 pages load correctly, Add Child Profile flow works end-to-end
+- No critical or minor issues found
 
 ---
 
 ## Architecture
 ```
 /app/backend/
-  server.py (203 lines), deps.py (299 lines), routers/ (18 files)
+  server.py, deps.py (with indexes), routers/ (18 files)
 /app/frontend/
-  src/pages/ + src/components/
+  src/pages/ (20 pages), src/components/, craco.config.js
 ```
 
-## Key Features
-- Parent Dashboard with Pixie Daily Digest + Proactive Suggestions
-- Bixby-style Pixie AI on login screen
-- Real-time WebSocket chat (FIXED)
-- Family Wall with polls + voter names (FIXED)
-- Achievements with Parent Manage tab + AI suggestions
-- NotificationBell with browser push + in-app dropdown
-- Child login with Setup Wizard
-- GIF and Image sharing in Live Chat
+## Key Features (All Working)
+- Parent Dashboard with Pixie AI
+- Child Login with Setup Wizard
+- Family Management with child profile creation
+- Real-time WebSocket Live Chat (GIF + Image support)
+- Family Wall with posts and polls
 - AI Dinner Planner with weekly schedule + calendar sync
-- Family Management with child profile creation (VERIFIED)
-- Location & Safe Zones with enforcement modal
+- Shared Calendar
+- Shopping List
+- Chores with AI suggestions
+- Points & Rewards system
+- Location & Safe Zones
+- Leaderboard
+- Reading Logs, Achievements, Analytics, Settings
 
-## Test Credentials
-- Child: username `testkid`, password `pass123`
-- Parent: `POST /api/auth/dev-login` with `{role: "parent"}`
+## Production Deployment Checklist
+- [ ] Set `DISABLE_DEV_LOGIN=true` in production backend .env
+- [ ] Configure CORS_ORIGINS to production domain only
+- [ ] Set up MongoDB replica set / Atlas cluster
+- [ ] Configure proper SESSION_SECRET (not default)
+- [ ] Set up SSL/HTTPS
+- [ ] Enable rate limiting on auth endpoints
 
-## Pending
+## Pending Tasks
 - (P1) Voice Commands for Pixie (speech-to-text)
 - (P1) Mobile: Native Google Sign-in
 - (P2) Mobile: Map screen fix
