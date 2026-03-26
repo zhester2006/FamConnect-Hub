@@ -69,28 +69,30 @@ export default function ChatScreen({ navigation }) {
       // Initialize Firebase
       const initialized = await firebaseChatService.initialize();
       if (!initialized) {
-        console.error('Failed to initialize Firebase');
-        setLoading(false);
-        return;
+        console.warn('Firebase not fully initialized - running in offline mode');
       }
 
-      // Set user info
+      // Set user info (even if Firebase isn't fully working)
       const familyId = user?.current_family_id || user?.parent_id || 'family_default';
+      const userId = user?.user_id || 'anonymous';
+      const userName = user?.name || 'Guest';
+      const userPicture = user?.picture || null;
+      
       firebaseChatService.setUser(
-        user?.user_id,
-        user?.name,
-        user?.picture,
+        userId,
+        userName,
+        userPicture,
         familyId
       );
 
       // Connect and listen for messages with connection status callback
       const isConnected = firebaseChatService.connect(
         (newMessages) => {
-          setMessages(newMessages);
+          setMessages(newMessages || []);
           setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
         },
         (typing) => {
-          setTypingUsers(typing);
+          setTypingUsers(typing || {});
         },
         (connectionStatus) => {
           // Handle connection status changes
@@ -98,13 +100,14 @@ export default function ChatScreen({ navigation }) {
           if (connectionStatus) {
             console.log('Chat connected');
           } else {
-            console.log('Chat disconnected - will auto-reconnect');
+            console.log('Chat in offline mode');
           }
         }
       );
 
-      if (isConnected) {
-        setConnected(true);
+      setConnected(isConnected || false);
+      
+      if (isConnected && firebaseChatService.syncOfflineMessages) {
         // Sync any offline messages
         await firebaseChatService.syncOfflineMessages();
       }
@@ -112,7 +115,10 @@ export default function ChatScreen({ navigation }) {
       // Load leaderboard for medals
       await fetchLeaderboard();
     } catch (error) {
-      console.error('Firebase chat initialization error:', error);
+      console.warn('Firebase chat initialization error:', error);
+      // Don't crash - just show empty chat
+      setMessages([]);
+      setConnected(false);
     } finally {
       setLoading(false);
     }

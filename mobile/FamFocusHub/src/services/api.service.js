@@ -631,6 +631,119 @@ class ApiService {
   getMockData(endpoint, options = {}) {
     console.log('[ApiService] Firebase-only mode - returning mock data for:', endpoint);
     
+    // Handle POST requests (like AI endpoints)
+    const method = options.method || 'GET';
+    let bodyData = {};
+    if (options.body) {
+      try {
+        bodyData = JSON.parse(options.body);
+      } catch (e) {}
+    }
+    
+    // AI Pixie endpoint - return helpful responses
+    if (endpoint.includes('/ai/pixie')) {
+      const message = bodyData.message || '';
+      const userName = bodyData.user_name || 'Friend';
+      
+      // Generate contextual responses
+      let response = '';
+      if (message.toLowerCase().includes('dinner') || message.toLowerCase().includes('meal')) {
+        response = `Great question, ${userName}! Here are some quick dinner ideas:\n\n🍝 **Pasta Night** - Quick marinara with garlic bread\n🌮 **Taco Tuesday** - Ground beef tacos with all the fixings\n🍗 **Sheet Pan Chicken** - Chicken with roasted veggies\n🥗 **Stir Fry** - Quick veggie stir fry with rice\n\nWant me to help with a specific recipe?`;
+      } else if (message.toLowerCase().includes('activity') || message.toLowerCase().includes('fun')) {
+        response = `Here are some fun family activities, ${userName}!\n\n🎲 **Game Night** - Board games or card games\n🎬 **Movie Marathon** - Pick a theme and watch together\n🎨 **Craft Time** - DIY projects or painting\n🌳 **Outdoor Adventure** - Park visit or nature walk\n🍪 **Baking Together** - Make cookies or cupcakes\n\nWhich sounds fun to you?`;
+      } else if (message.toLowerCase().includes('chore') || message.toLowerCase().includes('clean')) {
+        response = `Here are some chore tips, ${userName}!\n\n⏰ **Set a Timer** - 15-minute cleaning sprints work great\n🎵 **Play Music** - Makes cleaning more fun\n✅ **Checklist** - Break tasks into smaller steps\n🏆 **Reward Yourself** - Treat after completing tasks\n👥 **Team Up** - Clean together as a family\n\nNeed help with a specific task?`;
+      } else if (message.toLowerCase().includes('homework') || message.toLowerCase().includes('study')) {
+        response = `Study tips for you, ${userName}!\n\n📚 **Quiet Space** - Find a distraction-free area\n⏰ **Pomodoro** - 25 min work, 5 min break\n📝 **Take Notes** - Writing helps memory\n❓ **Ask Questions** - Don't be afraid to ask for help\n🎯 **One at a Time** - Focus on one subject\n\nWhat subject do you need help with?`;
+      } else if (message.toLowerCase().includes('weather')) {
+        response = `Weather planning tips, ${userName}!\n\n☀️ **Sunny Day** - Perfect for outdoor activities!\n🌧️ **Rainy Day** - Indoor games, movies, or baking\n❄️ **Cold Day** - Hot cocoa and cozy activities\n\nCheck your local weather app for today's forecast!`;
+      } else {
+        response = `Hi ${userName}! I'm Pixie, your family assistant! 🧚‍♀️\n\nI can help you with:\n• 🍽️ Meal and dinner ideas\n• 🎮 Fun family activities\n• 🧹 Chore tips and motivation\n• 📚 Homework and study help\n• ☀️ Weather-based activity suggestions\n\nJust ask me anything!`;
+      }
+      
+      return { response, success: true };
+    }
+    
+    // AI meal plan
+    if (endpoint.includes('/ai/meal-plan')) {
+      return {
+        response: "Here's a quick meal suggestion:\n\n**Chicken Stir Fry**\n- 1 lb chicken breast\n- Mixed vegetables\n- Soy sauce & ginger\n- Serve over rice\n\nCook time: 20 minutes!",
+        success: true
+      };
+    }
+    
+    // AI chore tips
+    if (endpoint.includes('/ai/chore-tips')) {
+      return {
+        response: "Make it fun! Set a timer and see how fast you can clean. Play your favorite music!",
+        success: true
+      };
+    }
+    
+    // AI family activity
+    if (endpoint.includes('/ai/family-activity')) {
+      return {
+        response: "How about a game night? Try playing charades or a board game together!",
+        success: true
+      };
+    }
+    
+    // Weather endpoint
+    if (endpoint.includes('/weather')) {
+      return {
+        weather: {
+          temperature: 72,
+          condition: 'Partly Cloudy',
+          icon: 'partly-sunny',
+          humidity: 45,
+          location: 'Your Location'
+        },
+        success: true
+      };
+    }
+    
+    // Daily quote
+    if (endpoint.includes('/daily-quote') || endpoint.includes('/quotes')) {
+      const quotes = [
+        "Family is not an important thing. It's everything. - Michael J. Fox",
+        "The love of family is life's greatest blessing.",
+        "Together is a wonderful place to be.",
+        "Family: where life begins and love never ends.",
+        "Home is where your family is."
+      ];
+      return { quote: quotes[Math.floor(Math.random() * quotes.length)] };
+    }
+    
+    // GIF search
+    if (endpoint.includes('/gifs')) {
+      return { gifs: [], results: [] };
+    }
+    
+    // Tutorial
+    if (endpoint.includes('/tutorial')) {
+      return { completed: true, slides: [] };
+    }
+    
+    // Checkins
+    if (endpoint.includes('/checkins')) {
+      return { checkins: [], success: true };
+    }
+    
+    // Goals
+    if (endpoint.includes('/goals')) {
+      return { goals: [] };
+    }
+    
+    // Family wall
+    if (endpoint.includes('/family-wall')) {
+      return { posts: [] };
+    }
+    
+    // Messages
+    if (endpoint.includes('/messages')) {
+      return { messages: [] };
+    }
+    
     // Return appropriate mock data based on endpoint
     if (endpoint.includes('/chores')) {
       return { chores: [], total: 0 };
@@ -641,14 +754,14 @@ class ApiService {
     if (endpoint.includes('/events') || endpoint.includes('/calendar')) {
       return { events: [], total: 0 };
     }
-    if (endpoint.includes('/family/members')) {
-      return { members: [] };
+    if (endpoint.includes('/family/members') || endpoint.includes('/families')) {
+      return { members: [], families: [] };
     }
     if (endpoint.includes('/reading')) {
       return { logs: [], total: 0 };
     }
     if (endpoint.includes('/leaderboard')) {
-      return { leaderboard: [] };
+      return { leaderboard: [], rankings: [] };
     }
     if (endpoint.includes('/rewards')) {
       return { rewards: [], total: 0 };
@@ -657,10 +770,10 @@ class ApiService {
       return { achievements: [], badges: [] };
     }
     if (endpoint.includes('/battery')) {
-      return { battery_status: [] };
+      return { battery_status: [], members: [] };
     }
     if (endpoint.includes('/geofences') || endpoint.includes('/location')) {
-      return { geofences: [], locations: [] };
+      return { geofences: [], locations: [], alerts: [] };
     }
     if (endpoint.includes('/user') || endpoint.includes('/profile')) {
       return { user: null };
@@ -677,11 +790,13 @@ class ApiService {
     if (endpoint.includes('/meals') || endpoint.includes('/dinner')) {
       return { meals: [], plan: [] };
     }
-    if (endpoint.includes('/quotes')) {
-      return { quote: 'Welcome to FamFocus Hub!' };
-    }
     if (endpoint.includes('/dashboard')) {
       return { config: {} };
+    }
+    
+    // For POST/PUT requests, return success
+    if (method === 'POST' || method === 'PUT') {
+      return { success: true, message: 'Action completed (offline mode)' };
     }
     
     // Default empty response

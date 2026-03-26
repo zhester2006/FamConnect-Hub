@@ -58,27 +58,36 @@ export default function FamilyWallScreen({ navigation }) {
       const initialized = await firebaseFamilyWallService.initialize();
       if (initialized && user) {
         const familyId = user.current_family_id || user.parent_id || 'family_default';
+        const userId = user.user_id || 'anonymous';
+        const userName = user.name || 'Guest';
+        const userPicture = user.picture || null;
+        
         firebaseFamilyWallService.setUser(
-          user.user_id,
-          user.name,
-          user.picture,
+          userId,
+          userName,
+          userPicture,
           familyId
         );
 
         // Connect and listen for real-time post updates
         const connected = firebaseFamilyWallService.connect((firebasePosts) => {
-          if (firebasePosts && firebasePosts.length > 0) {
+          if (firebasePosts && Array.isArray(firebasePosts)) {
             setPosts(firebasePosts);
           }
         });
 
+        setFirebaseConnected(connected || false);
+        
         if (connected) {
-          setFirebaseConnected(true);
           console.log('Firebase Family Wall connected');
+        } else {
+          console.log('Firebase Family Wall running in offline mode');
         }
       }
     } catch (error) {
-      console.error('Firebase Family Wall init error:', error);
+      console.warn('Firebase Family Wall init error:', error);
+      setFirebaseConnected(false);
+      // Don't crash - we can fall back to API or empty state
     }
   };
 

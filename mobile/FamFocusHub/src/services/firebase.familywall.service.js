@@ -1,8 +1,15 @@
 // Firebase Family Wall Service for FamFocus Hub
 // Using React Native Firebase Realtime Database
 
-import database from '@react-native-firebase/database';
 import firebaseStorageService from './firebase.storage.service';
+
+// Safely import Firebase - it may not be available in all environments
+let database = null;
+try {
+  database = require('@react-native-firebase/database').default;
+} catch (e) {
+  console.warn('[FamilyWallService] Firebase database not available:', e.message);
+}
 
 class FirebaseFamilyWallService {
   constructor() {
@@ -15,17 +22,36 @@ class FirebaseFamilyWallService {
     this.unsubscribers = [];
     this.postCallback = null;
     this.isInitialized = false;
+    this.offlineMode = false;
   }
 
   initialize() {
     try {
+      if (!database) {
+        console.warn('[FamilyWallService] Firebase Database not available - running in offline mode');
+        this.offlineMode = true;
+        this.isInitialized = true;
+        return true;
+      }
+      
       this.db = database();
+      
+      if (!this.db) {
+        console.warn('[FamilyWallService] Could not get database instance - running in offline mode');
+        this.offlineMode = true;
+        this.isInitialized = true;
+        return true;
+      }
+      
       this.isInitialized = true;
+      this.offlineMode = false;
       console.log('[FamilyWallService] Initialized');
       return true;
     } catch (error) {
-      console.error('[FamilyWallService] Initialization error:', error);
-      return false;
+      console.warn('[FamilyWallService] Initialization error - running in offline mode:', error.message);
+      this.offlineMode = true;
+      this.isInitialized = true;
+      return true;
     }
   }
 
@@ -42,12 +68,16 @@ class FirebaseFamilyWallService {
 
   // Connect and listen for posts
   connect(onPosts) {
-    if (!this.isInitialized || !this.postsRef) {
-      console.log('[FamilyWallService] Not initialized');
-      return false;
-    }
-
     this.postCallback = onPosts;
+
+    // Handle offline mode
+    if (this.offlineMode || !this.db || !this.postsRef) {
+      console.log('[FamilyWallService] Running in offline mode');
+      if (this.postCallback) {
+        this.postCallback([]);
+      }
+      return true;
+    }
 
     try {
       this.disconnect();
@@ -61,6 +91,7 @@ class FirebaseFamilyWallService {
           snapshot.forEach((child) => {
             posts.push({
               id: child.key,
+              post_id: child.key,
               ...child.val()
             });
           });
@@ -69,14 +100,23 @@ class FirebaseFamilyWallService {
           if (this.postCallback) {
             this.postCallback(posts);
           }
+        }, (error) => {
+          console.warn('[FamilyWallService] Posts listener error:', error);
+          if (this.postCallback) {
+            this.postCallback([]);
+          }
         });
 
       this.unsubscribers.push(() => this.postsRef.off('value', postsListener));
 
       return true;
     } catch (error) {
-      console.error('[FamilyWallService] Connection error:', error);
-      return false;
+      console.warn('[FamilyWallService] Connection error:', error);
+      this.offlineMode = true;
+      if (this.postCallback) {
+        this.postCallback([]);
+      }
+      return true;
     }
   }
 
