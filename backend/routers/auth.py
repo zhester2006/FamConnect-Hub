@@ -346,3 +346,17 @@ async def child_login(data: dict, response: Response):
         "tutorial_completed": user.get('tutorial_completed', True)
     }
 
+
+
+@router.get("/auth/ws-token")
+async def get_ws_token(request: Request):
+    """Return the session token for WebSocket connections (since httpOnly cookies aren't readable by JS)"""
+    current_user = await get_current_user(request)
+    token = request.cookies.get('session_token')
+    if not token:
+        auth = request.headers.get('Authorization', '')
+        if auth.startswith('Bearer '):
+            token = auth[7:]
+    if not token:
+        raise HTTPException(status_code=401, detail="No session token found")
+    return {"token": token}

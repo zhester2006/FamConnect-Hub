@@ -25,6 +25,10 @@ async def get_family_wall(request: Request):
         # Sanitize author picture to prevent large base64 data
         post['author_picture'] = sanitize_picture(post.get('author_picture'), fallback_name=post.get('author_name'))
         
+        # Normalize type field (some docs use 'type', others 'post_type')
+        if not post.get('post_type'):
+            post['post_type'] = post.get('type', 'text')
+        
         if post.get('type') == 'poll' or post.get('post_type') == 'poll':
             poll_options = post.get('poll_options', [])
             for idx, opt in enumerate(poll_options):

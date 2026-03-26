@@ -418,10 +418,31 @@ export default function LiveChat({ user }) {
   }, []);
 
   // Connect to WebSocket
-  const connectWebSocket = useCallback(() => {
-    const token = getSessionToken();
+  const connectWebSocket = useCallback(async () => {
+    // Close existing connection first
+    if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
+      wsRef.current.close();
+    }
+
+    // Get token from dedicated endpoint (httpOnly cookies aren't readable by JS)
+    let token = null;
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/auth/ws-token`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        token = data.token;
+      }
+    } catch (e) {
+      console.error('Failed to get WS token:', e);
+    }
+
+    // Fallback to localStorage
     if (!token) {
-      console.log('No session token, falling back to polling');
+      token = localStorage.getItem('dev_session_token');
+    }
+
+    if (!token) {
+      console.log('No session token available for WebSocket');
       return;
     }
 

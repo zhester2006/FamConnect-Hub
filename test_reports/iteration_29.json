@@ -1,0 +1,105 @@
+{
+  "summary": "Iteration 29 - Bug Fixes Testing Complete. Both bugs fixed successfully: 1) WebSocket 'reconnecting' loop fixed - /api/auth/ws-token endpoint returns token for WS connections, 2) Polls now showing on Family Wall - post_type field normalized correctly. All 11 backend tests passed. All frontend features verified working.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration29_bugfixes.py",
+    "/app/test_reports/pytest/pytest_results_v30.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "GET /api/auth/ws-token correctly returns session token when authenticated (returns 401 without auth)",
+    "GET /api/family-wall correctly normalizes post_type from 'type' field for backward compatibility",
+    "POST /api/family-wall/{post_id}/vote correctly records votes and prevents double voting",
+    "LiveChat.js now fetches token from /api/auth/ws-token instead of reading httpOnly cookies",
+    "FamilyWall.js PollComponent correctly checks post.post_type === 'poll'",
+    "WebSocket shows 'Live' status instead of perpetual 'Reconnecting...' loop"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration29_bugfixes.py"
+  ],
+  "success_rate": {
+    "backend": "100% (11/11 tests passed)",
+    "frontend": "100% (All bug fixes verified)"
+  },
+  "test_credentials": {
+    "child_login": {"username": "testkid", "password": "pass123"},
+    "dev_login": "POST /api/auth/dev-login with {role: 'parent'}"
+  },
+  "seed_data_creation": "Created test polls via backend tests (TEST_ prefixed)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 29 verified both bug fixes: 1) WebSocket token endpoint /api/auth/ws-token returns token when authenticated - LiveChat now shows 'Live' status instead of 'Reconnecting...', 2) Family Wall polls display correctly - GET /api/family-wall normalizes post_type from 'type' field. All 11 backend tests passed. UI tests confirmed: 20 poll components visible, poll creation works, voting works, WebSocket connects successfully.",
+  "features_tested": {
+    "ws_token_endpoint": {
+      "status": "PASS",
+      "endpoint": "GET /api/auth/ws-token",
+      "returns": {"token": "session_token_string"},
+      "notes": "Returns 401 without authentication"
+    },
+    "family_wall_polls": {
+      "status": "PASS",
+      "endpoint": "GET /api/family-wall",
+      "returns": {"posts": "array with post_type normalized"},
+      "notes": "Polls have post_type='poll' correctly set"
+    },
+    "poll_voting": {
+      "status": "PASS",
+      "endpoint": "POST /api/family-wall/{post_id}/vote",
+      "returns": {"poll_options": "array with votes", "user_voted_option": "index"},
+      "notes": "Double voting correctly prevented with 400 error"
+    },
+    "live_chat_websocket": {
+      "status": "PASS",
+      "ui_verification": "Shows 'Live' status, 'Connected to chat' toast",
+      "notes": "No more 'Reconnecting...' loop"
+    },
+    "poll_creation_ui": {
+      "status": "PASS",
+      "ui_verification": "Create Poll modal works, new poll appears on wall",
+      "notes": "Poll options display with vote buttons"
+    },
+    "daily_quote": {
+      "status": "PASS",
+      "endpoint": "GET /api/family-wall/daily-quote",
+      "returns": {"quote": "string"}
+    },
+    "notifications": {
+      "status": "PASS",
+      "endpoints": ["GET /api/notifications", "GET /api/notifications/unread-count"]
+    },
+    "health_check": {
+      "status": "PASS",
+      "endpoint": "GET /api/health"
+    },
+    "dev_login": {
+      "status": "PASS",
+      "endpoint": "POST /api/auth/dev-login"
+    }
+  },
+  "bugs_fixed": {
+    "websocket_reconnecting_loop": {
+      "status": "FIXED",
+      "root_cause": "httpOnly cookies not readable by JavaScript - LiveChat couldn't extract session token for WS URL",
+      "fix": "Added /api/auth/ws-token endpoint that returns token via API call",
+      "verification": "UI shows 'Live' status, console logs 'WebSocket connected'"
+    },
+    "polls_not_showing": {
+      "status": "FIXED",
+      "root_cause": "Backend stored 'type':'poll' but frontend checked 'post_type':'poll'",
+      "fix": "GET /api/family-wall now normalizes post_type from type field",
+      "verification": "20 poll components visible on Family Wall, voting works"
+    }
+  },
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "note": "All APIs are real implementations"
+  }
+}
