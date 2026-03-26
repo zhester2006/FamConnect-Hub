@@ -68,11 +68,12 @@ export default function WelcomePage() {
         <main className="flex-1 flex items-center justify-center px-4 lg:px-6 pb-10 pt-10">
           <div className="max-w-md w-full space-y-6 text-center">
             <div className="space-y-4">
-              <div className="inline-block">
+              <div className="inline-block relative">
+                <div className="absolute inset-0 bg-primary/30 rounded-full blur-2xl animate-pulse" />
                 <img 
                   src="https://customer-assets.emergentagent.com/job_homebridge-5/artifacts/tqccfghc_startup.gif.gif" 
                   alt="FamFocus Hub"
-                  className="w-32 h-32 lg:w-40 lg:h-40 object-contain mx-auto"
+                  className="relative w-44 h-44 lg:w-52 lg:h-52 object-contain mx-auto drop-shadow-[0_0_25px_rgba(99,102,241,0.4)]"
                   data-testid="app-logo"
                 />
               </div>
