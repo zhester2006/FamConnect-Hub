@@ -5,7 +5,7 @@ Family-oriented app for managing activities, chores, rewards, and communication.
 
 ## Status: PRODUCTION READY | Last Updated: March 2026
 
-## Live URL: https://family-dashboard-14.preview.emergentagent.com
+## Live URL: https://family-hub-app-6.preview.emergentagent.com
 
 ---
 

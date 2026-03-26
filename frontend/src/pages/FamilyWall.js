@@ -280,7 +280,7 @@ export default function FamilyWall({ user }) {
       const data = await res.json();
       setQuote(data.quote || '');
       if (forceRefresh) {
-        toast.success(quoteType === 'bible' ? 'New Bible verse loaded!' : 'New inspiration loaded!');
+        // No toast - user requested removal of inspiration notifications
       }
     } catch (error) {
       console.error('Failed to fetch quote:', error);

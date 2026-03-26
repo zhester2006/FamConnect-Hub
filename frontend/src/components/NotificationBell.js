@@ -137,45 +137,45 @@ export default function NotificationBell({ user }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 w-80 max-h-96 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50" data-testid="notification-dropdown">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
+        <div className="absolute right-0 top-12 w-72 sm:w-80 max-h-80 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50" data-testid="notification-dropdown" style={{ maxWidth: 'calc(100vw - 2rem)' }}>
+          <div className="flex items-center justify-between px-3 py-2.5 border-b border-slate-700">
             <h3 className="text-white font-semibold text-sm">Notifications</h3>
-            <div className="flex gap-2">
+            <div className="flex gap-1.5">
               {notifications.length > 0 && (
                 <>
-                  <button onClick={markAllRead} className="text-xs text-cyan-400 hover:text-cyan-300" data-testid="mark-all-read-btn">
-                    <Check className="w-4 h-4" />
+                  <button onClick={markAllRead} className="p-1 text-cyan-400 hover:text-cyan-300" data-testid="mark-all-read-btn">
+                    <Check className="w-3.5 h-3.5" />
                   </button>
-                  <button onClick={clearAll} className="text-xs text-red-400 hover:text-red-300" data-testid="clear-all-btn">
-                    <Trash2 className="w-4 h-4" />
+                  <button onClick={clearAll} className="p-1 text-red-400 hover:text-red-300" data-testid="clear-all-btn">
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </>
               )}
-              <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-white">
-                <X className="w-4 h-4" />
+              <button onClick={() => setOpen(false)} className="p-1 text-slate-400 hover:text-white">
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
-          <div className="overflow-y-auto max-h-72">
+          <div className="overflow-y-auto max-h-64">
             {notifications.length === 0 ? (
-              <div className="text-center py-8 text-slate-500">
-                <Bell className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">No notifications yet</p>
+              <div className="text-center py-6 text-slate-500">
+                <Bell className="w-6 h-6 mx-auto mb-2 opacity-30" />
+                <p className="text-xs">No notifications yet</p>
               </div>
             ) : (
               notifications.map((n) => (
                 <div
                   key={n.notification_id}
-                  className={`px-4 py-3 border-b border-slate-800 hover:bg-slate-800/50 transition-colors ${!n.read ? 'bg-slate-800/30' : ''}`}
+                  className={`px-3 py-2.5 border-b border-slate-800 hover:bg-slate-800/50 transition-colors ${!n.read ? 'bg-slate-800/30' : ''}`}
                   data-testid={`notification-${n.notification_id}`}
                 >
-                  <div className="flex items-start gap-2.5">
-                    <span className="text-lg flex-shrink-0">{getIcon(n.type)}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm ${!n.read ? 'text-white' : 'text-slate-400'}`}>{n.message}</p>
-                      <p className="text-xs text-slate-600 mt-0.5">{timeAgo(n.created_at)}</p>
+                  <div className="flex items-start gap-2">
+                    <span className="text-base flex-shrink-0">{getIcon(n.type)}</span>
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <p className={`text-xs leading-snug break-words ${!n.read ? 'text-white' : 'text-slate-400'}`}>{n.message}</p>
+                      <p className="text-[10px] text-slate-600 mt-0.5">{timeAgo(n.created_at)}</p>
                     </div>
-                    {!n.read && <div className="w-2 h-2 bg-cyan-400 rounded-full flex-shrink-0 mt-1.5" />}
+                    {!n.read && <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full flex-shrink-0 mt-1" />}
                   </div>
                 </div>
               ))

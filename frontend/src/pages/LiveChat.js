@@ -292,64 +292,28 @@ const VoicePlayer = ({ audioBlob, audioUrl }) => {
 
 // Online Users Bar Component
 const OnlineUsersBar = ({ onlineUsers, familyMembers, currentUserId }) => {
-  const onlineMembers = familyMembers.filter(m => onlineUsers.includes(m.user_id) && m.user_id !== currentUserId);
-  const offlineMembers = familyMembers.filter(m => !onlineUsers.includes(m.user_id) && m.user_id !== currentUserId);
-  
+  if (!familyMembers.length) return null;
+  const others = familyMembers.filter(m => m.user_id !== currentUserId);
   return (
-    <div className="flex items-center gap-3 py-2 px-4 bg-slate-900/50 border-b border-slate-800 overflow-x-auto" data-testid="online-users-bar">
-      {onlineMembers.length > 0 && (
-        <div className="flex items-center gap-2">
-          <Circle className="w-2 h-2 fill-green-400 text-green-400" />
-          <span className="text-xs text-green-400 font-medium whitespace-nowrap">Online</span>
-          <div className="flex -space-x-2">
-            {onlineMembers.map(member => (
-              <div 
-                key={member.user_id}
-                className="relative"
-                title={member.name}
-              >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xs font-bold text-white border-2 border-slate-950">
-                  {member.picture ? (
-                    <img src={member.picture} alt={member.name} className="w-full h-full rounded-full object-cover" />
-                  ) : (
-                    member.name?.charAt(0)
-                  )}
-                </div>
-                <OnlineIndicator isOnline={true} size="sm" />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {offlineMembers.length > 0 && (
-        <div className="flex items-center gap-2 opacity-60">
-          <Circle className="w-2 h-2 fill-slate-500 text-slate-500" />
-          <span className="text-xs text-slate-500 font-medium whitespace-nowrap">Offline</span>
-          <div className="flex -space-x-2">
-            {offlineMembers.slice(0, 5).map(member => (
-              <div 
-                key={member.user_id}
-                className="relative"
-                title={member.name}
-              >
-                <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-400 border-2 border-slate-950">
-                  {member.picture ? (
-                    <img src={member.picture} alt={member.name} className="w-full h-full rounded-full object-cover opacity-50" />
-                  ) : (
-                    member.name?.charAt(0)
-                  )}
-                </div>
-              </div>
-            ))}
-            {offlineMembers.length > 5 && (
-              <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500 border-2 border-slate-950">
-                +{offlineMembers.length - 5}
+    <div className="flex items-center gap-1 py-1.5 px-3 bg-slate-900/50 border-b border-slate-800 overflow-x-auto" data-testid="online-users-bar">
+      {others.map(member => {
+        const isOnline = onlineUsers.includes(member.user_id);
+        const name = member.nickname || member.name || '?';
+        return (
+          <div key={member.user_id} className="relative flex-shrink-0" title={`${name}${isOnline ? ' - online' : ' - offline'}`}>
+            {member.picture && !member.picture.includes('dicebear') ? (
+              <img src={member.picture} alt={name} className={`w-7 h-7 rounded-full object-cover border border-slate-700 ${!isOnline ? 'opacity-40' : ''}`} />
+            ) : (
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white border border-slate-700 ${
+                isOnline ? 'bg-gradient-to-br from-purple-500 to-pink-500' : 'bg-slate-700 opacity-40'
+              }`}>
+                {name[0]?.toUpperCase()}
               </div>
             )}
+            <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-slate-900 ${isOnline ? 'bg-green-400' : 'bg-slate-500'}`} />
           </div>
-        </div>
-      )}
+        );
+      })}
     </div>
   );
 };
@@ -453,7 +417,6 @@ export default function LiveChat({ user }) {
         console.log('WebSocket connected');
         setConnected(true);
         reconnectAttemptsRef.current = 0;
-        toast.success('Connected to chat');
       };
 
       wsRef.current.onmessage = (event) => {
