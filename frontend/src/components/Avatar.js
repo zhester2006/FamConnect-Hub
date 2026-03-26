@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 /**
  * Shared Avatar component — shows profile picture if available, 
  * otherwise shows gradient initial.
  */
 export function Avatar({ name, picture, size = 'md', className = '' }) {
+  const [imgError, setImgError] = useState(false);
+
   const sizes = {
     xs: 'w-6 h-6 text-[10px]',
     sm: 'w-8 h-8 text-xs',
@@ -16,10 +18,17 @@ export function Avatar({ name, picture, size = 'md', className = '' }) {
   const sizeClass = sizes[size] || sizes.md;
   const initial = name?.charAt(0)?.toUpperCase() || '?';
 
-  if (picture) {
+  if (picture && !imgError) {
     return (
       <div className={`${sizeClass} rounded-full overflow-hidden flex-shrink-0 ${className}`}>
-        <img src={picture} alt={name} className="w-full h-full object-cover" />
+        <img
+          src={picture}
+          alt={name}
+          referrerPolicy="no-referrer"
+          crossOrigin="anonymous"
+          className="w-full h-full object-cover"
+          onError={() => setImgError(true)}
+        />
       </div>
     );
   }

@@ -147,8 +147,12 @@ export default function FamilyManagement({ user }) {
     finally { setProcessing(null); setModal({ type: null }); }
   };
 
-  const handleRemoveMember = async (memberId) => {
-    if (!family || !window.confirm('Are you sure you want to remove this member from the family?')) return;
+  const handleRemoveMember = async (memberId, memberName) => {
+    if (!family) return;
+    setModal({ type: 'deleteMember', data: { user_id: memberId, name: memberName } });
+  };
+
+  const executeRemoveMember = async (memberId) => {
     setProcessing(memberId);
     try {
       const res = await fetch(`${BACKEND_URL}/api/families/${family.family_id}/members/${memberId}`, { 
@@ -157,6 +161,20 @@ export default function FamilyManagement({ user }) {
       if (res.ok) { toast.success('Member removed from family'); fetchData(); }
       else { const data = await res.json(); toast.error(data.detail || 'Failed to remove member'); }
     } catch (error) { toast.error('Failed to remove member'); }
+    finally { setProcessing(null); setModal({ type: null }); }
+  };
+
+  const executeDeleteProfile = async (memberId) => {
+    setProcessing(memberId);
+    try {
+      const token = localStorage.getItem('dev_session_token');
+      const res = await fetch(`${BACKEND_URL}/api/users/${memberId}`, { 
+        method: 'DELETE', credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (res.ok) { toast.success('Profile completely deleted'); fetchData(); }
+      else { const data = await res.json(); toast.error(data.detail || 'Failed to delete profile'); }
+    } catch (error) { toast.error('Failed to delete profile'); }
     finally { setProcessing(null); setModal({ type: null }); }
   };
 
@@ -531,10 +549,11 @@ export default function FamilyManagement({ user }) {
                                 <Edit2 className="w-4 h-4" />
                               </button>
                               <button 
-                                onClick={() => handleRemoveMember(member.user_id)}
+                                onClick={() => handleRemoveMember(member.user_id, member.name)}
                                 disabled={processing === member.user_id}
                                 className="p-2 hover:bg-red-500/20 rounded-lg text-slate-400 hover:text-red-400 transition-all disabled:opacity-50"
-                                title="Remove member"
+                                title="Remove / Delete member"
+                                data-testid={`delete-member-${member.user_id}`}
                               >
                                 {processing === member.user_id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                               </button>
@@ -901,6 +920,51 @@ export default function FamilyManagement({ user }) {
               </button>
             </>
           )}
+        </Modal>
+      )}
+
+      {/* Delete/Remove Member Modal */}
+      {modal.type === 'deleteMember' && modal.data && (
+        <Modal title={`Remove ${modal.data.name}`} icon={<Trash2 className="w-5 h-5 text-red-400" />} onClose={() => setModal({ type: null })}>
+          <div className="space-y-3">
+            <p className="text-sm text-slate-400">
+              What would you like to do with <span className="text-white font-semibold">{modal.data.name}</span>'s profile?
+            </p>
+            
+            <button
+              onClick={() => executeRemoveMember(modal.data.user_id)}
+              disabled={processing === modal.data.user_id}
+              className="w-full flex items-center gap-3 p-4 bg-slate-800/50 hover:bg-slate-800 rounded-xl border border-slate-700 transition-all text-left"
+              data-testid="remove-from-family-btn"
+            >
+              <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+                <UserPlus className="w-5 h-5 text-yellow-400" />
+              </div>
+              <div>
+                <p className="font-semibold text-white">Remove from Family</p>
+                <p className="text-xs text-slate-400">Profile stays but is unlinked from this family</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => executeDeleteProfile(modal.data.user_id)}
+              disabled={processing === modal.data.user_id}
+              className="w-full flex items-center gap-3 p-4 bg-red-500/10 hover:bg-red-500/20 rounded-xl border border-red-500/30 transition-all text-left"
+              data-testid="delete-profile-btn"
+            >
+              <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                <Trash2 className="w-5 h-5 text-red-400" />
+              </div>
+              <div>
+                <p className="font-semibold text-red-400">Delete Completely</p>
+                <p className="text-xs text-slate-400">Permanently removes profile and all associated data</p>
+              </div>
+            </button>
+
+            <button onClick={() => setModal({ type: null })} className="w-full px-4 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-white font-medium mt-2">
+              Cancel
+            </button>
+          </div>
         </Modal>
       )}
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Plus, Check, X } from 'lucide-react';
+import { ShoppingCart, Plus, Check, X, Trash2 } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -56,6 +56,18 @@ export default function ShoppingList({ user }) {
     }
   };
 
+  const handleDeleteItem = async (itemId) => {
+    try {
+      await fetch(`${BACKEND_URL}/api/shopping/${itemId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      fetchItems();
+    } catch (error) {
+      console.error('Failed to delete item:', error);
+    }
+  };
+
   const pendingItems = items.filter(i => i.status === 'pending');
   const approvedItems = items.filter(i => i.status === 'approved');
   const purchasedItems = items.filter(i => i.status === 'purchased');
@@ -104,6 +116,13 @@ export default function ShoppingList({ user }) {
                   >
                     <X className="w-5 h-5" />
                   </button>
+                  <button
+                    onClick={() => handleDeleteItem(item.item_id)}
+                    className="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-red-400 p-2 rounded-full transition-all"
+                    data-testid="delete-pending-item-button"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
             ))}
@@ -121,15 +140,24 @@ export default function ShoppingList({ user }) {
             approvedItems.map(item => (
               <div key={item.item_id} className="glass-card rounded-2xl p-4 flex items-center justify-between" data-testid="shopping-item">
                 <p className="font-medium text-white">{item.name}</p>
-                {user?.role === 'parent' && (
+                <div className="flex items-center space-x-2">
+                  {user?.role === 'parent' && (
+                    <button
+                      onClick={() => handleUpdateItem(item.item_id, 'purchased')}
+                      className="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-full text-sm font-bold transition-all"
+                      data-testid="mark-purchased-button"
+                    >
+                      Mark Purchased
+                    </button>
+                  )}
                   <button
-                    onClick={() => handleUpdateItem(item.item_id, 'purchased')}
-                    className="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-full text-sm font-bold transition-all"
-                    data-testid="mark-purchased-button"
+                    onClick={() => handleDeleteItem(item.item_id)}
+                    className="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-red-400 p-2 rounded-full transition-all"
+                    data-testid="delete-shopping-item-button"
                   >
-                    Mark Purchased
+                    <Trash2 className="w-4 h-4" />
                   </button>
-                )}
+                </div>
               </div>
             ))
           )}
@@ -139,11 +167,18 @@ export default function ShoppingList({ user }) {
           <div className="space-y-3">
             <h2 className="text-lg font-bold text-white">Recently Purchased</h2>
             {purchasedItems.map(item => (
-              <div key={item.item_id} className="glass-card rounded-2xl p-4 opacity-50" data-testid="purchased-item">
+              <div key={item.item_id} className="glass-card rounded-2xl p-4 opacity-50 flex items-center justify-between" data-testid="purchased-item">
                 <div className="flex items-center space-x-2">
                   <Check className="w-5 h-5 text-green-400" />
                   <p className="font-medium text-white line-through">{item.name}</p>
                 </div>
+                <button
+                  onClick={() => handleDeleteItem(item.item_id)}
+                  className="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-red-400 p-2 rounded-full transition-all opacity-100"
+                  data-testid="delete-purchased-item-button"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             ))}
           </div>

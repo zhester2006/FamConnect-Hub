@@ -5,7 +5,7 @@ Family-oriented app for managing activities, chores, rewards, and communication.
 
 ## Status: PRODUCTION READY | Last Updated: March 26, 2026
 
-## Live URL: https://famfocus-preview.preview.emergentagent.com
+## Live URL: https://family-connect-app-4.preview.emergentagent.com
 
 ---
 

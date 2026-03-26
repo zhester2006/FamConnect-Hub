@@ -147,9 +147,13 @@ async def dev_login(response: Response, data: dict = None):
     if os.environ.get('DISABLE_DEV_LOGIN', '').lower() == 'true':
         raise HTTPException(status_code=404, detail="Not found")
     role = data.get('role', 'parent') if data else 'parent'
+    email = data.get('email') if data else None
     
-    # Find or create a test user
-    user = await db.users.find_one({"role": role}, {"_id": 0})
+    # Find user by email if provided, otherwise by role
+    if email:
+        user = await db.users.find_one({"email": email}, {"_id": 0})
+    else:
+        user = await db.users.find_one({"role": role}, {"_id": 0})
     if not user:
         user_id = f"user_test_{uuid.uuid4().hex[:8]}"
         user = {

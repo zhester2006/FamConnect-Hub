@@ -508,5 +508,48 @@ async def upload_image(request: Request):
             return {"url": image_data, "success": True}
         raise HTTPException(status_code=400, detail="No image data provided")
 
+
+@router.delete("/users/{user_id}")
+async def delete_user_profile(user_id: str, request: Request):
+    """Fully delete a user profile and all associated data (parent only, or self-delete)"""
+    current_user = await get_current_user(request)
+    
+    target_user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Authorization: parent can delete children in their family, or user deletes themselves
+    is_self = current_user['user_id'] == user_id
+    is_parent_of_target = (
+        current_user['role'] == 'parent' and
+        target_user.get('parent_id') == current_user['user_id']
+    )
+    
+    if not is_self and not is_parent_of_target:
+        raise HTTPException(status_code=403, detail="Only parents can delete child profiles, or delete your own profile")
+    
+    # Delete all associated data across collections
+    await db.family_memberships.delete_many({"user_id": user_id})
+    await db.user_sessions.delete_many({"user_id": user_id})
+    await db.messages.delete_many({"user_id": user_id})
+    await db.notifications.delete_many({"user_id": user_id})
+    await db.checkins.delete_many({"user_id": user_id})
+    await db.achievements.delete_many({"user_id": user_id})
+    await db.reading_logs.delete_many({"user_id": user_id})
+    await db.points_history.delete_many({"user_id": user_id})
+    await db.push_queue.delete_many({"user_id": user_id})
+    
+    # Unassign chores
+    await db.chores.update_many(
+        {"assigned_to": user_id},
+        {"$set": {"assigned_to": None}}
+    )
+    
+    # Delete the user document
+    await db.users.delete_one({"user_id": user_id})
+    
+    return {"success": True, "message": f"Profile for {target_user.get('name', 'user')} has been completely deleted"}
+
+
 # Pixie AI Onboarding - Get onboarding steps
 

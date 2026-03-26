@@ -346,24 +346,25 @@ async def get_user_families(request: Request):
     """Get all families the user belongs to"""
     current_user = await get_current_user(request)
     user_id = current_user['user_id']
+    current_family_id = current_user.get('current_family_id')
     
-    # Get families where user is parent or member
     families = []
     
-    # Check if user is a parent (owns a family)
+    # Only add the virtual family if this parent actually has children or a family doc under their user_id
     if current_user.get('role') == 'parent':
-        member_count = await db.users.count_documents({"parent_id": user_id})
-        # Check if a real family doc exists for this virtual family
+        child_count = await db.users.count_documents({"parent_id": user_id})
         saved_family = await db.families.find_one({"family_id": user_id}, {"_id": 0})
-        family_name = (saved_family or {}).get('name') or (saved_family or {}).get('family_name') or current_user.get('family_name', f"{current_user['name']}'s Family")
-        families.append({
-            "family_id": user_id,
-            "name": family_name,
-            "family_code": (saved_family or {}).get('family_code', ''),
-            "role": "parent",
-            "member_count": member_count + 1,
-            "is_current": True
-        })
+        
+        if child_count > 0 or saved_family:
+            family_name = (saved_family or {}).get('name') or (saved_family or {}).get('family_name') or current_user.get('family_name', f"{current_user['name']}'s Family")
+            families.append({
+                "family_id": user_id,
+                "name": family_name,
+                "family_code": (saved_family or {}).get('family_code', ''),
+                "role": "parent",
+                "member_count": child_count + 1,
+                "is_current": current_family_id == user_id or (not current_family_id and True)
+            })
     
     # Check family memberships
     memberships = await db.family_memberships.find(
@@ -377,20 +378,29 @@ async def get_user_families(request: Request):
             {"_id": 0}
         )
         if family:
-            # Skip if this is the same as the virtual family already added
             if any(f['family_id'] == family['family_id'] for f in families):
                 continue
             member_count = await db.family_memberships.count_documents({"family_id": family['family_id']})
-            # Also count children via parent_id
             parent_children = await db.users.count_documents({"parent_id": family['family_id']})
+            is_current = family['family_id'] == current_family_id or (not current_family_id and len(families) == 0)
             families.append({
                 "family_id": family['family_id'],
                 "name": family.get('name', family.get('family_name', 'Family')),
                 "family_code": family.get('family_code', ''),
                 "role": membership.get('role', 'member'),
                 "member_count": member_count + parent_children,
-                "is_current": family['family_id'] == current_user.get('current_family_id') or (not current_user.get('current_family_id') and len(families) == 0)
+                "is_current": is_current
             })
+    
+    # Ensure exactly one family is marked current
+    if families and not any(f['is_current'] for f in families):
+        # Prefer current_family_id match, else first family
+        for f in families:
+            if f['family_id'] == current_family_id:
+                f['is_current'] = True
+                break
+        else:
+            families[0]['is_current'] = True
     
     return {"families": families}
 
@@ -886,24 +896,46 @@ async def get_family_members(family_id: str, request: Request):
                 "online_status": creator.get('online_status', False)
             })
     
-    # Also include users linked via parent_id (virtual family members)
+    # Also include users linked via parent_id or family_id (virtual family members)
     existing_ids = {m['user_id'] for m in members}
-    children_via_parent = await db.users.find(
-        {"parent_id": family_id},
+    linked_users = await db.users.find(
+        {"$or": [{"parent_id": family_id}, {"family_id": family_id}]},
         {"_id": 0, "password_hash": 0}
     ).to_list(100)
-    for child in children_via_parent:
-        if child['user_id'] not in existing_ids:
+    for linked in linked_users:
+        if linked['user_id'] not in existing_ids:
             members.append({
-                "user_id": child['user_id'],
-                "name": child.get('name', 'Unknown'),
-                "email": child.get('email', ''),
-                "role": child.get('role', 'child'),
-                "picture": child.get('picture'),
-                "username": child.get('username'),
-                "has_pin": bool(child.get('pin')),
-                "online_status": child.get('online_status', False)
+                "user_id": linked['user_id'],
+                "name": linked.get('name', 'Unknown'),
+                "email": linked.get('email', ''),
+                "role": linked.get('role', 'child'),
+                "picture": linked.get('picture'),
+                "username": linked.get('username'),
+                "has_pin": bool(linked.get('pin')),
+                "online_status": linked.get('online_status', False)
             })
+            existing_ids.add(linked['user_id'])
+    
+    # For real families created by a parent, also include that parent's children
+    if family and family.get('created_by'):
+        creator_id = family['created_by']
+        creator_children = await db.users.find(
+            {"parent_id": creator_id},
+            {"_id": 0, "password_hash": 0}
+        ).to_list(100)
+        for child in creator_children:
+            if child['user_id'] not in existing_ids:
+                members.append({
+                    "user_id": child['user_id'],
+                    "name": child.get('name', 'Unknown'),
+                    "email": child.get('email', ''),
+                    "role": child.get('role', 'child'),
+                    "picture": child.get('picture'),
+                    "username": child.get('username'),
+                    "has_pin": bool(child.get('pin')),
+                    "online_status": child.get('online_status', False)
+                })
+                existing_ids.add(child['user_id'])
     
     return {"members": members}
 
