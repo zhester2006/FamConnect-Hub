@@ -19,23 +19,46 @@ router = APIRouter()
 async def suggest_dinner(request: Request, data: dict):
     await get_current_user(request)
     
-    ingredients = data.get('ingredients', [])
+    ingredients = data.get('ingredients', '')
     preferences = data.get('preferences', '')
     
     chat = LlmChat(
         api_key=os.environ['EMERGENT_LLM_KEY'],
         session_id=f"dinner_{uuid.uuid4().hex[:8]}",
-        system_message="You are a helpful cooking assistant for families."
+        system_message="You are a family cooking assistant. ALWAYS respond with valid JSON only, no markdown."
     ).with_model("openai", "gpt-5.2")
     
     prompt = f"""Suggest a family-friendly dinner meal.
-Ingredients available: {', '.join(ingredients) if ingredients else 'any'}
-Preferences: {preferences}
+Ingredients available: {ingredients if ingredients else 'any'}
+Preferences: {preferences if preferences else 'none'}
 
-Provide: meal name, ingredients list, and simple cooking instructions."""
+IMPORTANT: Respond ONLY with a JSON object (no markdown, no code blocks):
+{{
+  "meal_name": "Chicken Stir Fry",
+  "description": "Quick Asian-style stir fry with fresh veggies",
+  "prep_time": "15 min",
+  "cook_time": "20 min",
+  "ingredients": ["chicken breast", "bell peppers", "broccoli", "soy sauce", "garlic", "ginger", "rice"],
+  "steps": ["Cut chicken into strips", "Stir fry vegetables", "Add sauce and serve over rice"]
+}}
+
+Keep meal name short (2-5 words). List 5-10 ingredients."""
     
     response = await chat.send_message(UserMessage(text=prompt))
-    return {"suggestion": response}
+    
+    structured = None
+    try:
+        clean = response.strip()
+        if clean.startswith('```'):
+            clean = clean.split('```')[1]
+            if clean.startswith('json'):
+                clean = clean[4:]
+            clean = clean.strip()
+        structured = json.loads(clean)
+    except:
+        structured = None
+    
+    return {"suggestion": response, "structured": structured}
 
 # AI Assistant endpoint with structured output
 @router.post("/ai/meal-plan")
@@ -101,58 +124,55 @@ async def create_weekly_meal_plan(request: Request, data: dict):
     family_size = data.get('family_size', 4)
     preferences = data.get('preferences', '')
     budget = data.get('budget', 'moderate')
-    use_pantry = data.get('use_pantry', True)  # Whether to check pantry items
-    
-    # Get pantry items to suggest meals based on available ingredients
-    pantry_items = []
-    pantry_text = ""
-    if use_pantry:
-        items = await db.pantry.find(
-            {"family_id": family_id, "quantity": {"$gt": 0}},
-            {"_id": 0, "name": 1, "category": 1, "quantity": 1}
-        ).to_list(100)
-        
-        pantry_items = [item['name'] for item in items]
-        if pantry_items:
-            by_category = {}
-            for item in items:
-                cat = item.get('category', 'other')
-                if cat not in by_category:
-                    by_category[cat] = []
-                by_category[cat].append(f"{item['name']} ({item.get('quantity', 1)})")
-            
-            pantry_text = "\n".join([f"- {cat.title()}: {', '.join(items)}" for cat, items in by_category.items()])
     
     chat = LlmChat(
         api_key=os.environ['EMERGENT_LLM_KEY'],
         session_id=f"mealplan_{uuid.uuid4().hex[:8]}",
-        system_message="You are a helpful family meal planning assistant. Prioritize using available pantry items when possible."
+        system_message="You are a family meal planning assistant. ALWAYS respond with valid JSON only, no markdown."
     ).with_model("openai", "gpt-5.2")
     
     prompt = f"""Create a weekly dinner plan for a family of {family_size}.
 Preferences: {preferences if preferences else 'Family-friendly meals'}
 Budget: {budget}
-"""
-    
-    if pantry_text:
-        prompt += f"""
-AVAILABLE IN PANTRY (prioritize using these):
-{pantry_text}
 
-Please create meals that USE these pantry ingredients when possible. Indicate which meals use pantry items.
-"""
-    
-    prompt += """
-For each day (Monday-Sunday), provide:
-1. Meal name (mark with 🏠 if using pantry items)
-2. Brief description
-3. Estimated prep time
-4. Key ingredients (mark pantry items with ✓)
-5. Missing ingredients to buy
+IMPORTANT: Respond ONLY with a JSON object in this exact format (no markdown, no code blocks):
+{{
+  "days": [
+    {{
+      "day": "Monday",
+      "meal_name": "Grilled Chicken Tacos",
+      "description": "Quick and flavorful tacos with seasoned chicken",
+      "prep_time": "15 min",
+      "cook_time": "20 min",
+      "ingredients": ["chicken breast", "taco shells", "lettuce", "tomatoes", "cheese", "sour cream", "taco seasoning"]
+    }},
+    {{
+      "day": "Tuesday",
+      "meal_name": "Pasta Bolognese",
+      "description": "Classic Italian meat sauce over spaghetti",
+      "prep_time": "10 min",
+      "cook_time": "30 min",
+      "ingredients": ["ground beef", "spaghetti", "tomato sauce", "onion", "garlic", "olive oil", "parmesan"]
+    }}
+  ]
+}}
 
-Format as a clear list for each day."""
+Include ALL 7 days Monday through Sunday. Keep meal names short (2-5 words). List 5-8 key ingredients per meal."""
     
     response = await chat.send_message(UserMessage(text=prompt))
+    
+    # Parse structured JSON response
+    structured_plan = None
+    try:
+        clean = response.strip()
+        if clean.startswith('```'):
+            clean = clean.split('```')[1]
+            if clean.startswith('json'):
+                clean = clean[4:]
+            clean = clean.strip()
+        structured_plan = json.loads(clean)
+    except:
+        structured_plan = None
     
     # Store the meal plan
     plan_id = f"mealplan_{uuid.uuid4().hex[:12]}"
@@ -161,15 +181,19 @@ Format as a clear list for each day."""
         "family_id": family_id,
         "week_start": datetime.now(timezone.utc).date().isoformat(),
         "plan": response,
+        "structured_plan": structured_plan,
         "preferences": preferences,
         "budget": budget,
-        "pantry_items_used": pantry_items[:20] if use_pantry else [],
         "created_by": current_user['user_id'],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.meal_plans.insert_one(plan_doc)
     
-    return {"plan_id": plan_id, "plan": response, "pantry_items_used": pantry_items[:20]}
+    return {
+        "plan_id": plan_id,
+        "plan": response,
+        "structured_plan": structured_plan
+    }
 
 # Get pantry summary for dinner planner
 @router.get("/dinner/pantry-summary")
@@ -319,6 +343,103 @@ async def remove_from_dinner_schedule(date: str, request: Request):
     await db.events.delete_one({"event_id": event_id})
     
     return {"message": "Removed from schedule"}
+
+
+@router.put("/dinner/schedule/{date}")
+async def update_dinner_schedule(date: str, request: Request, data: dict):
+    """Update a meal in the dinner schedule (rename, change description)"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    update_fields = {}
+    if 'meal_name' in data:
+        update_fields['meal_name'] = data['meal_name']
+    if 'description' in data:
+        update_fields['description'] = data['description']
+    
+    if not update_fields:
+        return {"error": "Nothing to update"}
+    
+    await db.dinner_schedule.update_one(
+        {"family_id": family_id, "date": date},
+        {"$set": update_fields}
+    )
+    
+    # Update the calendar event too
+    event_id = f"event_dinner_{date.replace('-', '')}"
+    event_update = {}
+    if 'meal_name' in update_fields:
+        event_update['title'] = f"Dinner: {update_fields['meal_name']}"
+    if 'description' in update_fields:
+        event_update['description'] = update_fields['description']
+    if event_update:
+        await db.events.update_one({"event_id": event_id}, {"$set": event_update})
+    
+    return {"message": "Updated", "date": date}
+
+
+@router.post("/dinner/schedule/move")
+async def move_dinner_schedule(request: Request, data: dict):
+    """Move a meal from one date to another (swap if target has a meal)"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('parent_id', current_user['user_id'])
+    
+    from_date = data.get('from_date')
+    to_date = data.get('to_date')
+    if not from_date or not to_date or from_date == to_date:
+        return {"error": "Invalid dates"}
+    
+    # Get both meals
+    from_meal = await db.dinner_schedule.find_one({"family_id": family_id, "date": from_date}, {"_id": 0})
+    to_meal = await db.dinner_schedule.find_one({"family_id": family_id, "date": to_date}, {"_id": 0})
+    
+    if not from_meal:
+        return {"error": "No meal on source date"}
+    
+    # Move from_meal to to_date
+    await db.dinner_schedule.update_one(
+        {"family_id": family_id, "date": from_date},
+        {"$set": {"date": to_date, "meal_name": from_meal['meal_name'], "description": from_meal.get('description', '')}}
+    )
+    # Update calendar event for from -> to
+    old_event_id = f"event_dinner_{from_date.replace('-', '')}"
+    new_event_id = f"event_dinner_{to_date.replace('-', '')}"
+    await db.events.delete_one({"event_id": old_event_id})
+    await db.events.update_one(
+        {"event_id": new_event_id},
+        {"$set": {
+            "event_id": new_event_id, "family_id": family_id,
+            "title": f"Dinner: {from_meal['meal_name']}", "description": from_meal.get('description', ''),
+            "event_date": to_date, "event_time": "18:00", "event_type": "meal",
+            "created_by": current_user['user_id'], "status": "approved",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    
+    if to_meal:
+        # Swap: move to_meal to from_date
+        await db.dinner_schedule.update_one(
+            {"family_id": family_id, "date": to_date, "meal_name": to_meal['meal_name']},
+            {"$set": {"date": from_date}}
+        )
+        from_event_id = f"event_dinner_{from_date.replace('-', '')}"
+        await db.events.update_one(
+            {"event_id": from_event_id},
+            {"$set": {
+                "event_id": from_event_id, "family_id": family_id,
+                "title": f"Dinner: {to_meal['meal_name']}", "description": to_meal.get('description', ''),
+                "event_date": from_date, "event_time": "18:00", "event_type": "meal",
+                "created_by": current_user['user_id'], "status": "approved",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }},
+            upsert=True
+        )
+    else:
+        # Just remove the old entry since we moved it
+        await db.dinner_schedule.delete_one({"family_id": family_id, "date": from_date, "meal_name": from_meal['meal_name']})
+    
+    return {"message": "Moved", "from_date": from_date, "to_date": to_date, "swapped": to_meal is not None}
 
 
 @router.post("/dinner/schedule/ai-fill")

@@ -1,504 +1,431 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Utensils, ChefHat, Sparkles, Calendar, History, ShoppingCart, Check, Square, CheckSquare, CalendarPlus, X, RefreshCw, Trash2 } from 'lucide-react';
+import { Utensils, ChefHat, Sparkles, Calendar, History, ShoppingCart, Check, CalendarPlus, X, Trash2, Pencil, ArrowRightLeft } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-function getWeekDates() {
-  const today = new Date();
-  const monday = new Date(today);
+function buildWeekDates() {
+  var today = new Date();
+  var monday = new Date(today);
   monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
-  return DAY_NAMES.map((name, i) => {
-    const d = new Date(monday);
+  var result = [];
+  for (var i = 0; i < 7; i++) {
+    var d = new Date(monday);
     d.setDate(monday.getDate() + i);
-    const dateStr = d.toISOString().split('T')[0];
-    const isToday = dateStr === today.toISOString().split('T')[0];
-    const isPast = d < new Date(today.toISOString().split('T')[0]);
-    return { name, date: dateStr, isToday, isPast, display: `${d.getMonth() + 1}/${d.getDate()}` };
-  });
-}
-
-function SelectableTextBlock({ text, selectedItems, onToggle }) {
-  if (!text) return null;
-  const lines = text.split('\n').filter(l => l.trim());
-  return (
-    <div className="space-y-1">
-      {lines.map((line, i) => {
-        const trimmed = line.trim();
-        if (!trimmed) return null;
-        const isHeader = trimmed.startsWith('#') || trimmed.startsWith('**') || trimmed.endsWith(':') || trimmed.length < 5;
-        const key = `${i}-${trimmed}`;
-        const isSelected = selectedItems.has(key);
-        if (isHeader) {
-          return <p key={i} className="text-white font-semibold text-sm mt-2">{trimmed.replace(/^[#*]+\s*/, '').replace(/\*+$/, '')}</p>;
-        }
-        return (
-          <button
-            key={i}
-            onClick={() => onToggle(key, trimmed)}
-            className={`w-full flex items-start gap-2 px-2 py-1 rounded-lg text-left transition-all ${
-              isSelected ? 'bg-green-500/10 border border-green-500/30' : 'hover:bg-slate-800/50'
-            }`}
-            data-testid={`meal-item-${i}`}
-          >
-            {isSelected ? (
-              <CheckSquare className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
-            ) : (
-              <Square className="w-4 h-4 text-slate-600 flex-shrink-0 mt-0.5" />
-            )}
-            <span className={`text-xs leading-relaxed ${isSelected ? 'text-green-300' : 'text-slate-300'}`}>
-              {trimmed.replace(/^[-*]\s*/, '')}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// Extracts meal names from AI text by finding day headers and the meal after them
-function extractMealsFromPlan(text) {
-  if (!text) return {};
-  const meals = {};
-  const lines = text.split('\n');
-  let currentDay = null;
-
-  for (const line of lines) {
-    const trimmed = line.trim().toLowerCase();
-    for (const day of DAY_NAMES) {
-      if (trimmed.includes(day.toLowerCase())) {
-        currentDay = day;
-        // Check if meal name is on the same line after a colon/dash
-        const afterDay = line.split(/[:\-]/)[1]?.trim();
-        if (afterDay && afterDay.length > 2 && afterDay.length < 80) {
-          meals[day] = afterDay.replace(/^\*+|\*+$/g, '').trim();
-        }
-        break;
-      }
-    }
-    // If we found a day but no meal yet, check next non-header line
-    if (currentDay && !meals[currentDay]) {
-      const clean = trimmed.replace(/^[-*#\d.]+\s*/, '').replace(/\*+/g, '');
-      if (clean.length > 3 && clean.length < 80 && !DAY_NAMES.some(d => clean.includes(d.toLowerCase()))) {
-        // Check if this looks like a meal name (has keywords)
-        if (clean.includes('meal') || clean.includes('name') || /^[a-z]/.test(clean)) {
-          const mealName = clean.replace(/^meal\s*name\s*[:\-]?\s*/i, '').trim();
-          if (mealName.length > 2) {
-            meals[currentDay] = mealName.charAt(0).toUpperCase() + mealName.slice(1);
-          }
-        }
-      }
-    }
+    var dateStr = d.toISOString().split('T')[0];
+    var isToday = dateStr === today.toISOString().split('T')[0];
+    var isPast = d < new Date(today.toISOString().split('T')[0]);
+    result.push({ name: DAY_NAMES[i], date: dateStr, isToday: isToday, isPast: isPast, display: (d.getMonth() + 1) + '/' + d.getDate() });
   }
-  return meals;
+  return result;
+}
+
+var WEEK_DATES = buildWeekDates();
+var FUTURE_DATES = [];
+for (var _i = 0; _i < WEEK_DATES.length; _i++) {
+  if (!WEEK_DATES[_i].isPast) FUTURE_DATES.push(WEEK_DATES[_i]);
+}
+
+function DayOptions() {
+  var items = [];
+  items.push(<option key="empty" value="">Pick a day...</option>);
+  for (var j = 0; j < FUTURE_DATES.length; j++) {
+    var fd = FUTURE_DATES[j];
+    items.push(<option key={fd.date} value={fd.date}>{fd.name} {fd.display}{fd.isToday ? ' (Today)' : ''}</option>);
+  }
+  return items;
+}
+
+function IngredientChips({ items, selected, onToggle }) {
+  var chips = [];
+  for (var i = 0; i < items.length; i++) {
+    var ing = items[i];
+    var isSel = selected.has(ing);
+    chips.push(
+      <button key={i} onClick={function(x) { return function() { onToggle(x); }; }(ing)}
+        className={'flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] transition-all ' + (isSel ? 'bg-green-500/15 border border-green-500/30 text-green-300' : 'bg-slate-800/50 border border-slate-700 text-slate-400 hover:border-slate-500')}>
+        {isSel && <Check className="w-2.5 h-2.5" />}{ing}
+      </button>
+    );
+  }
+  return <div className="flex flex-wrap gap-1">{chips}</div>;
 }
 
 export default function DinnerPlanner({ user }) {
-  const [suggestion, setSuggestion] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [weeklyLoading, setWeeklyLoading] = useState(false);
-  const [ingredients, setIngredients] = useState('');
-  const [preferences, setPreferences] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [weeklyPlan, setWeeklyPlan] = useState('');
-  const [savedPlans, setSavedPlans] = useState([]);
-  const [showHistory, setShowHistory] = useState(false);
-  const [familySize, setFamilySize] = useState(4);
-  const [budget, setBudget] = useState('moderate');
-  const [selectedItems, setSelectedItems] = useState(new Map());
-  const [addingToCart, setAddingToCart] = useState(false);
+  var [suggestion, setSuggestion] = useState(null);
+  var [rawSuggestion, setRawSuggestion] = useState('');
+  var [loading, setLoading] = useState(false);
+  var [weeklyLoading, setWeeklyLoading] = useState(false);
+  var [ingredients, setIngredients] = useState('');
+  var [preferences, setPreferences] = useState('');
+  var [sidebarOpen, setSidebarOpen] = useState(false);
+  var [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  var [structuredPlan, setStructuredPlan] = useState(null);
+  var [rawPlan, setRawPlan] = useState('');
+  var [savedPlans, setSavedPlans] = useState([]);
+  var [showHistory, setShowHistory] = useState(false);
+  var [familySize, setFamilySize] = useState(4);
+  var [budget, setBudget] = useState('moderate');
+  var [schedule, setSchedule] = useState([]);
+  var [aiFillingDays, setAiFillingDays] = useState(false);
+  var [editingDay, setEditingDay] = useState(null);
+  var [movingFrom, setMovingFrom] = useState(null);
+  var [assigningDay, setAssigningDay] = useState(null);
+  var [mealNameInput, setMealNameInput] = useState('');
+  // Suggestion ingredient selection
+  var [sugSelectedIngs, setSugSelectedIngs] = useState(new Set());
+  var [sugTargetDay, setSugTargetDay] = useState('');
+  // Plan day selections (per-day ingredient sets)
+  var [planDayIngs, setPlanDayIngs] = useState({});
+  var [planDayTargets, setPlanDayTargets] = useState({});
 
-  // Dinner Schedule state
-  const [schedule, setSchedule] = useState([]);
-  const [weekDates] = useState(getWeekDates);
-  const [scheduleLoading, setScheduleLoading] = useState(false);
-  const [aiFillingDays, setAiFillingDays] = useState(false);
-  const [assigningDay, setAssigningDay] = useState(null); // date string being assigned
-  const [mealNameInput, setMealNameInput] = useState('');
+  var fetchSchedule = useCallback(function() {
+    return fetch(BACKEND_URL + '/api/dinner/schedule?week_start=' + WEEK_DATES[0].date, { credentials: 'include' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) { setSchedule(data.schedule || []); })
+      .catch(function() {});
+  }, []);
 
-  const fetchSchedule = useCallback(async () => {
-    try {
-      const monday = weekDates[0].date;
-      const res = await fetch(`${BACKEND_URL}/api/dinner/schedule?week_start=${monday}`, { credentials: 'include' });
-      const data = await res.json();
-      setSchedule(data.schedule || []);
-    } catch (error) { console.error('Failed to fetch schedule:', error); }
-  }, [weekDates]);
+  useEffect(function() { fetchSavedPlans(); fetchSchedule(); }, [fetchSchedule]);
 
-  useEffect(() => { fetchSavedPlans(); fetchSchedule(); }, [fetchSchedule]);
+  function fetchSavedPlans() {
+    fetch(BACKEND_URL + '/api/dinner/plans', { credentials: 'include' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) { setSavedPlans(data.plans || []); })
+      .catch(function() {});
+  }
 
-  const fetchSavedPlans = async () => {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/dinner/plans`, { credentials: 'include' });
-      const data = await res.json();
-      setSavedPlans(data.plans || []);
-    } catch (error) { console.error('Failed to fetch plans:', error); }
-  };
-
-  const handleGetSuggestion = async (e) => {
+  function handleGetSuggestion(e) {
     e.preventDefault();
-    setLoading(true);
-    setSuggestion('');
-    setSelectedItems(new Map());
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/dinner/suggest`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ingredients, preferences })
-      });
-      const data = await res.json();
-      setSuggestion(data.suggestion || '');
-    } catch { toast.error('Failed to get suggestion'); }
-    finally { setLoading(false); }
-  };
+    setLoading(true); setSuggestion(null); setRawSuggestion(''); setSugSelectedIngs(new Set()); setSugTargetDay('');
+    fetch(BACKEND_URL + '/api/dinner/suggest', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      body: JSON.stringify({ ingredients: ingredients, preferences: preferences })
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      if (data.structured) setSuggestion(data.structured);
+      else setRawSuggestion(data.suggestion || '');
+    }).catch(function() { toast.error('Failed'); }).finally(function() { setLoading(false); });
+  }
 
-  const handleGetWeeklyPlan = async () => {
-    setWeeklyLoading(true);
-    setWeeklyPlan('');
-    setSelectedItems(new Map());
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/dinner/weekly-plan`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ preferences, family_size: familySize, budget })
-      });
-      const data = await res.json();
-      setWeeklyPlan(data.plan || '');
-    } catch { toast.error('Failed to generate plan'); }
-    finally { setWeeklyLoading(false); }
-  };
+  function handleGetWeeklyPlan() {
+    setWeeklyLoading(true); setStructuredPlan(null); setRawPlan(''); setPlanDayIngs({}); setPlanDayTargets({});
+    fetch(BACKEND_URL + '/api/dinner/weekly-plan', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      body: JSON.stringify({ preferences: preferences, family_size: familySize, budget: budget })
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      if (data.structured_plan && data.structured_plan.days) setStructuredPlan(data.structured_plan);
+      else setRawPlan(data.plan || '');
+    }).catch(function() { toast.error('Failed'); }).finally(function() { setWeeklyLoading(false); });
+  }
 
-  const toggleItem = (key, text) => {
-    setSelectedItems(prev => {
-      const next = new Map(prev);
-      if (next.has(key)) next.delete(key);
-      else next.set(key, text.replace(/^[-*]\s*/, '').trim());
-      return next;
-    });
-  };
+  function addMealToSchedule(date, mealName, desc) {
+    if (!mealName || !mealName.trim()) return;
+    fetch(BACKEND_URL + '/api/dinner/schedule', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      body: JSON.stringify({ meals: [{ date: date, meal_name: mealName, description: desc || '', source: 'plan' }] })
+    }).then(function(r) { if (r.ok) { toast.success('Scheduled!'); fetchSchedule(); setAssigningDay(null); setMealNameInput(''); } })
+      .catch(function() { toast.error('Failed'); });
+  }
 
-  const addToShoppingList = async () => {
-    if (selectedItems.size === 0) { toast.error('Select items first'); return; }
-    setAddingToCart(true);
-    try {
-      const items = [...selectedItems.values()];
-      let added = 0;
-      for (const item of items) {
-        const res = await fetch(`${BACKEND_URL}/api/shopping`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ name: item })
-        });
-        if (res.ok) added++;
-      }
-      toast.success(`Added ${added} item${added !== 1 ? 's' : ''} to shopping list!`);
-      setSelectedItems(new Map());
-    } catch { toast.error('Failed to add items'); }
-    finally { setAddingToCart(false); }
-  };
-
-  // Add a single meal to the dinner schedule for a specific day
-  const addMealToSchedule = async (date, mealName, description = '') => {
-    if (!mealName.trim()) return;
-    setScheduleLoading(true);
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/dinner/schedule`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ meals: [{ date, meal_name: mealName, description, source: 'manual' }] })
-      });
-      if (res.ok) {
-        toast.success(`Scheduled "${mealName}" for dinner!`);
-        fetchSchedule();
-        setAssigningDay(null);
-        setMealNameInput('');
-      }
-    } catch { toast.error('Failed to add to schedule'); }
-    finally { setScheduleLoading(false); }
-  };
-
-  // Add extracted meals from weekly plan to schedule
-  const addPlanToSchedule = async () => {
-    const extracted = extractMealsFromPlan(weeklyPlan);
-    const meals = [];
-    for (const day of weekDates) {
-      const mealName = extracted[day.name];
-      if (mealName) {
-        meals.push({ date: day.date, meal_name: mealName, source: 'ai_plan' });
-      }
+  function addIngredientsToCart(items) {
+    var promises = [];
+    for (var k = 0; k < items.length; k++) {
+      promises.push(fetch(BACKEND_URL + '/api/shopping', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ name: items[k] })
+      }));
     }
-    if (meals.length === 0) {
-      toast.error('Could not extract meal names from the plan. Try adding meals manually.');
-      return;
-    }
-    setScheduleLoading(true);
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/dinner/schedule`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ meals })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        toast.success(`Scheduled ${data.count} meals for the week!`);
-        fetchSchedule();
-      }
-    } catch { toast.error('Failed to add plan to schedule'); }
-    finally { setScheduleLoading(false); }
-  };
+    Promise.all(promises).then(function() { toast.success('Added ' + items.length + ' to shopping list!'); }).catch(function() { toast.error('Failed'); });
+  }
 
-  // Remove meal from schedule
-  const removeMealFromSchedule = async (date) => {
-    try {
-      await fetch(`${BACKEND_URL}/api/dinner/schedule/${date}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-      toast.success('Removed from schedule');
-      fetchSchedule();
-    } catch { toast.error('Failed to remove'); }
-  };
+  function removeMeal(date) {
+    fetch(BACKEND_URL + '/api/dinner/schedule/' + date, { method: 'DELETE', credentials: 'include' })
+      .then(function() { toast.success('Removed'); fetchSchedule(); }).catch(function() { toast.error('Failed'); });
+  }
 
-  // AI fill unplanned days
-  const aiFillUnplannedDays = async () => {
-    const plannedDates = schedule.map(s => s.date);
-    const unplanned = weekDates.filter(d => !d.isPast && !plannedDates.includes(d.date)).map(d => d.date);
-    if (unplanned.length === 0) {
-      toast.info('All days are already planned!');
-      return;
+  function updateMeal(date, mealName, desc) {
+    fetch(BACKEND_URL + '/api/dinner/schedule/' + date, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      body: JSON.stringify({ meal_name: mealName, description: desc })
+    }).then(function() { toast.success('Updated!'); fetchSchedule(); setEditingDay(null); }).catch(function() { toast.error('Failed'); });
+  }
+
+  function moveMeal(fromDate, toDate) {
+    fetch(BACKEND_URL + '/api/dinner/schedule/move', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      body: JSON.stringify({ from_date: fromDate, to_date: toDate })
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      toast.success(data.swapped ? 'Swapped!' : 'Moved!'); fetchSchedule(); setMovingFrom(null);
+    }).catch(function() { toast.error('Failed'); });
+  }
+
+  function aiFillUnplannedDays() {
+    var schedMap = {};
+    for (var s = 0; s < schedule.length; s++) schedMap[schedule[s].date] = true;
+    var unplanned = [];
+    for (var u = 0; u < WEEK_DATES.length; u++) {
+      if (!WEEK_DATES[u].isPast && !schedMap[WEEK_DATES[u].date]) unplanned.push(WEEK_DATES[u].date);
     }
+    if (unplanned.length === 0) { toast.info('All planned!'); return; }
     setAiFillingDays(true);
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/dinner/schedule/ai-fill`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ unplanned_days: unplanned, preferences })
-      });
-      const data = await res.json();
-      const suggestions = data.suggestions || [];
-      if (suggestions.length > 0) {
-        // Add all suggestions to the schedule
-        const addRes = await fetch(`${BACKEND_URL}/api/dinner/schedule`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ meals: suggestions.map(s => ({ ...s, source: 'ai_suggestion' })) })
-        });
-        if (addRes.ok) {
-          const addData = await addRes.json();
-          toast.success(`AI suggested ${addData.count} meals for unplanned days!`);
-          fetchSchedule();
+    fetch(BACKEND_URL + '/api/dinner/schedule/ai-fill', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      body: JSON.stringify({ unplanned_days: unplanned, preferences: preferences })
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      if (data.suggestions && data.suggestions.length > 0) {
+        var meals = [];
+        for (var m = 0; m < data.suggestions.length; m++) {
+          meals.push({ date: data.suggestions[m].date, meal_name: data.suggestions[m].meal_name, description: data.suggestions[m].description || '', source: 'ai' });
         }
-      } else {
-        toast.error('AI could not generate suggestions. Try again.');
-      }
-    } catch { toast.error('Failed to get AI suggestions'); }
-    finally { setAiFillingDays(false); }
-  };
+        return fetch(BACKEND_URL + '/api/dinner/schedule', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+          body: JSON.stringify({ meals: meals })
+        }).then(function(r) { return r.json(); }).then(function(d) { toast.success('AI scheduled ' + d.count + ' meals!'); fetchSchedule(); });
+      } else { toast.error('No suggestions'); }
+    }).catch(function() { toast.error('Failed'); }).finally(function() { setAiFillingDays(false); });
+  }
 
-  const selectedCount = selectedItems.size;
-  const plannedDates = schedule.map(s => s.date);
-  const unplannedCount = weekDates.filter(d => !d.isPast && !plannedDates.includes(d.date)).length;
+  // Pre-compute everything before JSX
+  var scheduleMap = {};
+  for (var si = 0; si < schedule.length; si++) scheduleMap[schedule[si].date] = schedule[si];
+  var unplannedCount = 0;
+  for (var ui = 0; ui < WEEK_DATES.length; ui++) {
+    if (!WEEK_DATES[ui].isPast && !scheduleMap[WEEK_DATES[ui].date]) unplannedCount++;
+  }
+
+  // Build schedule day cards
+  var scheduleDayCards = [];
+  for (var di = 0; di < WEEK_DATES.length; di++) {
+    var wd = WEEK_DATES[di];
+    var meal = scheduleMap[wd.date];
+    var isMovingThis = movingFrom === wd.date;
+    var isMovingTarget = movingFrom !== null && movingFrom !== wd.date && !wd.isPast;
+    var cls = 'group relative rounded-xl p-3 border transition-all min-h-[100px] ';
+    if (isMovingThis) cls += 'border-yellow-500 bg-yellow-500/10 ring-2 ring-yellow-500/30';
+    else if (isMovingTarget) cls += 'border-dashed border-blue-500/50 bg-blue-500/5 cursor-pointer hover:bg-blue-500/10';
+    else if (wd.isToday) cls += 'border-primary bg-primary/10';
+    else if (meal) cls += 'border-green-500/30 bg-green-500/5';
+    else if (wd.isPast) cls += 'border-slate-800 bg-slate-900/30 opacity-50';
+    else cls += 'border-slate-800 bg-slate-900/50 hover:border-slate-600';
+
+    scheduleDayCards.push(
+      <ScheduleDay key={wd.date} day={wd} meal={meal} cls={cls}
+        isMovingTarget={isMovingTarget} movingFrom={movingFrom}
+        editingDay={editingDay} setEditingDay={setEditingDay}
+        setMovingFrom={setMovingFrom} assigningDay={assigningDay}
+        setAssigningDay={setAssigningDay} mealNameInput={mealNameInput}
+        setMealNameInput={setMealNameInput} addMealToSchedule={addMealToSchedule}
+        updateMeal={updateMeal} removeMeal={removeMeal} moveMeal={moveMeal} />
+    );
+  }
+
+  // Build plan day cards
+  var planDayCards = [];
+  if (structuredPlan && structuredPlan.days) {
+    var days = structuredPlan.days;
+    for (var pi = 0; pi < days.length; pi++) {
+      planDayCards.push(
+        <PlanCard key={pi} dayData={days[pi]} addMealToSchedule={addMealToSchedule} addIngredientsToCart={addIngredientsToCart} />
+      );
+    }
+  }
+
+  // Build saved plans list
+  var savedPlanItems = [];
+  for (var sp = 0; sp < savedPlans.length; sp++) {
+    var plan = savedPlans[sp];
+    savedPlanItems.push(
+      <button key={plan.plan_id} onClick={function(p) { return function() {
+        if (p.structured_plan && p.structured_plan.days) setStructuredPlan(p.structured_plan);
+        else setRawPlan(p.plan); setShowHistory(false);
+      }; }(plan)} className="w-full text-left p-3 bg-slate-800/50 hover:bg-slate-800 rounded-xl transition-all">
+        <p className="text-sm text-white font-medium">Week of {plan.week_start}</p>
+        <p className="text-xs text-slate-400 truncate">{plan.preferences || 'No preferences'}</p>
+      </button>
+    );
+  }
+
+  // Suggestion ingredients
+  var sugIngChips = null;
+  if (suggestion && suggestion.ingredients) {
+    var sugIngs = suggestion.ingredients;
+    sugIngChips = <IngredientChips items={sugIngs} selected={sugSelectedIngs} onToggle={function(ing) {
+      setSugSelectedIngs(function(prev) { var n = new Set(prev); if (n.has(ing)) n.delete(ing); else n.add(ing); return n; });
+    }} />;
+  }
+
+  var sugSteps = [];
+  if (suggestion && suggestion.steps) {
+    for (var sti = 0; sti < suggestion.steps.length; sti++) {
+      sugSteps.push(<li key={sti} className="text-xs text-slate-300 leading-relaxed">{suggestion.steps[sti]}</li>);
+    }
+  }
+
+  // Family size options
+  var sizeOptions = [];
+  for (var fs = 2; fs <= 8; fs++) sizeOptions.push(<option key={fs} value={fs}>{fs} people</option>);
+
+  // Quick meals
+  var quickMeals = [
+    { name: 'Pasta Night', pref: 'Italian pasta dishes' },
+    { name: 'Taco Tuesday', pref: 'Mexican tacos and sides' },
+    { name: 'Pizza Party', pref: 'Homemade pizza' },
+    { name: 'Stir Fry', pref: 'Asian stir fry dishes' },
+    { name: 'Burger Night', pref: 'Gourmet burgers' },
+    { name: 'Soup & Salad', pref: 'Light healthy soups and salads' },
+    { name: 'Breakfast 4 Dinner', pref: 'Breakfast foods for dinner' },
+    { name: 'BBQ Night', pref: 'Grilled meats and BBQ' },
+  ];
+  var quickMealCards = [];
+  for (var qi = 0; qi < quickMeals.length; qi++) {
+    quickMealCards.push(
+      <button key={quickMeals[qi].name} onClick={function(p) { return function() { setPreferences(p); }; }(quickMeals[qi].pref)}
+        className="glass-card rounded-xl p-4 hover:border-primary/50 transition-all text-center"
+        data-testid={'quick-meal-' + quickMeals[qi].name.toLowerCase().replace(/ /g, '-')}>
+        <p className="text-sm font-medium text-white">{quickMeals[qi].name}</p>
+      </button>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-slate-950">
       <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
-      <main className={`flex-1 overflow-y-auto transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
+      <main className={'flex-1 overflow-y-auto transition-all duration-300 ' + (sidebarCollapsed ? 'md:ml-16' : 'md:ml-64')}>
         <div className="p-4 pt-16 md:pt-4 lg:p-6 lg:pt-6 pb-24 md:pb-6 space-y-4" data-testid="dinner-planner">
           <header className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-black text-white flex items-center space-x-2">
-                <Utensils className="w-6 h-6 text-primary" />
-                <span>Dinner Planner</span>
+                <Utensils className="w-6 h-6 text-primary" /><span>Dinner Planner</span>
               </h1>
-              <p className="text-sm text-slate-400 mt-1">Plan meals, schedule dinners, and build your shopping list</p>
+              <p className="text-sm text-slate-400 mt-1">Plan meals, schedule dinners, build your shopping list</p>
             </div>
-            <div className="flex gap-2">
-              {savedPlans.length > 0 && (
-                <button onClick={() => setShowHistory(!showHistory)} className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-all" data-testid="show-history">
-                  <History className="w-4 h-4 text-slate-400" />
-                  <span className="text-sm text-slate-300 hidden sm:inline">History ({savedPlans.length})</span>
-                </button>
-              )}
-            </div>
+            {savedPlans.length > 0 && (
+              <button onClick={function() { setShowHistory(!showHistory); }} className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-all" data-testid="show-history">
+                <History className="w-4 h-4 text-slate-400" /><span className="text-sm text-slate-300 hidden sm:inline">History</span>
+              </button>
+            )}
           </header>
 
-          {/* ===== DINNER SCHEDULE (Week View) ===== */}
           <div className="glass-card rounded-2xl p-5 space-y-4" data-testid="dinner-schedule">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Calendar className="w-5 h-5 text-accent" />
-                <h2 className="text-lg font-bold text-white">This Week's Dinners</h2>
+                <Calendar className="w-5 h-5 text-accent" /><h2 className="text-lg font-bold text-white">This Week's Dinners</h2>
               </div>
-              {unplannedCount > 0 && (
-                <button
-                  onClick={aiFillUnplannedDays}
-                  disabled={aiFillingDays}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/20 hover:bg-accent/30 border border-accent/30 text-accent rounded-full text-xs font-bold transition-all disabled:opacity-50"
-                  data-testid="ai-fill-btn"
-                >
-                  {aiFillingDays ? (
-                    <div className="animate-spin rounded-full h-3 w-3 border-t-2 border-b-2 border-accent" />
-                  ) : (
-                    <Sparkles className="w-3 h-3" />
-                  )}
-                  <span>AI Fill {unplannedCount} Day{unplannedCount !== 1 ? 's' : ''}</span>
-                </button>
-              )}
+              <div className="flex gap-2">
+                {movingFrom && (
+                  <button onClick={function() { setMovingFrom(null); }} className="px-3 py-1.5 bg-red-500/20 border border-red-500/30 text-red-400 rounded-full text-xs font-bold">Cancel</button>
+                )}
+                {unplannedCount > 0 && (
+                  <button onClick={aiFillUnplannedDays} disabled={aiFillingDays}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/20 hover:bg-accent/30 border border-accent/30 text-accent rounded-full text-xs font-bold transition-all disabled:opacity-50"
+                    data-testid="ai-fill-btn">
+                    {aiFillingDays ? <div className="animate-spin rounded-full h-3 w-3 border-t-2 border-b-2 border-accent" /> : <Sparkles className="w-3 h-3" />}
+                    AI Fill {unplannedCount} Day{unplannedCount !== 1 ? 's' : ''}
+                  </button>
+                )}
+              </div>
             </div>
-
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
-              {weekDates.map((day) => {
-                const meal = schedule.find(s => s.date === day.date);
-                return (
-                  <div
-                    key={day.date}
-                    className={`relative rounded-xl p-3 border transition-all min-h-[90px] ${
-                      day.isToday ? 'border-primary bg-primary/10' :
-                      meal ? 'border-green-500/30 bg-green-500/5' :
-                      day.isPast ? 'border-slate-800 bg-slate-900/30 opacity-50' :
-                      'border-slate-800 bg-slate-900/50 hover:border-slate-600'
-                    }`}
-                    data-testid={`schedule-day-${day.date}`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className={`text-[10px] font-bold ${day.isToday ? 'text-primary' : 'text-slate-400'}`}>
-                        {day.name.slice(0, 3)} {day.display}
-                      </span>
-                      {day.isToday && <span className="text-[8px] bg-primary/20 text-primary px-1.5 rounded-full font-bold">TODAY</span>}
-                    </div>
-                    {meal ? (
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-white leading-tight">{meal.meal_name}</p>
-                        {meal.description && <p className="text-[10px] text-slate-400 leading-tight line-clamp-2">{meal.description}</p>}
-                        <button
-                          onClick={() => removeMealFromSchedule(day.date)}
-                          className="absolute top-1.5 right-1.5 p-1 hover:bg-red-500/20 rounded-lg opacity-0 group-hover:opacity-100 hover:opacity-100 transition-all"
-                          data-testid={`remove-meal-${day.date}`}
-                        >
-                          <Trash2 className="w-3 h-3 text-red-400" />
-                        </button>
-                      </div>
-                    ) : !day.isPast ? (
-                      assigningDay === day.date ? (
-                        <div className="space-y-1">
-                          <input
-                            type="text"
-                            value={mealNameInput}
-                            onChange={(e) => setMealNameInput(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') addMealToSchedule(day.date, mealNameInput); if (e.key === 'Escape') setAssigningDay(null); }}
-                            placeholder="Meal name..."
-                            autoFocus
-                            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-white placeholder:text-slate-600"
-                            data-testid={`meal-input-${day.date}`}
-                          />
-                          <div className="flex gap-1">
-                            <button onClick={() => addMealToSchedule(day.date, mealNameInput)} className="flex-1 bg-green-600 text-white text-[9px] py-0.5 rounded font-bold">Add</button>
-                            <button onClick={() => { setAssigningDay(null); setMealNameInput(''); }} className="flex-1 bg-slate-700 text-white text-[9px] py-0.5 rounded">Cancel</button>
-                          </div>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => { setAssigningDay(day.date); setMealNameInput(''); }}
-                          className="w-full h-full flex flex-col items-center justify-center text-slate-600 hover:text-slate-400 transition-all"
-                          data-testid={`add-meal-${day.date}`}
-                        >
-                          <CalendarPlus className="w-4 h-4 mb-1" />
-                          <span className="text-[9px]">Add Meal</span>
-                        </button>
-                      )
-                    ) : (
-                      <p className="text-[10px] text-slate-600 italic">No meal planned</p>
-                    )}
-                  </div>
-                );
-              })}
+              {scheduleDayCards}
             </div>
           </div>
 
-          {showHistory && savedPlans.length > 0 && (
+          {showHistory && savedPlanItems.length > 0 && (
             <div className="glass-card rounded-2xl p-4">
               <h3 className="text-sm font-bold text-white mb-3">Previous Meal Plans</h3>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {savedPlans.map((plan) => (
-                  <button key={plan.plan_id} onClick={() => { setWeeklyPlan(plan.plan); setShowHistory(false); }}
-                    className="w-full text-left p-3 bg-slate-800/50 hover:bg-slate-800 rounded-xl transition-all">
-                    <p className="text-sm text-white font-medium">Week of {plan.week_start}</p>
-                    <p className="text-xs text-slate-400 truncate">{plan.preferences || 'No specific preferences'}</p>
-                  </button>
-                ))}
-              </div>
+              <div className="space-y-2 max-h-48 overflow-y-auto">{savedPlanItems}</div>
             </div>
           )}
 
-          {/* Quick Dinner Idea */}
           <div className="glass-card rounded-2xl p-5 space-y-4">
             <div className="flex items-center space-x-2 mb-2">
-              <ChefHat className="w-5 h-5 text-accent" />
-              <h2 className="text-lg font-bold text-white">Quick Dinner Idea</h2>
+              <ChefHat className="w-5 h-5 text-accent" /><h2 className="text-lg font-bold text-white">Quick Dinner Idea</h2>
             </div>
             <form onSubmit={handleGetSuggestion} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">Available Ingredients</label>
-                <input type="text" value={ingredients} onChange={(e) => setIngredients(e.target.value)}
-                  placeholder="e.g., chicken, rice, tomatoes, garlic"
-                  className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder:text-slate-600" data-testid="ingredients-input" />
+                <input type="text" value={ingredients} onChange={function(e) { setIngredients(e.target.value); }}
+                  placeholder="e.g., chicken, rice, tomatoes" className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder:text-slate-600" data-testid="ingredients-input" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">Dietary Preferences</label>
-                <input type="text" value={preferences} onChange={(e) => setPreferences(e.target.value)}
-                  placeholder="e.g., vegetarian, quick meals, kid-friendly"
-                  className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder:text-slate-600" data-testid="preferences-input" />
+                <input type="text" value={preferences} onChange={function(e) { setPreferences(e.target.value); }}
+                  placeholder="e.g., vegetarian, kid-friendly" className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder:text-slate-600" data-testid="preferences-input" />
               </div>
               <button type="submit" disabled={loading}
                 className="w-full bg-primary hover:bg-primary/80 disabled:bg-slate-800 text-white font-bold py-3 px-4 rounded-full transition-all flex items-center justify-center space-x-2" data-testid="get-suggestion-button">
-                {loading ? <><div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white" /><span>Thinking...</span></> :
-                  <><Sparkles className="w-5 h-5" /><span>Get Dinner Idea</span></>}
+                {loading ? <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white" /> : <Sparkles className="w-5 h-5" />}
+                <span>{loading ? 'Thinking...' : 'Get Dinner Idea'}</span>
               </button>
             </form>
           </div>
 
-          {/* Suggestion Result */}
           {suggestion && (
             <div className="glass-card rounded-2xl p-5 space-y-3" data-testid="suggestion-result">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center space-x-2">
-                  <Sparkles className="w-5 h-5 text-accent" />
-                  <h3 className="text-base font-bold text-white">AI Suggestion</h3>
-                </div>
-                <span className="text-xs text-slate-500">Tap items to select</span>
+              <div className="flex items-center space-x-2 mb-2">
+                <Sparkles className="w-5 h-5 text-accent" /><h3 className="text-base font-bold text-white">{suggestion.meal_name}</h3>
               </div>
-              <SelectableTextBlock text={suggestion} selectedItems={selectedItems} onToggle={toggleItem} />
+              {suggestion.description && <p className="text-sm text-slate-300">{suggestion.description}</p>}
+              {suggestion.prep_time && <p className="text-xs text-slate-500">Prep: {suggestion.prep_time} {suggestion.cook_time ? '| Cook: ' + suggestion.cook_time : ''}</p>}
+              <div className="flex items-center gap-2 py-2 border-t border-b border-slate-800">
+                <CalendarPlus className="w-4 h-4 text-accent" />
+                <span className="text-xs text-white font-bold flex-1">{suggestion.meal_name}</span>
+                <select value={sugTargetDay} onChange={function(e) { setSugTargetDay(e.target.value); }}
+                  className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-white" data-testid="suggestion-target-day">
+                  <DayOptions />
+                </select>
+                <button onClick={function() { if (sugTargetDay) addMealToSchedule(sugTargetDay, suggestion.meal_name, suggestion.description || ''); else toast.error('Pick a day'); }}
+                  className="px-3 py-1 bg-accent/20 border border-accent/30 text-accent rounded-lg text-[10px] font-bold" data-testid="add-suggestion-schedule">Schedule</button>
+              </div>
+              {sugIngChips && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase">Ingredients</span>
+                    <button onClick={function() { setSugSelectedIngs(function(p) { return p.size === suggestion.ingredients.length ? new Set() : new Set(suggestion.ingredients); }); }}
+                      className="text-[9px] text-primary hover:underline">Toggle All</button>
+                  </div>
+                  {sugIngChips}
+                  {sugSelectedIngs.size > 0 && (
+                    <button onClick={function() { addIngredientsToCart(Array.from(sugSelectedIngs)); setSugSelectedIngs(new Set()); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/30 border border-green-600/30 text-green-400 rounded-lg text-[10px] font-bold transition-all"
+                      data-testid="add-suggestion-ingredients">
+                      <ShoppingCart className="w-3 h-3" />Add {sugSelectedIngs.size} to Shopping List
+                    </button>
+                  )}
+                </div>
+              )}
+              {sugSteps.length > 0 && (
+                <div className="pt-2">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">Steps</span>
+                  <ol className="list-decimal list-inside space-y-1 mt-1">{sugSteps}</ol>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Weekly Meal Plan */}
+          {rawSuggestion && !suggestion && (
+            <div className="glass-card rounded-2xl p-5" data-testid="suggestion-result-raw">
+              <pre className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed">{rawSuggestion}</pre>
+            </div>
+          )}
+
           <div className="glass-card rounded-2xl p-5 space-y-4">
             <div className="flex items-center space-x-2 mb-2">
-              <Calendar className="w-5 h-5 text-secondary" />
-              <h2 className="text-lg font-bold text-white">Weekly Meal Plan</h2>
+              <Calendar className="w-5 h-5 text-secondary" /><h2 className="text-lg font-bold text-white">Weekly Meal Plan</h2>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1">Family Size</label>
-                <select value={familySize} onChange={(e) => setFamilySize(parseInt(e.target.value))}
+                <select value={familySize} onChange={function(e) { setFamilySize(parseInt(e.target.value)); }}
                   className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm" data-testid="family-size">
-                  {[2, 3, 4, 5, 6, 7, 8].map(n => <option key={n} value={n}>{n} people</option>)}
+                  {sizeOptions}
                 </select>
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1">Budget</label>
-                <select value={budget} onChange={(e) => setBudget(e.target.value)}
+                <select value={budget} onChange={function(e) { setBudget(e.target.value); }}
                   className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm" data-testid="budget">
                   <option value="budget">Budget-friendly</option>
                   <option value="moderate">Moderate</option>
@@ -506,83 +433,168 @@ export default function DinnerPlanner({ user }) {
                 </select>
               </div>
               <div className="col-span-2 md:col-span-1">
-                <label className="block text-xs font-medium text-slate-400 mb-1">&nbsp;</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1"> </label>
                 <button onClick={handleGetWeeklyPlan} disabled={weeklyLoading}
                   className="w-full bg-secondary hover:bg-secondary/80 disabled:bg-slate-800 text-white font-bold py-2 px-4 rounded-xl transition-all flex items-center justify-center space-x-2" data-testid="get-weekly-plan">
-                  {weeklyLoading ? <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white" /> :
-                    <><Calendar className="w-4 h-4" /><span>Generate Plan</span></>}
+                  {weeklyLoading ? <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white" /> : <Calendar className="w-4 h-4" />}
+                  <span>{weeklyLoading ? 'Generating...' : 'Generate Plan'}</span>
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Weekly Plan Result */}
-          {weeklyPlan && (
-            <div className="glass-card rounded-2xl p-5 space-y-3" data-testid="weekly-plan-result">
-              <div className="flex items-center justify-between mb-2">
+          {planDayCards.length > 0 && (
+            <div className="space-y-3" data-testid="structured-plan">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Calendar className="w-5 h-5 text-secondary" />
-                  <h3 className="text-base font-bold text-white">Your Weekly Plan</h3>
+                  <Calendar className="w-5 h-5 text-secondary" /><h3 className="text-base font-bold text-white">Your Weekly Plan</h3>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={addPlanToSchedule}
-                    disabled={scheduleLoading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/20 hover:bg-accent/30 border border-accent/30 text-accent rounded-full text-xs font-bold transition-all disabled:opacity-50"
-                    data-testid="add-plan-to-schedule-btn"
-                  >
-                    <CalendarPlus className="w-3 h-3" />
-                    <span>Add to Schedule</span>
-                  </button>
-                  <span className="text-xs text-slate-500 self-center">Tap items to select</span>
-                </div>
+                <span className="text-xs text-slate-500">Pick days, select ingredients</span>
               </div>
-              <SelectableTextBlock text={weeklyPlan} selectedItems={selectedItems} onToggle={toggleItem} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">{planDayCards}</div>
             </div>
           )}
 
-          {/* Sticky Action Bar */}
-          {selectedCount > 0 && (
-            <div className="fixed bottom-20 md:bottom-4 left-0 right-0 z-40 px-4" data-testid="add-to-cart-bar">
-              <div className={`max-w-lg mx-auto flex items-center justify-between bg-green-600 rounded-2xl px-5 py-3 shadow-xl shadow-green-900/30 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
-                <div className="flex items-center gap-2">
-                  <ShoppingCart className="w-5 h-5 text-white" />
-                  <span className="text-white font-bold text-sm">{selectedCount} item{selectedCount !== 1 ? 's' : ''}</span>
-                </div>
-                <button onClick={addToShoppingList} disabled={addingToCart}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-white font-bold text-sm transition-all" data-testid="add-to-shopping-btn">
-                  {addingToCart ? <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white" /> :
-                    <><Check className="w-4 h-4" /><span>Add to Shopping List</span></>}
-                </button>
-              </div>
+          {rawPlan && !structuredPlan && (
+            <div className="glass-card rounded-2xl p-5" data-testid="raw-plan">
+              <pre className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed">{rawPlan}</pre>
             </div>
           )}
 
-          {/* Quick Meal Ideas */}
           <div className="glass-card rounded-2xl p-5">
             <h3 className="text-lg font-bold text-white mb-4">Quick Meal Ideas</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[
-                { name: 'Pasta Night', icon: '\ud83c\udf5d', pref: 'Italian pasta dishes' },
-                { name: 'Taco Tuesday', icon: '\ud83c\udf2e', pref: 'Mexican tacos and sides' },
-                { name: 'Pizza Party', icon: '\ud83c\udf55', pref: 'Homemade pizza' },
-                { name: 'Stir Fry', icon: '\ud83e\udd58', pref: 'Asian stir fry dishes' },
-                { name: 'Burger Night', icon: '\ud83c\udf54', pref: 'Gourmet burgers' },
-                { name: 'Soup & Salad', icon: '\ud83e\udd57', pref: 'Light healthy soups and salads' },
-                { name: 'Breakfast 4 Dinner', icon: '\ud83e\udd5e', pref: 'Breakfast foods for dinner' },
-                { name: 'BBQ Night', icon: '\ud83c\udf56', pref: 'Grilled meats and BBQ' },
-              ].map((meal) => (
-                <button key={meal.name} onClick={() => setPreferences(meal.pref)}
-                  className="glass-card rounded-xl p-4 hover:border-primary/50 transition-all text-center"
-                  data-testid={`quick-meal-${meal.name.toLowerCase().replace(/ /g, '-')}`}>
-                  <span className="text-3xl mb-2 block">{meal.icon}</span>
-                  <p className="text-xs font-medium text-white">{meal.name}</p>
-                </button>
-              ))}
-            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{quickMealCards}</div>
           </div>
         </div>
       </main>
+    </div>
+  );
+}
+
+function ScheduleDay({ day, meal, cls, isMovingTarget, movingFrom, editingDay, setEditingDay, setMovingFrom, assigningDay, setAssigningDay, mealNameInput, setMealNameInput, addMealToSchedule, updateMeal, removeMeal, moveMeal }) {
+  function handleClick() { if (isMovingTarget) moveMeal(movingFrom, day.date); }
+
+  var content;
+  if (meal && editingDay && editingDay.date === day.date) {
+    content = (
+      <div className="space-y-1.5" onClick={function(e) { e.stopPropagation(); }}>
+        <input type="text" value={editingDay.meal_name} onChange={function(e) { setEditingDay({ date: editingDay.date, meal_name: e.target.value, description: editingDay.description }); }}
+          className="w-full bg-slate-950 border border-slate-600 rounded-lg px-2 py-1 text-[11px] text-white" autoFocus data-testid={'edit-name-' + day.date} />
+        <input type="text" value={editingDay.description || ''} onChange={function(e) { setEditingDay({ date: editingDay.date, meal_name: editingDay.meal_name, description: e.target.value }); }}
+          placeholder="Description..." className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-slate-300 placeholder:text-slate-600" />
+        <div className="flex gap-1">
+          <button onClick={function() { updateMeal(day.date, editingDay.meal_name, editingDay.description); }} className="flex-1 bg-green-600 text-white text-[9px] py-1 rounded font-bold">Save</button>
+          <button onClick={function() { setEditingDay(null); }} className="flex-1 bg-slate-700 text-white text-[9px] py-1 rounded">Cancel</button>
+        </div>
+      </div>
+    );
+  } else if (meal) {
+    content = (
+      <div className="space-y-1">
+        <p className="text-xs font-bold text-white leading-tight">{meal.meal_name}</p>
+        {meal.description && <p className="text-[10px] text-slate-400 leading-tight line-clamp-2">{meal.description}</p>}
+        <div className="flex gap-1 pt-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={function(e) { e.stopPropagation(); }}>
+          <button onClick={function() { setEditingDay({ date: day.date, meal_name: meal.meal_name, description: meal.description || '' }); }}
+            className="p-1 hover:bg-slate-700 rounded" data-testid={'edit-btn-' + day.date}><Pencil className="w-3 h-3 text-slate-400" /></button>
+          <button onClick={function() { setMovingFrom(movingFrom === day.date ? null : day.date); }}
+            className={'p-1 rounded ' + (movingFrom === day.date ? 'bg-yellow-500/20' : 'hover:bg-slate-700')} data-testid={'move-btn-' + day.date}><ArrowRightLeft className="w-3 h-3 text-slate-400" /></button>
+          <button onClick={function() { removeMeal(day.date); }}
+            className="p-1 hover:bg-red-500/20 rounded" data-testid={'delete-btn-' + day.date}><Trash2 className="w-3 h-3 text-red-400" /></button>
+        </div>
+      </div>
+    );
+  } else if (day.isPast) {
+    content = <p className="text-[10px] text-slate-600 italic">No meal</p>;
+  } else if (assigningDay === day.date) {
+    content = (
+      <div className="space-y-1" onClick={function(e) { e.stopPropagation(); }}>
+        <input type="text" value={mealNameInput} onChange={function(e) { setMealNameInput(e.target.value); }}
+          onKeyDown={function(e) { if (e.key === 'Enter') addMealToSchedule(day.date, mealNameInput); if (e.key === 'Escape') setAssigningDay(null); }}
+          placeholder="Meal name..." autoFocus className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-white placeholder:text-slate-600"
+          data-testid={'meal-input-' + day.date} />
+        <div className="flex gap-1">
+          <button onClick={function() { addMealToSchedule(day.date, mealNameInput); }} className="flex-1 bg-green-600 text-white text-[9px] py-0.5 rounded font-bold">Add</button>
+          <button onClick={function() { setAssigningDay(null); setMealNameInput(''); }} className="flex-1 bg-slate-700 text-white text-[9px] py-0.5 rounded">Cancel</button>
+        </div>
+      </div>
+    );
+  } else {
+    content = (
+      <button onClick={function(e) { e.stopPropagation(); setAssigningDay(day.date); setMealNameInput(''); }}
+        className="w-full h-full flex flex-col items-center justify-center text-slate-600 hover:text-slate-400 transition-all pt-2"
+        data-testid={'add-meal-' + day.date}>
+        <CalendarPlus className="w-4 h-4 mb-1" /><span className="text-[9px]">Add Meal</span>
+      </button>
+    );
+  }
+
+  return (
+    <div className={cls} onClick={handleClick} data-testid={'schedule-day-' + day.date}>
+      <div className="flex items-center justify-between mb-1">
+        <span className={'text-[10px] font-bold ' + (day.isToday ? 'text-primary' : 'text-slate-400')}>{day.name.slice(0, 3)} {day.display}</span>
+        {day.isToday && <span className="text-[8px] bg-primary/20 text-primary px-1.5 rounded-full font-bold">TODAY</span>}
+        {isMovingTarget && <span className="text-[8px] bg-blue-500/20 text-blue-400 px-1.5 rounded-full font-bold">DROP</span>}
+      </div>
+      {content}
+    </div>
+  );
+}
+
+function PlanCard({ dayData, addMealToSchedule, addIngredientsToCart }) {
+  var [selIngs, setSelIngs] = useState(new Set());
+  var [targetDate, setTargetDate] = useState('');
+
+  var ingChips = [];
+  var ings = dayData.ingredients || [];
+  for (var i = 0; i < ings.length; i++) {
+    var ing = ings[i];
+    var sel = selIngs.has(ing);
+    ingChips.push(
+      <button key={i} onClick={function(x) { return function() { setSelIngs(function(p) { var n = new Set(p); if (n.has(x)) n.delete(x); else n.add(x); return n; }); }; }(ing)}
+        className={'flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] transition-all ' + (sel ? 'bg-green-500/15 border border-green-500/30 text-green-300' : 'bg-slate-800/50 border border-slate-700 text-slate-400 hover:border-slate-500')}
+        data-testid={'ingredient-' + dayData.day + '-' + i}>
+        {sel && <Check className="w-2.5 h-2.5" />}{ing}
+      </button>
+    );
+  }
+
+  return (
+    <div className="glass-card rounded-xl p-4 space-y-3 border border-slate-800 hover:border-slate-600 transition-all" data-testid={'plan-day-' + dayData.day}>
+      <div>
+        <span className="text-[10px] font-bold text-slate-400 uppercase">{dayData.day}</span>
+        <h4 className="text-sm font-bold text-white leading-tight">{dayData.meal_name}</h4>
+      </div>
+      {dayData.description && <p className="text-[11px] text-slate-400 leading-snug">{dayData.description}</p>}
+      {dayData.prep_time && <p className="text-[10px] text-slate-500">Prep: {dayData.prep_time} {dayData.cook_time ? '| Cook: ' + dayData.cook_time : ''}</p>}
+      <div className="flex items-center gap-2">
+        <select value={targetDate} onChange={function(e) { setTargetDate(e.target.value); }}
+          className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-[11px] text-white"
+          data-testid={'target-date-' + dayData.day}>
+          <DayOptions />
+        </select>
+        <button onClick={function() { if (targetDate) { addMealToSchedule(targetDate, dayData.meal_name, dayData.description || ''); setTargetDate(''); } else toast.error('Pick a day'); }}
+          className="flex items-center gap-1 px-3 py-1.5 bg-accent/20 hover:bg-accent/30 border border-accent/30 text-accent rounded-lg text-[10px] font-bold transition-all whitespace-nowrap"
+          data-testid={'add-to-schedule-' + dayData.day}>
+          <CalendarPlus className="w-3 h-3" />Schedule
+        </button>
+      </div>
+      {ings.length > 0 && (
+        <div className="space-y-1.5 pt-1 border-t border-slate-800">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-slate-500 uppercase">Ingredients</span>
+            <button onClick={function() { setSelIngs(function(p) { return p.size === ings.length ? new Set() : new Set(ings); }); }}
+              className="text-[9px] text-primary hover:underline">Toggle All</button>
+          </div>
+          <div className="flex flex-wrap gap-1">{ingChips}</div>
+          {selIngs.size > 0 && (
+            <button onClick={function() { addIngredientsToCart(Array.from(selIngs)); setSelIngs(new Set()); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/30 border border-green-600/30 text-green-400 rounded-lg text-[10px] font-bold transition-all"
+              data-testid={'add-ingredients-' + dayData.day}>
+              <ShoppingCart className="w-3 h-3" />Add {selIngs.size} to Shopping List
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

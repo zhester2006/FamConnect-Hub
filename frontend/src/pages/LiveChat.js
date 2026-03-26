@@ -293,30 +293,19 @@ const VoicePlayer = ({ audioBlob, audioUrl }) => {
 // Online Users Bar Component — HomeHub style compact avatars
 const OnlineUsersBar = ({ onlineUsers, familyMembers, currentUserId }) => {
   if (!familyMembers.length) return null;
-  const others = familyMembers.filter(m => m.user_id !== currentUserId);
-  const onlineCount = others.filter(m => onlineUsers.includes(m.user_id)).length;
+  const onlineCount = familyMembers.filter(m => m.user_id !== currentUserId && onlineUsers.includes(m.user_id)).length;
   return (
-    <div className="flex items-center gap-2 py-1.5 px-3 bg-slate-900/50 border-b border-slate-800" data-testid="online-users-bar">
-      <Users className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+    <div className="glass-card rounded-xl px-4 py-2 mx-3 mt-1 flex items-center space-x-3" data-testid="online-users-bar">
+      <Users className="w-4 h-4 text-primary" />
       <div className="flex -space-x-2">
-        {others.slice(0, 6).map(member => {
-          const isOnline = onlineUsers.includes(member.user_id);
-          const name = member.nickname || member.name || '?';
-          return (
-            <div key={member.user_id} className="relative" title={`${name}${isOnline ? ' - online' : ' - offline'}`}>
-              {member.picture && !member.picture.includes('dicebear') ? (
-                <img src={member.picture} alt={name} className={`w-7 h-7 rounded-full object-cover border-2 border-slate-950 ${!isOnline ? 'opacity-40' : ''}`} />
-              ) : (
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-slate-950 ${
-                  isOnline ? 'bg-gradient-to-br from-primary to-secondary' : 'bg-slate-700 opacity-40'
-                }`}>
-                  {name[0]?.toUpperCase()}
-                </div>
-              )}
-              <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-950 ${isOnline ? 'bg-green-400' : 'bg-slate-500'}`} />
+        {familyMembers.slice(0, 5).map(member => (
+          <div key={member.user_id} className="relative" title={member.nickname || member.name}>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xs font-black text-white border-2 border-slate-950">
+              {(member.nickname || member.name || '?').charAt(0)}
             </div>
-          );
-        })}
+            <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-950 ${onlineUsers.includes(member.user_id) ? 'bg-green-400' : 'bg-slate-500'}`} />
+          </div>
+        ))}
       </div>
       <span className="text-xs text-green-400 font-bold">{onlineCount} online</span>
     </div>
