@@ -12,15 +12,23 @@ Family-oriented app for managing activities, chores, rewards, and communication.
 ## Deployment Prep (March 26, 2026) — COMPLETE
 
 ### Changes Made
-- **DB Indexes**: Added 25+ MongoDB indexes on startup for all high-frequency query fields (user_id, family_id, session_token, email, etc.). Session TTL index for auto-expiry.
-- **Dev-Login Guard**: `POST /api/auth/dev-login` now checks `DISABLE_DEV_LOGIN` env var. Set to `true` in production to disable.
-- **Lint Clean**: All backend source files pass ruff lint (bare except → Exception, logger defined in all routers, no function name redefinitions, no unused variables).
+- **DB Indexes**: 25+ MongoDB indexes on startup for all high-frequency query fields (user_id, family_id, session_token, email, etc.). Session TTL index for auto-expiry.
+- **Dev-Login Guard**: `POST /api/auth/dev-login` checks `DISABLE_DEV_LOGIN` env var. Set to `true` in production.
+- **Lint Clean**: All backend source files pass ruff lint. Fixed bare excepts, logger defs, function redefs, unused vars.
 - **Frontend Build**: Verified `yarn build` (craco) succeeds.
 
-### Testing (Iteration 31) — 100% PASS
-- Backend: 18/18 tests passed (health, auth, families, events, shopping, wall, dinner, rewards, leaderboard)
-- Frontend: 11/11 pages load correctly, Add Child Profile flow works end-to-end
-- No critical or minor issues found
+### Health Check (Iteration 31) — ALL PASS
+- Backend Health: healthy
+- Auth (dev-login, child-login, /me, ws-token): all working
+- Key APIs (families, events, shopping, family-wall, rewards, leaderboard, dinner/schedule): all 200
+- Services: Backend, Frontend, MongoDB all RUNNING
+- Logs: No errors
+- Disk: 82% free
+- Frontend Build: compiles successfully
+
+### Deployment Agent Findings
+- Web app: NO BLOCKERS
+- Mobile app (Expo): 2 hardcoded URLs (separate project, not web app)
 
 ---
 
@@ -55,9 +63,14 @@ Family-oriented app for managing activities, chores, rewards, and communication.
 - [ ] Set up SSL/HTTPS
 - [ ] Enable rate limiting on auth endpoints
 
+## Test Credentials
+- Child: username `testkid`, password `pass123`
+- Parent: `POST /api/auth/dev-login` with `{role: "parent"}`
+
 ## Pending Tasks
 - (P1) Voice Commands for Pixie (speech-to-text)
 - (P1) Mobile: Native Google Sign-in
 - (P2) Mobile: Map screen fix
+- (P2) Mobile: Fix hardcoded URLs (use env vars)
 - (P2) Weekly Family Leaderboard Recap
 - (P2) App Store Deployment Guide
