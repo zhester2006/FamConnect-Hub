@@ -275,3 +275,120 @@ Generate suggestions in this JSON format:
             {"type": "meal", "icon": "🍕", "title": "Try Something New", "description": "How about making homemade pizza together tonight?", "priority": "low"}
         ]}
 
+@router.post("/ai/pixie/daily-digest")
+async def pixie_daily_digest(request: Request):
+    """Generate a personalized daily digest for the family"""
+    current_user = await get_current_user(request)
+    family_id = current_user.get('family_id') or current_user.get('parent_id', current_user['user_id'])
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_display = datetime.now(timezone.utc).strftime("%A, %B %d")
+
+    # Check cache — one digest per family per day
+    cached = await db.daily_digests.find_one(
+        {"family_id": family_id, "date": today}, {"_id": 0}
+    )
+    if cached:
+        return {"success": True, "digest": cached["digest"], "cached": True}
+
+    # Gather family data
+    members = await db.users.find(
+        {"$or": [{"user_id": family_id}, {"parent_id": family_id}]},
+        {"_id": 0, "user_id": 1, "name": 1, "nickname": 1, "role": 1, "points": 1}
+    ).to_list(20)
+
+    todays_chores = await db.chores.find(
+        {"family_id": family_id, "scheduled_date": today}, {"_id": 0, "title": 1, "assigned_to": 1, "status": 1}
+    ).to_list(20)
+
+    todays_events = await db.events.find(
+        {"family_id": family_id, "event_date": today}, {"_id": 0, "title": 1, "event_time": 1}
+    ).to_list(10)
+
+    recent_meals = await db.dinner_plans.find(
+        {"family_id": family_id}, {"_id": 0, "meal_name": 1}
+    ).sort("created_at", -1).to_list(3)
+
+    # Build context strings
+    member_info = []
+    for m in members:
+        name = m.get('nickname') or m['name']
+        role = m.get('role', 'member')
+        pts = m.get('points', 0)
+        assigned = [c['title'] for c in todays_chores if c.get('assigned_to') == m['user_id']]
+        member_info.append(f"- {name} ({role}, {pts} pts): chores today = {', '.join(assigned) or 'none'}")
+
+    events_text = ", ".join([f"{e['title']} at {e.get('event_time','TBD')}" for e in todays_events]) or "No events today"
+    meals_text = ", ".join([m.get('meal_name','') for m in recent_meals]) or "No recent meals planned"
+    pending = sum(1 for c in todays_chores if c['status'] == 'pending')
+    done = sum(1 for c in todays_chores if c['status'] == 'completed')
+
+    chat = LlmChat(
+        api_key=os.environ['EMERGENT_LLM_KEY'],
+        session_id=f"digest_{uuid.uuid4().hex[:8]}",
+        system_message="You are Pixie, a warm and encouraging family AI assistant. Generate a morning daily digest. Be concise, upbeat, and personal. Respond ONLY with valid JSON."
+    ).with_model("openai", "gpt-5.2")
+
+    prompt = f"""Generate a family daily digest for {today_display}.
+
+Family members:
+{chr(10).join(member_info)}
+
+Today's events: {events_text}
+Chores: {pending} pending, {done} completed
+Recent meals: {meals_text}
+
+Respond in this JSON format:
+{{
+  "greeting": "Good morning greeting for the family (1 sentence)",
+  "overview": "Brief summary of what's happening today (2-3 sentences)",
+  "member_highlights": [
+    {{
+      "name": "member name",
+      "message": "personalized motivational message (1 sentence)",
+      "emoji": "fitting emoji"
+    }}
+  ],
+  "tip_of_day": "One practical family tip or fun activity idea (1 sentence)",
+  "fun_fact": "A fun or inspiring fact to start the day (1 sentence)"
+}}"""
+
+    try:
+        response = await chat.send_message(UserMessage(text=prompt))
+        clean = response.strip()
+        if clean.startswith('```'):
+            clean = clean.split('```')[1]
+            if clean.startswith('json'):
+                clean = clean[4:]
+        digest = json.loads(clean)
+    except Exception:
+        # Fallback digest
+        digest = {
+            "greeting": f"Good morning, family! Happy {today_display}!",
+            "overview": f"You have {pending} chores to tackle and {len(todays_events)} events today. Let's make it a great day!",
+            "member_highlights": [
+                {"name": m.get('nickname') or m['name'], "message": "You're doing amazing — keep it up!", "emoji": "⭐"}
+                for m in members[:4]
+            ],
+            "tip_of_day": "Try doing a 5-minute family stretch before starting the day — it's a great energy boost!",
+            "fun_fact": "Families who eat together at least 3 times a week report feeling happier and more connected."
+        }
+
+    # Cache the digest
+    await db.daily_digests.insert_one({
+        "family_id": family_id,
+        "date": today,
+        "digest": digest,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+
+    # Create notification
+    await db.notifications.insert_one({
+        "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+        "type": "daily_digest",
+        "family_id": family_id,
+        "message": f"Pixie's Daily Digest: {digest.get('greeting', 'Good morning!')}",
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+
+    return {"success": True, "digest": digest, "cached": False}

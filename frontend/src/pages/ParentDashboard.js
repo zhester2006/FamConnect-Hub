@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, CheckCircle, Clock, AlertCircle, TrendingUp, Calendar as CalendarIcon, MapPin, Eye, Book, Award, Settings, X, ChevronRight, ToggleLeft, ToggleRight, Sparkles, Loader2, Battery, BatteryCharging, BatteryLow, BatteryWarning, GripVertical } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
+import DailyDigest from '@/components/DailyDigest';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -35,10 +36,15 @@ export default function ParentDashboard({ user }) {
   const [pixieSuggestions, setPixieSuggestions] = useState([]);
   const [pixieLoading, setPixieLoading] = useState(false);
 
+  // Daily Digest
+  const [dailyDigest, setDailyDigest] = useState(null);
+  const [digestLoading, setDigestLoading] = useState(false);
+
   useEffect(() => {
     fetchDashboardData();
     fetchBatteryStatus();
     fetchPixieSuggestions();
+    fetchDailyDigest();
     
     // Refresh battery status every 30 seconds
     const batteryInterval = setInterval(fetchBatteryStatus, 30000);
@@ -69,6 +75,23 @@ export default function ParentDashboard({ user }) {
       console.error('Failed to fetch Pixie suggestions:', error);
     } finally {
       setPixieLoading(false);
+    }
+  };
+
+  const fetchDailyDigest = async () => {
+    setDigestLoading(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/ai/pixie/daily-digest`, {
+        method: 'POST', credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDailyDigest(data.digest || null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch daily digest:', error);
+    } finally {
+      setDigestLoading(false);
     }
   };
 
@@ -251,6 +274,9 @@ export default function ParentDashboard({ user }) {
             <h1 className="text-2xl lg:text-3xl font-black text-white">Hello, {user?.name?.split(' ')[0]}!</h1>
             <p className="text-sm text-slate-400">Here's what's happening with your family today</p>
           </header>
+
+          {/* Pixie Daily Digest */}
+          <DailyDigest digest={dailyDigest} loading={digestLoading} />
 
           {/* Stats Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
