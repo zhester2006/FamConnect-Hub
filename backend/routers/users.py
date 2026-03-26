@@ -92,6 +92,35 @@ async def create_child_profile(request: Request, data: dict):
         "tutorial_completed": False
     }
     await db.users.insert_one(child_doc)
+    
+    # Auto-add child to all families the parent belongs to
+    parent_memberships = await db.family_memberships.find(
+        {"user_id": current_user['user_id']},
+        {"_id": 0, "family_id": 1}
+    ).to_list(20)
+    
+    for pm in parent_memberships:
+        child_membership = {
+            "membership_id": f"mem_{uuid.uuid4().hex[:12]}",
+            "family_id": pm['family_id'],
+            "user_id": child_id,
+            "role": "child",
+            "joined_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.family_memberships.insert_one(child_membership)
+    
+    # Also add to family_id directly if not already covered
+    if family_id:
+        existing = await db.family_memberships.find_one({"family_id": family_id, "user_id": child_id})
+        if not existing:
+            await db.family_memberships.insert_one({
+                "membership_id": f"mem_{uuid.uuid4().hex[:12]}",
+                "family_id": family_id,
+                "user_id": child_id,
+                "role": "child",
+                "joined_at": datetime.now(timezone.utc).isoformat()
+            })
+    
     result = await db.users.find_one({"user_id": child_id}, {"_id": 0, "password_hash": 0})
     result['invite_link'] = f"/join/{invite_code}"
     return result
