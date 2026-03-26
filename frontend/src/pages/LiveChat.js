@@ -13,7 +13,7 @@ const EMOJI_REACTIONS = [
 ];
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const WS_URL = BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://');
+const WS_URL = BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://') + '/api';
 
 // Online Status Indicator Component
 const OnlineIndicator = ({ isOnline, size = 'sm' }) => {
@@ -370,6 +370,7 @@ export default function LiveChat({ user }) {
   const typingTimeoutRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const connectWebSocketRef = useRef(null);
+  const reconnectAttemptsRef = useRef(0);
 
   // Common emoji set for quick picker
   const quickEmojis = ['😀', '😂', '❤️', '👍', '🎉', '🔥', '😢', '😡', '🤔', '👏', '💯', '✨'];
@@ -429,6 +430,7 @@ export default function LiveChat({ user }) {
       wsRef.current.onopen = () => {
         console.log('WebSocket connected');
         setConnected(true);
+        reconnectAttemptsRef.current = 0;
         toast.success('Connected to chat');
       };
 
@@ -457,20 +459,23 @@ export default function LiveChat({ user }) {
         }
       };
 
-      wsRef.current.onclose = () => {
-        console.log('WebSocket disconnected');
+      wsRef.current.onclose = (event) => {
+        console.log('WebSocket disconnected, code:', event.code);
         setConnected(false);
-        // Attempt to reconnect after 3 seconds using ref
+        // Don't reconnect if intentionally closed (code 4001 = auth failure)
+        if (event.code === 4001) return;
+        // Exponential backoff: 3s, 6s, 12s, max 30s
+        const delay = Math.min(3000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+        reconnectAttemptsRef.current += 1;
         reconnectTimeoutRef.current = setTimeout(() => {
           if (connectWebSocketRef.current) {
             connectWebSocketRef.current();
           }
-        }, 3000);
+        }, delay);
       };
 
       wsRef.current.onerror = (error) => {
         console.error('WebSocket error:', error);
-        setConnected(false);
       };
     } catch (error) {
       console.error('Failed to connect WebSocket:', error);

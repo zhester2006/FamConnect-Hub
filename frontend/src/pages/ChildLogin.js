@@ -45,7 +45,7 @@ export default function ChildLogin({ onLogin }) {
           navigate('/setup-wizard', { state: { user: data.user } });
         } else {
           onLogin?.(data.user);
-          navigate('/child-dashboard');
+          navigate('/space');
         }
       } else {
         setError(data.detail || 'Invalid username or password');

@@ -232,12 +232,14 @@ export default function FamilyWall({ user }) {
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [familyMembers, setFamilyMembers] = useState([]);
   const inputRef = useRef(null);
   const postsEndRef = useRef(null);
 
   useEffect(() => {
     fetchPosts();
     fetchDailyQuote();
+    fetchFamilyMembers();
   }, []);
 
   useEffect(() => {
@@ -251,6 +253,16 @@ export default function FamilyWall({ user }) {
       setPosts(data.posts || []);
     } catch (error) {
       console.error('Failed to fetch posts:', error);
+    }
+  };
+
+  const fetchFamilyMembers = async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/family/members`, { credentials: 'include' });
+      const data = await res.json();
+      setFamilyMembers(data.members || []);
+    } catch (error) {
+      console.error('Failed to fetch family members:', error);
     }
   };
 
@@ -479,7 +491,7 @@ export default function FamilyWall({ user }) {
                   )}
 
                   {post.post_type === 'poll' && (
-                    <PollComponent poll={post} user={user} onVote={handleVote} />
+                    <PollComponent poll={post} user={user} onVote={handleVote} familyMembers={familyMembers} />
                   )}
 
                   <div className="flex items-center space-x-4 pt-2 border-t border-slate-800">

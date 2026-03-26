@@ -68,13 +68,6 @@ export default function WelcomePage() {
         <main className="flex-1 flex items-center justify-center px-4 lg:px-6 pb-10 pt-10">
           <div className="max-w-md w-full space-y-6 text-center">
             <div className="space-y-4">
-              <div className="inline-block">
-                <img 
-                  src="https://customer-assets.emergentagent.com/job_homebridge-5/artifacts/tqccfghc_startup.gif.gif" 
-                  alt="FamFocus Hub"
-                  className="w-48 h-48 lg:w-56 lg:h-56 object-contain mx-auto"
-                />
-              </div>
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
                 Welcome to Your
                 <span className="gradient-text block">Family Space</span>

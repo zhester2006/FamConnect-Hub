@@ -1121,7 +1121,7 @@ async def complete_invite_setup(invite_code: str, data: dict):
     }
 
 @api_router.post("/auth/child-login")
-async def child_login(data: dict):
+async def child_login(data: dict, response: Response):
     """Login for children using username and password"""
     username = data.get('username', '').lower().strip()
     password = data.get('password', '')
@@ -1142,12 +1142,22 @@ async def child_login(data: dict):
     
     # Create session
     session_token = str(uuid.uuid4())
-    await db.sessions.insert_one({
-        "session_id": session_token,
+    await db.user_sessions.insert_one({
+        "session_token": session_token,
         "user_id": user['user_id'],
         "created_at": datetime.now(timezone.utc).isoformat(),
         "expires_at": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
     })
+    
+    # Set session cookie
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        max_age=30*24*60*60,
+        httponly=True,
+        samesite="lax",
+        path="/"
+    )
     
     # Return user without sensitive fields
     user_data = await db.users.find_one({"user_id": user['user_id']}, {"_id": 0, "password_hash": 0, "pin": 0})
@@ -4081,7 +4091,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 # WebSocket endpoint for real-time chat
-@app.websocket("/ws/chat/{session_token}")
+@app.websocket("/api/ws/chat/{session_token}")
 async def websocket_chat(websocket: WebSocket, session_token: str):
     # Verify session
     session = await db.user_sessions.find_one({"session_token": session_token}, {"_id": 0})
