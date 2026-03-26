@@ -122,6 +122,7 @@ export default function HomeHub({ user }) {
   const [verifiedUser, setVerifiedUser] = useState(null);
   const [pendingChoresByMember, setPendingChoresByMember] = useState([]);
   const [selectedChore, setSelectedChore] = useState(null);
+  const [quoteType, setQuoteType] = useState('inspiration');
   const [newEvent, setNewEvent] = useState({ 
     title: '', 
     event_date: new Date().toISOString().split('T')[0],
@@ -243,7 +244,7 @@ export default function HomeHub({ user }) {
       const [membersRes, eventsRes, quoteRes, shoppingRes, choresRes, pendingChoresRes] = await Promise.all([
         fetch(`${BACKEND_URL}/api/family/members`, { credentials: 'include', headers }),
         fetch(`${BACKEND_URL}/api/events`, { credentials: 'include', headers }),
-        fetch(`${BACKEND_URL}/api/family-wall/daily-quote`, { credentials: 'include', headers }),
+        fetch(`${BACKEND_URL}/api/family-wall/daily-quote?quote_type=${quoteType}`, { credentials: 'include', headers }),
         fetch(`${BACKEND_URL}/api/shopping`, { credentials: 'include', headers }),
         fetch(`${BACKEND_URL}/api/chores`, { credentials: 'include', headers }),
         fetch(`${BACKEND_URL}/api/chores/pending-by-member`, { credentials: 'include', headers })
@@ -512,12 +513,34 @@ export default function HomeHub({ user }) {
               {/* Daily Inspiration */}
               <div className="glass-card rounded-xl p-3 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-20 h-20 bg-accent/10 rounded-full blur-2xl" />
-                <div className="relative z-10 flex items-start space-x-2">
-                  <Sparkles className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h3 className="text-[10px] font-bold text-accent mb-0.5">Daily Inspiration</h3>
-                    <p className="text-xs text-white italic leading-relaxed line-clamp-2">"{quote || 'Loading...'}"</p>
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-accent" />
+                      <h3 className="text-[10px] font-bold text-accent">
+                        {quoteType === 'bible' ? 'Daily Bible Verse' : 'Daily Inspiration'}
+                      </h3>
+                    </div>
+                    <div className="flex bg-slate-800 rounded p-0.5">
+                      <button
+                        onClick={() => { setQuoteType('inspiration'); fetchHubData(); }}
+                        className={`px-1.5 py-0.5 rounded text-[8px] font-medium transition-all ${
+                          quoteType === 'inspiration' ? 'bg-accent text-white' : 'text-slate-400'
+                        }`}
+                      >
+                        ✨
+                      </button>
+                      <button
+                        onClick={() => { setQuoteType('bible'); fetchHubData(); }}
+                        className={`px-1.5 py-0.5 rounded text-[8px] font-medium transition-all ${
+                          quoteType === 'bible' ? 'bg-accent text-white' : 'text-slate-400'
+                        }`}
+                      >
+                        ✝️
+                      </button>
+                    </div>
                   </div>
+                  <p className="text-xs text-white italic leading-relaxed line-clamp-2">"{quote || 'Loading...'}"</p>
                 </div>
               </div>
 

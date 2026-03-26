@@ -128,30 +128,12 @@ export default function WelcomePage() {
               </span>
             </button>
 
-            {/* Dev Login Buttons */}
-            <div className="flex gap-2 mt-3">
-              <button
-                onClick={() => handleDevLogin('parent')}
-                className="flex-1 bg-slate-800 text-white font-medium py-2 px-4 rounded-lg hover:bg-slate-700 transition-all text-sm border border-slate-600"
-                data-testid="dev-login-parent"
-              >
-                Dev: Parent Login
-              </button>
-              <button
-                onClick={() => handleDevLogin('child')}
-                className="flex-1 bg-slate-800 text-white font-medium py-2 px-4 rounded-lg hover:bg-slate-700 transition-all text-sm border border-slate-600"
-                data-testid="dev-login-child"
-              >
-                Dev: Child Login
-              </button>
-            </div>
-
             {/* Kid's Login Link */}
             <a 
               href="/child-login"
-              className="block text-center mt-4 text-primary hover:text-accent transition-colors font-medium"
+              className="block text-center mt-4 py-3 px-6 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 text-white font-bold rounded-full transition-all hover:scale-105"
             >
-              Kid's Login (with username) →
+              Kid's Login →
             </a>
 
             <p className="text-xs text-slate-500">

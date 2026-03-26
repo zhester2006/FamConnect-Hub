@@ -3,7 +3,7 @@
 ## Project Overview
 A comprehensive, family-oriented, mobile-friendly app for managing family activities, chores, rewards, and communication.
 
-## Current Status: LIVE WITH NEW FEATURES
+## Current Status: PRODUCTION READY
 
 ### Last Updated: December 2024
 
@@ -16,219 +16,222 @@ A comprehensive, family-oriented, mobile-friendly app for managing family activi
 
 ---
 
-## Latest Features (Session 4)
+## Session 5 Updates
 
-### 1. Child Username/Password Login
-- Parents create child profiles with username and password
-- Children login using `/child-login` page
-- Kid-friendly login UI with fun animations
-- Link from welcome page: "Kid's Login (with username) →"
+### 1. Removed Developer Sign-In
+- Dev login buttons removed from welcome page
+- Clean production-ready login experience
+- Only "Sign In with Google" and "Kid's Login" buttons visible
 
-### 2. Quick Actions Panel on Home Hub
-- Shows pending chores grouped by family member
-- Children can mark chores as complete directly
-- PIN verification required on Home Hub devices
-- Shows points earned for each chore
+### 2. First-Time Login Tutorial for Children
+- New Setup Wizard page at `/setup-wizard`
+- 4-step onboarding process:
+  1. Welcome message with overview
+  2. Choose avatar from 8 options
+  3. Pick theme from 6 color schemes
+  4. Add email and phone (optional)
+- Progress bar shows completion percentage
+- Skip option available for steps 2-3
 
-### 3. Parent Credential Management
-- Parents can modify child's username/password/PIN
-- Edit button appears next to child profiles
-- All credentials can be updated anytime
-
-### 4. First-Time Login Tutorial
-- Children complete setup wizard on first login
-- Add email address and phone number
-- Customize profile picture and theme
-- `first_login` flag tracks tutorial completion
-
----
-
-## API Endpoints (New Session 4)
-
-### Child Authentication
-- `POST /api/auth/child-login` - Login with username/password
-
-### First-Time Setup
-- `POST /api/users/{user_id}/first-login-setup` - Complete tutorial
-
-### Credential Management
-- `PUT /api/users/{user_id}/credentials` - Update username/password/PIN
-
-### Quick Actions
-- `GET /api/chores/pending-by-member` - Get pending chores grouped by member
+### 3. Daily Inspiration Toggle
+- Toggle between "Inspire" (✨) and "Bible" (✝️)
+- Available on Family Wall and Home Hub
+- Bible verses from Scripture
+- Removed "AI-generated" text
+- Clean, respectful presentation
 
 ---
 
-## User Flows
+## Authentication Flow
 
-### Parent Creates Child Profile
-1. Go to Family Management
-2. Click "Add Child Profile" (pink button)
-3. Enter:
-   - Child's Name
-   - Username (for app login)
-   - Password
-   - 4-digit PIN (for Home Hub)
-4. Click "Create Profile"
-5. Success screen shows:
-   - Username & PIN confirmation
-   - Optional invite link
+### Parent Login
+1. Go to welcome page
+2. Click "Sign In with Google"
+3. Authenticate with Google
+4. Arrive at Parent Dashboard
 
-### Child First Login
-1. Child goes to `/child-login`
-2. Enters username and password
-3. If first login → Redirected to setup wizard
-4. Adds email, phone, profile picture
-5. Completes tutorial
-6. Arrives at Child Dashboard
-
-### Home Hub Quick Actions
-1. View pending chores by family member
-2. Click chore button to mark complete
-3. If Home Hub role → PIN verification modal
-4. Select profile and enter PIN
-5. Chore marked complete, points awarded
+### Child Login
+1. Go to welcome page
+2. Click "Kid's Login →"
+3. Enter username and password
+4. If first login → Setup Wizard
+5. Complete 4-step tutorial
+6. Arrive at Child Space
 
 ---
 
-## User Schema Updates
+## Key Features
 
-```javascript
-{
-  // Existing fields...
-  
-  // New fields:
-  username: String,        // Alphanumeric, lowercase
-  password_hash: String,   // SHA256 hashed
-  first_login: Boolean,    // True until tutorial complete
-  tutorial_completed: Boolean,
-  phone: String           // Added during first login
-}
-```
+### For Parents
+- Create child profiles with username/password/PIN
+- View and manage all family activities
+- AI-powered chore scheduling
+- Approve chores, reading logs, purchases
+- Track children's points and progress
+- Set up Home Hub for shared devices
 
----
+### For Children
+- Fun kid-friendly login and onboarding
+- Personal dashboard with chores and points
+- Earn rewards for completing tasks
+- Family chat with emoji and GIFs
+- Reading log submissions
+- Leaderboard competition with siblings
 
-## Frontend Routes
-
-| Route | Component | Access |
-|-------|-----------|--------|
-| `/login` | WelcomePage | Public |
-| `/child-login` | ChildLogin | Public |
-| `/dashboard` | ParentDashboard | Parent |
-| `/space` | ChildSpace | Child |
-| `/hub` | HomeHub | HomeHub/All |
-| `/family` | FamilyManagement | Parent |
-| ... | ... | ... |
+### For Home Hub (Shared Device)
+- PIN verification for all actions
+- Profile dropdown selection
+- Quick Actions to mark chores complete
+- Weather forecast with 3-day view
+- Calendar with monthly events
+- Daily inspiration or Bible verse
 
 ---
 
-## Role Permissions
+## User Roles
 
-### Parent
-- Full access to all features
-- Create/edit child profiles
-- Set/change PINs for all members
-- Approve chores, rewards, reading logs
-
-### Child  
-- Access own dashboard and features
-- Complete chores, earn points
-- Login with username/password
-- No PIN required on personal device
-
-### HomeHub
-- Shared family device role
-- **PIN required for ALL actions**
-- View all family data
-- Profile selection + PIN to make changes
+| Role | Access | PIN Required |
+|------|--------|--------------|
+| Parent | Full | No |
+| Child | Limited | No (on own device) |
+| Member | Standard | No |
+| HomeHub | Display | Yes (all actions) |
 
 ---
 
-## Session 4 File Changes
+## Enhancement Suggestions
 
-### Backend
-- `server.py`:
-  - Added child-login endpoint
-  - Added first-login-setup endpoint
-  - Added update credentials endpoint
-  - Added pending-chores-by-member endpoint
-  - Updated child profile creation with username/password
+### Recommended Enhancements
+
+#### 1. **Family Prayer/Devotion Time**
+- Schedule family devotion/prayer times
+- Send reminders to all family members
+- Track attendance and participation
+- Add Bible reading plans
+
+#### 2. **Meal Planning Integration**
+- Plan weekly meals as a family
+- Assign cooking helpers
+- Generate shopping lists from recipes
+- Track dietary preferences
+
+#### 3. **Family Goals & Savings**
+- Set family savings goals
+- Track contributions from each member
+- Visual progress towards goals
+- Reward achievements
+
+#### 4. **Chore Streaks & Bonuses**
+- Bonus points for completing chores multiple days in a row
+- Visual streak counter
+- Special badges for consistency
+- Weekly/monthly challenges
+
+#### 5. **Voice Commands (Pixie)**
+- "Hey Pixie, what are my chores today?"
+- "Mark dishes as complete"
+- "What's for dinner?"
+- Hands-free Home Hub control
+
+#### 6. **Family Memory Wall**
+- Save favorite photos permanently
+- Create digital photo albums
+- Anniversary and milestone reminders
+- Memory slideshow on Home Hub
+
+#### 7. **Emergency Contact Card**
+- Quick access emergency numbers
+- Medical info for each child
+- School and doctor contacts
+- Share with babysitters
+
+#### 8. **Allowance Management**
+- Weekly/monthly allowance tracking
+- Points to real money conversion
+- Savings goals for kids
+- Teach financial literacy
+
+#### 9. **School Integration**
+- Track homework assignments
+- School event calendar sync
+- Grade tracking (if API available)
+- Teacher meeting reminders
+
+#### 10. **Gratitude Journal**
+- Daily gratitude prompts
+- Family gratitude sharing
+- Weekly gratitude roundup
+- Positive habit building
+
+---
+
+## Technical Notes
 
 ### Frontend
-- `ChildLogin.js` (NEW) - Kid-friendly login page
-- `WelcomePage.js` - Added "Kid's Login" link
-- `FamilyManagement.js`:
-  - Updated Add Child modal with username/password
-  - Added Edit Credentials modal
-  - Added credential edit button for children
-- `HomeHub.js`:
-  - Added Quick Actions panel
-  - Added handleCompleteChore function
-  - PIN verification for chore completion
-- `App.js` - Added /child-login route
+- React 18 with Tailwind CSS
+- Shadcn/UI components
+- Sonner for toasts
+- WebSocket for real-time chat
+
+### Backend  
+- FastAPI (Python)
+- MongoDB database
+- Session-based auth
+- Real-time WebSocket support
+
+### Mobile App
+- React Native with Expo
+- @react-native-firebase for auth
+- FIREBASE_ONLY_MODE: false
+
+---
+
+## File Changes (Session 5)
+
+### New Files
+- `/app/frontend/src/pages/SetupWizard.js` - First-time login tutorial
+
+### Modified Files
+- `WelcomePage.js` - Removed dev login buttons
+- `FamilyWall.js` - Added quote type toggle
+- `HomeHub.js` - Added quote type toggle
+- `App.js` - Added setup-wizard route
 
 ---
 
 ## Changelog
 
-### December 2024 - Session 4
-- Added child username/password login
-- Added Kid's Login page (/child-login)
-- Added Quick Actions panel on Home Hub
-- Added Edit Credentials modal for parents
-- Added first-time login setup endpoint
-- Updated child profile creation with credentials
+### December 2024 - Session 5
+- Removed developer sign-in buttons (production ready)
+- Created first-time setup wizard for children
+- Added Bible verse toggle for daily inspiration
+- Removed "AI-generated" text from quotes
 
-### December 2024 - Session 3
-- Weather forecast expansion
-- 10 new nature photos
-- Calendar monthly events list
+### December 2024 - Sessions 1-4
+- Full app implementation
+- Firebase authentication
 - PIN verification system
-- HomeHub role
-
-### December 2024 - Session 2
-- Fixed build errors
-- Firebase offline mode
-
-### December 2024 - Session 1
-- Initial implementation
+- Child username/password login
+- Quick Actions panel
+- Weather forecast
+- Calendar improvements
+- And more...
 
 ---
 
-## Testing Checklist
+## Next Steps
 
-### Child Login Flow
-- [ ] Create child with username/password
-- [ ] Child login at /child-login
-- [ ] First-time setup wizard
-- [ ] Subsequent logins bypass wizard
+### For Production
+1. Set up Google OAuth credentials
+2. Configure Firebase for production
+3. Set up custom domain
+4. Enable HTTPS everywhere
+5. Add rate limiting
+6. Set up monitoring and logging
 
-### Quick Actions
-- [ ] Assign chores to children
-- [ ] View Quick Actions on Home Hub
-- [ ] Mark chore complete (non-HomeHub)
-- [ ] PIN verification on HomeHub
-
-### Credential Management
-- [ ] Edit child username
-- [ ] Change child password
-- [ ] Update child PIN
-
----
-
-## Future Enhancements
-
-### P1 - High Priority
-- Native Google Sign-In for mobile
-- Push notifications
-- Voice commands for Pixie
-
-### P2 - Medium Priority
-- App Store deployment guide
-- Offline mode with sync
-- Performance optimization
-
-### P3 - Low Priority
-- Backend modularization
-- Advanced analytics
-- Multi-language support
+### For Enhancement
+1. Implement Prayer/Devotion feature
+2. Add chore streaks system
+3. Build voice commands for Pixie
+4. Create family memory wall
+5. Add gratitude journal

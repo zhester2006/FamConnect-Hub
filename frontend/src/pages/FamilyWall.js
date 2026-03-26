@@ -173,6 +173,7 @@ export default function FamilyWall({ user }) {
   const [posts, setPosts] = useState([]);
   const [quote, setQuote] = useState('');
   const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteType, setQuoteType] = useState('inspiration'); // 'inspiration' or 'bible'
   const [newPost, setNewPost] = useState('');
   const [selectedGif, setSelectedGif] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -190,6 +191,10 @@ export default function FamilyWall({ user }) {
     fetchDailyQuote();
   }, []);
 
+  useEffect(() => {
+    fetchDailyQuote(true);
+  }, [quoteType]);
+
   const fetchPosts = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/family-wall`, { credentials: 'include' });
@@ -203,19 +208,23 @@ export default function FamilyWall({ user }) {
   const fetchDailyQuote = async (forceRefresh = false) => {
     setQuoteLoading(true);
     try {
-      const url = forceRefresh 
-        ? `${BACKEND_URL}/api/family-wall/daily-quote?refresh=true`
-        : `${BACKEND_URL}/api/family-wall/daily-quote`;
-      const res = await fetch(url, { credentials: 'include' });
+      const token = localStorage.getItem('dev_session_token');
+      let url = forceRefresh 
+        ? `${BACKEND_URL}/api/family-wall/daily-quote?refresh=true&quote_type=${quoteType}`
+        : `${BACKEND_URL}/api/family-wall/daily-quote?quote_type=${quoteType}`;
+      const res = await fetch(url, { 
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
       const data = await res.json();
       setQuote(data.quote || '');
       if (forceRefresh) {
-        toast.success('New inspiration generated!');
+        toast.success(quoteType === 'bible' ? 'New Bible verse loaded!' : 'New inspiration loaded!');
       }
     } catch (error) {
       console.error('Failed to fetch quote:', error);
       if (forceRefresh) {
-        toast.error('Failed to generate new quote');
+        toast.error('Failed to load quote');
       }
     } finally {
       setQuoteLoading(false);
@@ -340,19 +349,45 @@ export default function FamilyWall({ user }) {
                         <Sparkles className="w-4 h-4 text-white" />
                       </div>
                       <div>
-                        <span className="text-sm font-bold text-accent">Daily Inspiration</span>
-                        <p className="text-[10px] text-slate-500">AI-generated just for your family</p>
+                        <span className="text-sm font-bold text-accent">
+                          {quoteType === 'bible' ? 'Daily Bible Verse' : 'Daily Inspiration'}
+                        </span>
                       </div>
                     </div>
-                    <button
-                      onClick={() => fetchDailyQuote(true)}
-                      disabled={quoteLoading}
-                      className="p-2 rounded-full hover:bg-slate-800 transition-all disabled:opacity-50"
-                      title="Get new quote"
-                      data-testid="refresh-quote-btn"
-                    >
-                      <RefreshCw className={`w-4 h-4 text-slate-400 ${quoteLoading ? 'animate-spin' : ''}`} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {/* Quote Type Toggle */}
+                      <div className="flex bg-slate-800 rounded-lg p-0.5">
+                        <button
+                          onClick={() => setQuoteType('inspiration')}
+                          className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all ${
+                            quoteType === 'inspiration' 
+                              ? 'bg-primary text-white' 
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          ✨ Inspire
+                        </button>
+                        <button
+                          onClick={() => setQuoteType('bible')}
+                          className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all ${
+                            quoteType === 'bible' 
+                              ? 'bg-primary text-white' 
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          ✝️ Bible
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => fetchDailyQuote(true)}
+                        disabled={quoteLoading}
+                        className="p-2 rounded-full hover:bg-slate-800 transition-all disabled:opacity-50"
+                        title="Get new quote"
+                        data-testid="refresh-quote-btn"
+                      >
+                        <RefreshCw className={`w-4 h-4 text-slate-400 ${quoteLoading ? 'animate-spin' : ''}`} />
+                      </button>
+                    </div>
                   </div>
                   {quoteLoading ? (
                     <div className="flex items-center justify-center py-4">
