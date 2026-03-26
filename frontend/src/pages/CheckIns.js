@@ -31,6 +31,8 @@ export default function CheckIns({ user }) {
   const [selectedMarker, setSelectedMarker] = useState(null);
   const [showMap, setShowMap] = useState(true);
 
+  const [locationDenied, setLocationDenied] = useState(false);
+
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     libraries: ['places']
@@ -42,8 +44,12 @@ export default function CheckIns({ user }) {
   }, []);
 
   const initializeLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
+    if (!navigator.geolocation) {
+      setGpsEnabled(false);
+      setLocationDenied(true);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
         (position) => {
           const loc = {
             lat: position.coords.latitude,
@@ -52,12 +58,13 @@ export default function CheckIns({ user }) {
           setCurrentLocation(loc);
           setMapCenter(loc);
           setGpsEnabled(true);
+          setLocationDenied(false);
           sendLocationUpdate(loc.lat, loc.lng);
         },
         (error) => {
           console.error('Location error:', error);
           setGpsEnabled(false);
-          toast.error('Please enable location services');
+          setLocationDenied(true);
         },
         { enableHighAccuracy: true }
       );
@@ -81,7 +88,6 @@ export default function CheckIns({ user }) {
         },
         { enableHighAccuracy: true, maximumAge: 30000, timeout: 27000 }
       );
-    }
   };
 
   const fetchData = async () => {
@@ -221,8 +227,40 @@ export default function CheckIns({ user }) {
     <div className="flex h-screen bg-slate-950">
       <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
+      {/* Location Required Blocking Modal */}
+      {locationDenied && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4" data-testid="location-required-modal">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-8 max-w-md w-full text-center space-y-5">
+            <div className="w-16 h-16 mx-auto bg-red-500/20 rounded-full flex items-center justify-center">
+              <MapPin className="w-8 h-8 text-red-400" />
+            </div>
+            <h2 className="text-xl font-black text-white">Location Required</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Location services must be enabled to use this feature. Please allow location access in your browser settings and try again.
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => { setLocationDenied(false); initializeLocation(); }}
+                className="w-full bg-primary hover:bg-primary/80 text-white font-bold py-3 px-6 rounded-full transition-all"
+                data-testid="retry-location-btn"
+              >
+                <Navigation className="w-4 h-4 inline mr-2" />
+                Enable Location & Retry
+              </button>
+              <button
+                onClick={() => window.history.back()}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3 px-6 rounded-full transition-all"
+                data-testid="go-back-btn"
+              >
+                Go Back
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className={`flex-1 overflow-y-auto transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
-        <div className="p-4 lg:p-6 pb-24 md:pb-6 space-y-4" data-testid="checkins-page">
+        <div className="p-4 pt-16 md:pt-4 lg:p-6 lg:pt-6 pb-24 md:pb-6 space-y-4" data-testid="checkins-page">
           <header className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-black text-white">Location</h1>

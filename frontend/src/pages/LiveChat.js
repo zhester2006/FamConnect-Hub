@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Smile, Check, CheckCheck, Wifi, WifiOff, Circle, Mic, MicOff, X, Play, Pause, Heart, ThumbsUp, Laugh, Angry, Frown } from 'lucide-react';
+import { Send, Smile, Check, CheckCheck, Wifi, WifiOff, Circle, Mic, MicOff, X, Play, Pause, Heart, ThumbsUp, Laugh, Angry, Frown, Image, Search } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { toast } from 'sonner';
 
@@ -317,6 +317,88 @@ const OnlineUsersBar = ({ onlineUsers, familyMembers, currentUserId }) => {
     </div>
   );
 };
+
+// Chat GIF Picker Component
+const ChatGifPicker = ({ onSelect, onClose }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [gifs, setGifs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchTrending();
+  }, []);
+
+  const fetchTrending = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/gifs/trending?limit=20`, { credentials: 'include' });
+      const data = await res.json();
+      setGifs(data.gifs || []);
+    } catch (error) {
+      console.error('Failed to fetch GIFs:', error);
+    }
+    setLoading(false);
+  };
+
+  const searchGifs = async () => {
+    if (!searchQuery.trim()) { fetchTrending(); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/gifs/search?q=${encodeURIComponent(searchQuery)}&limit=20`, { credentials: 'include' });
+      const data = await res.json();
+      setGifs(data.gifs || []);
+    } catch (error) {
+      console.error('Failed to search GIFs:', error);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="mb-3 w-full max-h-64 bg-slate-800/90 border border-slate-700 rounded-2xl overflow-hidden" data-testid="chat-gif-picker">
+      <div className="flex items-center gap-2 p-2 border-b border-slate-700">
+        <span className="text-xs font-bold text-white">GIFs</span>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && searchGifs()}
+          placeholder="Search GIFs..."
+          className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white placeholder:text-slate-500"
+          data-testid="chat-gif-search"
+        />
+        <button onClick={searchGifs} className="p-1 hover:bg-slate-700 rounded-lg">
+          <Search className="w-3.5 h-3.5 text-slate-400" />
+        </button>
+        <button onClick={onClose} className="p-1 hover:bg-slate-700 rounded-lg">
+          <X className="w-3.5 h-3.5 text-slate-400" />
+        </button>
+      </div>
+      <div className="overflow-y-auto max-h-48 p-2">
+        {loading ? (
+          <div className="flex justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary" />
+          </div>
+        ) : gifs.length > 0 ? (
+          <div className="grid grid-cols-3 gap-1.5">
+            {gifs.map((gif) => (
+              <button
+                key={gif.id}
+                onClick={() => onSelect(gif)}
+                className="relative overflow-hidden rounded-lg hover:ring-2 hover:ring-primary transition-all"
+                data-testid={`chat-gif-${gif.id}`}
+              >
+                <img src={gif.preview} alt={gif.title} className="w-full h-20 object-cover" loading="lazy" />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-slate-500 text-center py-4">No GIFs found</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export default function LiveChat({ user }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -329,12 +411,15 @@ export default function LiveChat({ user }) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [selectedMessageForReaction, setSelectedMessageForReaction] = useState(null);
+  const [showGifPicker, setShowGifPicker] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
   const messagesEndRef = useRef(null);
   const wsRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const connectWebSocketRef = useRef(null);
   const reconnectAttemptsRef = useRef(0);
+  const fileInputRef = useRef(null);
 
   // Common emoji set for quick picker
   const quickEmojis = ['😀', '😂', '❤️', '👍', '🎉', '🔥', '😢', '😡', '🤔', '👏', '💯', '✨'];
@@ -576,6 +661,62 @@ export default function LiveChat({ user }) {
     setShowEmojiPicker(false);
   };
 
+  // Handle image file selection
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be under 5MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  // Send image message
+  const sendImageMessage = async (imageUrl, caption = '') => {
+    try {
+      await fetch(`${BACKEND_URL}/api/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          content: caption || '[Image]',
+          media_url: imageUrl,
+          media_type: 'image'
+        })
+      });
+      setImagePreview(null);
+      fetchMessages();
+    } catch (error) {
+      console.error('Failed to send image:', error);
+      toast.error('Failed to send image');
+    }
+  };
+
+  // Handle GIF selection
+  const handleGifSelect = async (gif) => {
+    setShowGifPicker(false);
+    try {
+      await fetch(`${BACKEND_URL}/api/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          content: '[GIF]',
+          media_url: gif.url || gif.preview,
+          media_type: 'gif'
+        })
+      });
+      fetchMessages();
+    } catch (error) {
+      console.error('Failed to send GIF:', error);
+      toast.error('Failed to send GIF');
+    }
+  };
+
   // Mark messages as read when viewing
   useEffect(() => {
     if (messages.length > 0) {
@@ -654,7 +795,7 @@ export default function LiveChat({ user }) {
       
       <main className={`flex-1 flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`} data-testid="live-chat">
         {/* Header */}
-        <div className="sticky top-0 z-10 glass-card border-b border-white/10 backdrop-blur-2xl bg-slate-950/90 p-4">
+        <div className="sticky top-0 z-10 glass-card border-b border-white/10 backdrop-blur-2xl bg-slate-950/90 p-4 pt-14 md:pt-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl lg:text-2xl font-black text-white">Family Chat</h1>
@@ -736,6 +877,18 @@ export default function LiveChat({ user }) {
                           <VoicePlayer audioUrl={message.audio_url} />
                           <span className="text-xs opacity-70">{message.duration}s</span>
                         </div>
+                      ) : message.media_url ? (
+                        <div className="space-y-1">
+                          <img 
+                            src={message.media_url} 
+                            alt={message.media_type === 'gif' ? 'GIF' : 'Image'} 
+                            className="max-w-[250px] max-h-[200px] rounded-lg object-cover"
+                            data-testid="chat-media"
+                          />
+                          {message.content && message.content !== '[Image]' && message.content !== '[GIF]' && (
+                            <p className="text-sm break-words leading-relaxed">{message.content}</p>
+                          )}
+                        </div>
                       ) : (
                         <p className="text-sm break-words leading-relaxed">{message.content}</p>
                       )}
@@ -791,7 +944,46 @@ export default function LiveChat({ user }) {
         </div>
 
         {/* Input */}
-        <div className="sticky bottom-0 z-20 p-3 lg:p-4 pb-20 md:pb-4 glass-card border-t border-white/10 backdrop-blur-2xl bg-slate-950/90">
+        <div className="sticky bottom-0 z-20 p-3 lg:p-4 pb-24 md:pb-4 glass-card border-t border-white/10 backdrop-blur-2xl bg-slate-950/90">
+          {/* Hidden file input for image upload */}
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            accept="image/*" 
+            className="hidden" 
+            onChange={handleImageSelect}
+            data-testid="image-file-input"
+          />
+
+          {/* Image Preview */}
+          {imagePreview && (
+            <div className="mb-3 relative inline-block" data-testid="image-preview">
+              <img src={imagePreview} alt="Preview" className="max-h-32 rounded-xl border border-slate-700" />
+              <button 
+                onClick={() => setImagePreview(null)} 
+                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center"
+                data-testid="remove-image-preview"
+              >
+                <X className="w-3 h-3 text-white" />
+              </button>
+              <button 
+                onClick={() => sendImageMessage(imagePreview)} 
+                className="absolute bottom-1 right-1 px-3 py-1 bg-primary rounded-full text-xs font-bold text-white"
+                data-testid="send-image-btn"
+              >
+                Send
+              </button>
+            </div>
+          )}
+
+          {/* GIF Picker */}
+          {showGifPicker && (
+            <ChatGifPicker 
+              onSelect={handleGifSelect} 
+              onClose={() => setShowGifPicker(false)} 
+            />
+          )}
+
           {/* Voice Recorder */}
           {showVoiceRecorder ? (
             <VoiceRecorder
@@ -817,22 +1009,44 @@ export default function LiveChat({ user }) {
                 </div>
               )}
               
-              <form onSubmit={handleSendMessage} className="flex items-center space-x-2" data-testid="message-form">
+              <form onSubmit={handleSendMessage} className="flex items-center space-x-1.5" data-testid="message-form">
                 <button
                   type="button"
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                  className={`p-2.5 lg:p-3 rounded-full transition-all flex-shrink-0 ${
+                  className={`p-2 lg:p-2.5 rounded-full transition-all flex-shrink-0 ${
                     showEmojiPicker ? 'bg-primary/20 text-primary' : 'hover:bg-white/5 text-slate-400'
                   }`}
                   data-testid="emoji-button"
                 >
                   <Smile className="w-5 h-5" />
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2 lg:p-2.5 hover:bg-white/5 rounded-full transition-all flex-shrink-0"
+                  data-testid="image-button"
+                  title="Send image"
+                >
+                  <Image className="w-5 h-5 text-slate-400" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setShowGifPicker(!showGifPicker); setShowEmojiPicker(false); }}
+                  className={`p-2 lg:p-2.5 rounded-full transition-all flex-shrink-0 ${
+                    showGifPicker ? 'bg-primary/20 text-primary' : 'hover:bg-white/5 text-slate-400'
+                  }`}
+                  data-testid="gif-button"
+                  title="Send GIF"
+                >
+                  <span className="text-xs font-black">GIF</span>
+                </button>
                 
                 <button
                   type="button"
                   onClick={() => setShowVoiceRecorder(true)}
-                  className="p-2.5 lg:p-3 hover:bg-white/5 rounded-full transition-all flex-shrink-0"
+                  className="p-2 lg:p-2.5 hover:bg-white/5 rounded-full transition-all flex-shrink-0"
                   data-testid="voice-button"
                   title="Record voice message"
                 >
@@ -844,7 +1058,7 @@ export default function LiveChat({ user }) {
                   value={newMessage}
                   onChange={handleTyping}
                   placeholder="Type a message..."
-                  className="flex-1 bg-slate-900/50 border border-slate-800 rounded-full px-4 py-3 text-white placeholder:text-slate-600 focus:border-primary focus:outline-none text-sm lg:text-base"
+                  className="flex-1 bg-slate-900/50 border border-slate-800 rounded-full px-4 py-3 text-white placeholder:text-slate-600 focus:border-primary focus:outline-none text-sm lg:text-base min-w-0"
                   data-testid="message-input"
                 />
                 <button

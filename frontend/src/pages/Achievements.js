@@ -253,7 +253,7 @@ export default function Achievements({ user }) {
       <PageBackground page="achievements" />
       <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
 
-      <main className={`flex-1 overflow-auto transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'} pb-20 md:pb-6`}>
+      <main className={`flex-1 overflow-auto transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'} pb-20 md:pb-6 pt-14 md:pt-0`}>
         <div className="p-4 md:p-6 max-w-6xl mx-auto">
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-white flex items-center gap-3" data-testid="achievements-title">

@@ -140,7 +140,7 @@ export default function Calendar({ user }) {
       <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
       <main className={`flex-1 overflow-y-auto transition-all duration-300 relative z-10 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
-        <div className="p-4 lg:p-6 pb-24 md:pb-6 space-y-4" data-testid="calendar-page">
+        <div className="p-4 pt-16 md:pt-4 lg:p-6 lg:pt-6 pb-24 md:pb-6 space-y-4" data-testid="calendar-page">
           {/* Header */}
           <header className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center space-x-3">

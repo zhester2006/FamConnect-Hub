@@ -69,7 +69,7 @@ export default function Leaderboard({ user }) {
       <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
       <main className={`flex-1 overflow-y-auto transition-all duration-300 relative z-10 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
-        <div className="p-6 lg:p-8 space-y-6 pb-24 lg:pb-8">
+        <div className="p-6 pt-16 md:pt-6 lg:p-8 space-y-6 pb-24 lg:pb-8">
           <header className="glass-card rounded-3xl p-6 lg:p-8 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-accent/20 rounded-full blur-3xl"></div>
             <div className="relative z-10">
