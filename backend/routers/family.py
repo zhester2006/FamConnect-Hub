@@ -377,13 +377,19 @@ async def get_user_families(request: Request):
             {"_id": 0}
         )
         if family:
+            # Skip if this is the same as the virtual family already added
+            if any(f['family_id'] == family['family_id'] for f in families):
+                continue
             member_count = await db.family_memberships.count_documents({"family_id": family['family_id']})
+            # Also count children via parent_id
+            parent_children = await db.users.count_documents({"parent_id": family['family_id']})
             families.append({
                 "family_id": family['family_id'],
-                "name": family.get('name', 'Family'),
+                "name": family.get('name', family.get('family_name', 'Family')),
+                "family_code": family.get('family_code', ''),
                 "role": membership.get('role', 'member'),
-                "member_count": member_count,
-                "is_current": family['family_id'] == current_user.get('current_family_id')
+                "member_count": member_count + parent_children,
+                "is_current": family['family_id'] == current_user.get('current_family_id') or (not current_user.get('current_family_id') and len(families) == 0)
             })
     
     return {"families": families}
@@ -590,7 +596,7 @@ async def resolve_family_code(family_code: str):
 # Join family by invite code (auth required)
 @router.post("/families/join/{family_code}")
 async def join_family_by_code(family_code: str, request: Request):
-    """Join a family using an invite code"""
+    """Join a family using an invite code. Properly migrates user into the family."""
     current_user = await get_current_user(request)
     
     family = await db.families.find_one({"family_code": family_code}, {"_id": 0})
@@ -598,30 +604,64 @@ async def join_family_by_code(family_code: str, request: Request):
         raise HTTPException(status_code=404, detail="Invalid invite code")
     
     family_id = family['family_id']
+    user_id = current_user['user_id']
     
     # Check if already a member
     existing = await db.family_memberships.find_one({
         "family_id": family_id,
-        "user_id": current_user['user_id']
+        "user_id": user_id
     })
-    if existing or current_user['user_id'] == family_id:
+    if existing or user_id == family_id:
+        # Still update current_family_id so they switch context
+        await db.users.update_one(
+            {"user_id": user_id},
+            {"$set": {"current_family_id": family_id}}
+        )
         return {"success": True, "family_id": family_id, "already_member": True}
+    
+    # Determine role — check if there's a pending invite with a specific role
+    invite = await db.family_invites.find_one({
+        "family_id": family_id,
+        "email": current_user.get('email', ''),
+        "status": "pending"
+    })
+    join_role = invite['role'] if invite else current_user.get('role', 'member')
     
     # Create membership
     membership_doc = {
         "membership_id": f"mem_{uuid.uuid4().hex[:12]}",
         "family_id": family_id,
-        "user_id": current_user['user_id'],
-        "role": "member",
+        "user_id": user_id,
+        "role": join_role,
         "joined_at": datetime.now(timezone.utc).isoformat(),
         "joined_via": "invite_code"
     }
     await db.family_memberships.insert_one(membership_doc)
     
+    # Update user: set current_family_id and parent_id if joining a parent's family
+    update_fields = {"current_family_id": family_id}
+    
+    # If the family_id is a user_id (virtual family), set parent_id for child roles
+    if join_role == 'child':
+        parent_user = await db.users.find_one({"user_id": family_id}, {"_id": 0})
+        if parent_user and parent_user.get('role') == 'parent':
+            update_fields["parent_id"] = family_id
+    
+    await db.users.update_one({"user_id": user_id}, {"$set": update_fields})
+    
+    # Mark invite as accepted
+    if invite:
+        await db.family_invites.update_one(
+            {"invite_id": invite['invite_id']},
+            {"$set": {"status": "accepted", "accepted_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    
+    family_name = family.get('name', family.get('family_name', 'Family'))
     return {
         "success": True,
         "family_id": family_id,
-        "family_name": family.get('name', family.get('family_name')),
+        "family_name": family_name,
+        "role": join_role,
         "already_member": False
     }
 

@@ -47,11 +47,15 @@ export default function JoinFamily({ user }) {
       if (res.ok) {
         const data = await res.json();
         setJoined(true);
-        if (data.already_member) {
-          setTimeout(() => navigate('/family'), 1500);
-        } else {
-          setTimeout(() => navigate('/family'), 2000);
-        }
+        // Refresh user session so React picks up the new family
+        try {
+          const meRes = await fetch(`${BACKEND_URL}/api/auth/me`, { credentials: 'include' });
+          if (meRes.ok) {
+            const meData = await meRes.json();
+            localStorage.setItem('famfocus_user', JSON.stringify(meData));
+          }
+        } catch {}
+        setTimeout(() => navigate('/family'), 2000);
       } else {
         const data = await res.json();
         setError(data.detail || 'Failed to join');
