@@ -1,175 +1,188 @@
-import React from 'react';
-import { Bell, X, Check, Trash2, MapPin, Battery, AlertTriangle, Clock } from 'lucide-react';
-import { useNotifications } from '../context/NotificationContext';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Bell, Check, Trash2, X } from 'lucide-react';
 
-// Notification icon mapping
-const getNotificationIcon = (type) => {
-  switch (type) {
-    case 'geofence_exit':
-    case 'geofence_enter':
-      return MapPin;
-    case 'low_battery':
-      return Battery;
-    case 'approval_needed':
-      return AlertTriangle;
-    case 'chore_reminder':
-      return Clock;
-    default:
-      return Bell;
-  }
-};
+const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-// Notification color mapping
-const getNotificationColor = (type) => {
-  switch (type) {
-    case 'geofence_exit':
-      return 'text-red-400 bg-red-500/20';
-    case 'geofence_enter':
-      return 'text-green-400 bg-green-500/20';
-    case 'low_battery':
-      return 'text-orange-400 bg-orange-500/20';
-    case 'approval_needed':
-      return 'text-yellow-400 bg-yellow-500/20';
-    default:
-      return 'text-primary bg-primary/20';
-  }
-};
+export default function NotificationBell({ user }) {
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [open, setOpen] = useState(false);
+  const [permissionGranted, setPermissionGranted] = useState(false);
+  const dropdownRef = useRef(null);
+  const prevCountRef = useRef(0);
 
-export function NotificationBell() {
-  const { unreadCount, showNotificationPanel, setShowNotificationPanel } = useNotifications();
-  
-  return (
-    <button
-      onClick={() => setShowNotificationPanel(!showNotificationPanel)}
-      className="relative p-2 hover:bg-white/5 rounded-xl transition-all"
-      data-testid="notification-bell"
-    >
-      <Bell className="w-5 h-5 text-slate-400" />
-      {unreadCount > 0 && (
-        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-          {unreadCount > 9 ? '9+' : unreadCount}
-        </span>
-      )}
-    </button>
-  );
-}
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const [notifRes, countRes] = await Promise.all([
+        fetch(`${API_URL}/api/notifications`, { credentials: 'include' }),
+        fetch(`${API_URL}/api/notifications/unread-count`, { credentials: 'include' }),
+      ]);
+      if (notifRes.ok) {
+        const data = await notifRes.json();
+        setNotifications(data.notifications || []);
+      }
+      if (countRes.ok) {
+        const data = await countRes.json();
+        const newCount = data.unread_count || 0;
+        if (newCount > prevCountRef.current && permissionGranted) {
+          showBrowserNotification(newCount);
+        }
+        prevCountRef.current = newCount;
+        setUnreadCount(newCount);
+      }
+    } catch (e) {
+      console.error('Failed to fetch notifications:', e);
+    }
+  }, [permissionGranted]);
 
-export function NotificationPanel() {
-  const { 
-    notifications, 
-    showNotificationPanel, 
-    setShowNotificationPanel,
-    markAsRead,
-    markAllAsRead,
-    clearAll
-  } = useNotifications();
+  useEffect(() => {
+    if (!user) return;
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [user, fetchNotifications]);
 
-  if (!showNotificationPanel) return null;
+  useEffect(() => {
+    if ('Notification' in window) {
+      setPermissionGranted(Notification.permission === 'granted');
+    }
+  }, []);
 
-  const formatTime = (dateStr) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
+  const requestPermission = async () => {
+    if ('Notification' in window) {
+      const perm = await Notification.requestPermission();
+      setPermissionGranted(perm === 'granted');
+    }
+  };
+
+  const showBrowserNotification = (count) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('FamFocus Hub', {
+        body: `You have ${count} new notification${count > 1 ? 's' : ''}`,
+        icon: 'https://customer-assets.emergentagent.com/job_homebridge-5/artifacts/tqccfghc_startup.gif.gif',
+      });
+    }
+  };
+
+  const markAllRead = async () => {
+    try {
+      await fetch(`${API_URL}/api/notifications/read-all`, { method: 'PUT', credentials: 'include' });
+      setUnreadCount(0);
+      prevCountRef.current = 0;
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    } catch (e) { console.error(e); }
+  };
+
+  const clearAll = async () => {
+    try {
+      await fetch(`${API_URL}/api/notifications/clear`, { method: 'DELETE', credentials: 'include' });
+      setNotifications([]);
+      setUnreadCount(0);
+      prevCountRef.current = 0;
+    } catch (e) { console.error(e); }
+  };
+
+  const toggleOpen = () => {
+    if (!open && !permissionGranted) {
+      requestPermission();
+    }
+    setOpen(!open);
+  };
+
+  const getIcon = (type) => {
+    switch (type) {
+      case 'chore_reminder': return '🧹';
+      case 'achievement': return '🏆';
+      case 'chat': return '💬';
+      case 'geofence_exit': return '📍';
+      case 'wall_post': return '📝';
+      case 'push': return '🔔';
+      default: return '📌';
+    }
+  };
+
+  const timeAgo = (dateStr) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'now';
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h`;
+    return `${Math.floor(hrs / 24)}d`;
   };
 
   return (
-    <>
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 z-40"
-        onClick={() => setShowNotificationPanel(false)}
-      />
-      
-      {/* Panel */}
-      <div 
-        className="fixed right-4 top-16 z-50 w-80 max-h-[80vh] backdrop-blur-2xl bg-slate-900/95 border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
-        data-testid="notification-panel"
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={toggleOpen}
+        data-testid="notification-bell"
+        className="relative p-2 rounded-xl hover:bg-white/10 transition-all"
       >
-        {/* Header */}
-        <div className="p-4 border-b border-white/10 flex items-center justify-between">
-          <h3 className="font-bold text-white">Notifications</h3>
-          <div className="flex items-center gap-2">
-            {notifications.length > 0 && (
-              <>
-                <button
-                  onClick={markAllAsRead}
-                  className="p-1.5 hover:bg-white/5 rounded-lg transition-all"
-                  title="Mark all as read"
-                >
-                  <Check className="w-4 h-4 text-slate-400" />
-                </button>
-                <button
-                  onClick={clearAll}
-                  className="p-1.5 hover:bg-white/5 rounded-lg transition-all"
-                  title="Clear all"
-                >
-                  <Trash2 className="w-4 h-4 text-slate-400" />
-                </button>
-              </>
-            )}
-            <button
-              onClick={() => setShowNotificationPanel(false)}
-              className="p-1.5 hover:bg-white/5 rounded-lg transition-all"
-            >
-              <X className="w-4 h-4 text-slate-400" />
-            </button>
-          </div>
-        </div>
+        <Bell className={`w-5 h-5 ${unreadCount > 0 ? 'text-yellow-400' : 'text-slate-400'}`} />
+        {unreadCount > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse" data-testid="notification-badge">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
 
-        {/* Notifications List */}
-        <div className="overflow-y-auto max-h-[60vh]">
-          {notifications.length === 0 ? (
-            <div className="p-8 text-center">
-              <Bell className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-              <p className="text-slate-400 text-sm">No notifications yet</p>
+      {open && (
+        <div className="absolute right-0 top-12 w-80 max-h-96 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50" data-testid="notification-dropdown">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
+            <h3 className="text-white font-semibold text-sm">Notifications</h3>
+            <div className="flex gap-2">
+              {notifications.length > 0 && (
+                <>
+                  <button onClick={markAllRead} className="text-xs text-cyan-400 hover:text-cyan-300" data-testid="mark-all-read-btn">
+                    <Check className="w-4 h-4" />
+                  </button>
+                  <button onClick={clearAll} className="text-xs text-red-400 hover:text-red-300" data-testid="clear-all-btn">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+              <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
             </div>
-          ) : (
-            notifications.map(notification => {
-              const Icon = getNotificationIcon(notification.type);
-              const colorClass = getNotificationColor(notification.type);
-              
-              return (
+          </div>
+          <div className="overflow-y-auto max-h-72">
+            {notifications.length === 0 ? (
+              <div className="text-center py-8 text-slate-500">
+                <Bell className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No notifications yet</p>
+              </div>
+            ) : (
+              notifications.map((n) => (
                 <div
-                  key={notification.notification_id}
-                  className={`p-4 border-b border-white/5 hover:bg-white/5 cursor-pointer transition-all ${
-                    !notification.read ? 'bg-primary/5' : ''
-                  }`}
-                  onClick={() => markAsRead(notification.notification_id)}
-                  data-testid="notification-item"
+                  key={n.notification_id}
+                  className={`px-4 py-3 border-b border-slate-800 hover:bg-slate-800/50 transition-colors ${!n.read ? 'bg-slate-800/30' : ''}`}
+                  data-testid={`notification-${n.notification_id}`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-xl ${colorClass.split(' ')[1]}`}>
-                      <Icon className={`w-4 h-4 ${colorClass.split(' ')[0]}`} />
-                    </div>
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-lg flex-shrink-0">{getIcon(n.type)}</span>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm ${notification.read ? 'text-slate-300' : 'text-white font-medium'}`}>
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {formatTime(notification.created_at)}
-                      </p>
+                      <p className={`text-sm ${!n.read ? 'text-white' : 'text-slate-400'}`}>{n.message}</p>
+                      <p className="text-xs text-slate-600 mt-0.5">{timeAgo(n.created_at)}</p>
                     </div>
-                    {!notification.read && (
-                      <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
-                    )}
+                    {!n.read && <div className="w-2 h-2 bg-cyan-400 rounded-full flex-shrink-0 mt-1.5" />}
                   </div>
                 </div>
-              );
-            })
-          )}
+              ))
+            )}
+          </div>
         </div>
-      </div>
-    </>
+      )}
+    </div>
   );
 }
-
-export default NotificationBell;

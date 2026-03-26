@@ -25,7 +25,7 @@ import ChildLogin from '@/pages/ChildLogin';
 import SetupWizard from '@/pages/SetupWizard';
 import WelcomeTutorial from '@/components/WelcomeTutorial';
 import { NotificationProvider } from '@/context/NotificationContext';
-import { NotificationPanel } from '@/components/NotificationBell';
+import NotificationBell from '@/components/NotificationBell';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -129,7 +129,6 @@ function ProtectedRoute({ children }) {
   return isAuthenticated ? (
     <NotificationProvider user={user}>
       <WelcomeTutorial user={user} />
-      <NotificationPanel />
       {React.cloneElement(children, { user })}
     </NotificationProvider>
   ) : null;

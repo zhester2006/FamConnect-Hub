@@ -31,9 +31,14 @@ export default function ParentDashboard({ user }) {
   const [schedulePreferences, setSchedulePreferences] = useState('');
   const [scheduleDays, setScheduleDays] = useState(7);
 
+  // Pixie proactive suggestions
+  const [pixieSuggestions, setPixieSuggestions] = useState([]);
+  const [pixieLoading, setPixieLoading] = useState(false);
+
   useEffect(() => {
     fetchDashboardData();
     fetchBatteryStatus();
+    fetchPixieSuggestions();
     
     // Refresh battery status every 30 seconds
     const batteryInterval = setInterval(fetchBatteryStatus, 30000);
@@ -47,6 +52,23 @@ export default function ParentDashboard({ user }) {
       setBatteryStatus(data.battery_status || []);
     } catch (error) {
       console.error('Failed to fetch battery status:', error);
+    }
+  };
+
+  const fetchPixieSuggestions = async () => {
+    setPixieLoading(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/ai/pixie/proactive-suggestions`, {
+        method: 'POST', credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPixieSuggestions(data.suggestions || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch Pixie suggestions:', error);
+    } finally {
+      setPixieLoading(false);
     }
   };
 
@@ -266,6 +288,41 @@ export default function ParentDashboard({ user }) {
               <p className="text-xs text-slate-400">Progress</p>
             </div>
           </div>
+
+          {/* Pixie AI Suggestions */}
+          {(pixieSuggestions.length > 0 || pixieLoading) && (
+            <div className="glass-card rounded-xl p-4" data-testid="pixie-suggestions">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-400 to-violet-500 flex items-center justify-center">
+                    <Sparkles className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <span className="text-sm font-bold text-white">Pixie's Suggestions</span>
+                </div>
+                <button onClick={fetchPixieSuggestions} className="text-xs text-cyan-400 hover:text-cyan-300" data-testid="refresh-suggestions-btn">
+                  {pixieLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Refresh'}
+                </button>
+              </div>
+              {pixieLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
+                  <span className="ml-2 text-sm text-slate-400">Pixie is thinking...</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {pixieSuggestions.map((s, i) => (
+                    <div key={i} className="flex items-start gap-2.5 bg-slate-800/40 rounded-lg p-3 border border-slate-700/30" data-testid={`pixie-suggestion-${i}`}>
+                      <span className="text-xl flex-shrink-0">{s.icon}</span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">{s.title}</p>
+                        <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{s.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Chore Scheduling Buttons */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

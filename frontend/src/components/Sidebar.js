@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 import NotificationContext from '../context/NotificationContext';
+import NotificationBell from './NotificationBell';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -192,20 +193,8 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
                 </div>
               )}
               <div className={`flex items-center gap-1 ${isCollapsed ? 'w-full justify-center' : ''}`}>
-                {!isCollapsed && setShowNotificationPanel && (
-                  <button
-                    onClick={() => setShowNotificationPanel(prev => !prev)}
-                    className="relative p-2 hover:bg-white/5 rounded-xl transition-all"
-                    data-testid="notification-bell"
-                    title="Notifications"
-                  >
-                    <Bell className="w-4 h-4 text-slate-400" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </span>
-                    )}
-                  </button>
+                {!isCollapsed && (
+                  <NotificationBell user={user} />
                 )}
                 <button 
                   onClick={handleCollapse} 
