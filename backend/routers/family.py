@@ -389,11 +389,13 @@ async def get_user_families(request: Request):
     current_user = await get_current_user(request)
     user_id = current_user['user_id']
     current_family_id = current_user.get('current_family_id')
+    user_role = current_user.get('role')
     
     families = []
+    seen_family_ids = set()
     
-    # Only add the virtual family if this parent actually has children or a family doc under their user_id
-    if current_user.get('role') == 'parent':
+    # For parent-role users: add the virtual family if they have children or a family doc
+    if user_role == 'parent':
         child_count = await db.users.count_documents({"parent_id": user_id})
         saved_family = await db.families.find_one({"family_id": user_id}, {"_id": 0})
         
@@ -407,6 +409,25 @@ async def get_user_families(request: Request):
                 "member_count": child_count + 1,
                 "is_current": current_family_id == user_id or (not current_family_id and True)
             })
+            seen_family_ids.add(user_id)
+    
+    # For all roles: resolve family via family_id or parent_id on the user doc
+    linked_family_id = current_user.get('family_id') or current_user.get('parent_id')
+    if linked_family_id and linked_family_id not in seen_family_ids:
+        linked_family = await db.families.find_one({"family_id": linked_family_id}, {"_id": 0})
+        if linked_family:
+            member_count = await db.family_memberships.count_documents({"family_id": linked_family_id})
+            parent_children = await db.users.count_documents({"parent_id": linked_family_id})
+            is_current = linked_family_id == current_family_id or (not current_family_id and len(families) == 0)
+            families.append({
+                "family_id": linked_family_id,
+                "name": linked_family.get('name', linked_family.get('family_name', 'Family')),
+                "family_code": linked_family.get('family_code', ''),
+                "role": user_role or 'member',
+                "member_count": member_count + parent_children,
+                "is_current": is_current
+            })
+            seen_family_ids.add(linked_family_id)
     
     # Check family memberships
     memberships = await db.family_memberships.find(
@@ -415,13 +436,13 @@ async def get_user_families(request: Request):
     ).to_list(20)
     
     for membership in memberships:
+        if membership['family_id'] in seen_family_ids:
+            continue
         family = await db.families.find_one(
             {"family_id": membership['family_id']},
             {"_id": 0}
         )
         if family:
-            if any(f['family_id'] == family['family_id'] for f in families):
-                continue
             member_count = await db.family_memberships.count_documents({"family_id": family['family_id']})
             parent_children = await db.users.count_documents({"parent_id": family['family_id']})
             is_current = family['family_id'] == current_family_id or (not current_family_id and len(families) == 0)
@@ -433,10 +454,10 @@ async def get_user_families(request: Request):
                 "member_count": member_count + parent_children,
                 "is_current": is_current
             })
+            seen_family_ids.add(family['family_id'])
     
     # Ensure exactly one family is marked current
     if families and not any(f['is_current'] for f in families):
-        # Prefer current_family_id match, else first family
         for f in families:
             if f['family_id'] == current_family_id:
                 f['is_current'] = True
@@ -852,8 +873,13 @@ async def get_family_members(family_id: str, request: Request):
     
     if is_virtual_family:
         # Virtual family: family_id is the parent's user_id
-        # Only allow the parent or their children to view
-        if current_user['user_id'] != family_id and current_user.get('parent_id') != family_id:
+        # Allow: the parent, their children, or any user linked via family_id/parent_id
+        is_authorized = (
+            current_user['user_id'] == family_id or
+            current_user.get('parent_id') == family_id or
+            current_user.get('family_id') == family_id
+        )
+        if not is_authorized:
             raise HTTPException(status_code=403, detail="Not a member of this family")
         
         members = []
@@ -898,8 +924,12 @@ async def get_family_members(family_id: str, request: Request):
     })
     
     is_family_owner = family.get('created_by') == current_user['user_id']
+    is_linked = (
+        current_user.get('family_id') == family_id or
+        current_user.get('parent_id') == family_id
+    )
     
-    if not membership and not is_family_owner:
+    if not membership and not is_family_owner and not is_linked:
         raise HTTPException(status_code=403, detail="Not a member of this family")
     
     memberships = await db.family_memberships.find(
