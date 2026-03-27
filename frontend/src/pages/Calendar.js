@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Plus, X, Clock, Briefcase, CalendarDays, Star } from 'lucide-react';
+import { DndContext, useSensor, useSensors, PointerSensor, DragOverlay } from '@dnd-kit/core';
+import { ChevronLeft, ChevronRight, Plus, X, Clock, Briefcase, CalendarDays, Star, GripVertical, Move } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { toast } from 'sonner';
 
@@ -12,7 +13,65 @@ const EVENT_TYPES = {
   task: { label: 'Task', color: 'bg-purple-500', icon: Clock }
 };
 
-export default function Calendar({ user }) {
+function DraggableEvent({ event }) {
+  const [isDragging, setIsDragging] = React.useState(false);
+  
+  return (
+    <div
+      draggable="true"
+      onDragStart={(e) => {
+        e.dataTransfer.setData('text/plain', event.event_id);
+        setIsDragging(true);
+      }}
+      onDragEnd={() => setIsDragging(false)}
+      className={`text-[9px] px-1 py-0.5 rounded truncate text-white cursor-grab active:cursor-grabbing flex items-center gap-0.5 ${
+        EVENT_TYPES[event.event_type]?.color || 'bg-primary'
+      } ${isDragging ? 'opacity-50' : 'hover:brightness-110'}`}
+      title={`Drag to move: ${event.title}`}
+    >
+      <GripVertical className="w-2 h-2 flex-shrink-0 opacity-50" />
+      <span className="truncate">{event.title}</span>
+    </div>
+  );
+}
+
+function DroppableDay({ id, day, isToday, isSelected, onClick, events }) {
+  const [isOver, setIsOver] = React.useState(false);
+  
+  if (!day) return <div className="min-h-[80px]" />;
+  
+  return (
+    <div
+      id={id}
+      data-droppable={id}
+      onClick={onClick}
+      onDragOver={(e) => { e.preventDefault(); setIsOver(true); }}
+      onDragLeave={() => setIsOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsOver(false);
+        // Will be handled by the parent's native drag handler
+      }}
+      className={`min-h-[80px] p-1 rounded-lg transition-all cursor-pointer ${
+        isOver ? 'bg-primary/30 ring-2 ring-primary' : 'hover:bg-slate-800/50'
+      } ${isSelected ? 'bg-primary/20 border border-primary' : ''} ${
+        isToday ? 'bg-accent/10 border border-accent' : ''
+      }`}
+    >
+      <span className={`text-sm font-bold ${isToday ? 'text-accent' : 'text-white'}`}>{day}</span>
+      <div className="space-y-0.5 mt-1">
+        {events.slice(0, 3).map(event => (
+          <DraggableEvent key={event.event_id} event={event} />
+        ))}
+        {events.length > 3 && (
+          <span className="text-[9px] text-slate-400">+{events.length - 3} more</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function CalendarPage({ user }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -22,6 +81,7 @@ export default function Calendar({ user }) {
   const [filterType, setFilterType] = useState('all');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activeEvent, setActiveEvent] = useState(null);
   const [newEvent, setNewEvent] = useState({
     title: '',
     event_date: '',
@@ -30,6 +90,15 @@ export default function Calendar({ user }) {
     work_start_time: '',
     work_end_time: ''
   });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('dev_session_token');
+    return { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
+  };
 
   useEffect(() => {
     fetchEvents();
@@ -41,11 +110,48 @@ export default function Calendar({ user }) {
       if (filterType !== 'all') {
         url += `?event_type=${filterType}`;
       }
-      const res = await fetch(url, { credentials: 'include' });
+      const res = await fetch(url, { credentials: 'include', headers: getAuthHeaders() });
       const data = await res.json();
       setEvents(data.events || []);
     } catch (error) {
       console.error('Failed to fetch events:', error);
+    }
+  };
+
+  const handleDragStart = (event) => {
+    const draggedEvent = events.find(e => e.event_id === event.active.id);
+    setActiveEvent(draggedEvent);
+  };
+
+  const handleDragEnd = async (event) => {
+    setActiveEvent(null);
+    const { active, over } = event;
+    if (!over || !active) return;
+    
+    const targetDayId = over.id;
+    if (!targetDayId?.toString().startsWith('day-')) return;
+    
+    const newDate = targetDayId.toString().replace('day-', '');
+    const draggedEvent = events.find(e => e.event_id === active.id);
+    if (!draggedEvent || draggedEvent.event_date === newDate) return;
+    
+    // Optimistic update
+    setEvents(prev => prev.map(e => e.event_id === active.id ? { ...e, event_date: newDate } : e));
+    
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/events/${active.id}/move`, {
+        method: 'PUT', headers: getAuthHeaders(), credentials: 'include',
+        body: JSON.stringify({ new_date: newDate })
+      });
+      if (res.ok) {
+        toast.success(`Moved to ${new Date(newDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`);
+      } else {
+        fetchEvents(); // Revert
+        toast.error('Failed to move event');
+      }
+    } catch (e) {
+      fetchEvents();
+      toast.error('Failed to move event');
     }
   };
 
@@ -189,6 +295,7 @@ export default function Calendar({ user }) {
           </div>
 
           {/* Calendar Grid */}
+          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <div className="glass-card rounded-2xl p-4">
             <div className="grid grid-cols-7 gap-1 mb-2">
               {dayNames.map(day => (
@@ -198,39 +305,34 @@ export default function Calendar({ user }) {
             <div className="grid grid-cols-7 gap-1">
               {getDaysInMonth().map((day, i) => {
                 const dayEventsForCell = getEventsForDay(day);
+                const dateStr = day ? `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` : '';
                 return (
-                  <div
+                  <DroppableDay
                     key={i}
+                    id={day ? `day-${dateStr}` : `empty-${i}`}
+                    day={day}
+                    isToday={isToday(day)}
+                    isSelected={selectedDate === day}
                     onClick={() => day && handleDayClick(day)}
-                    className={`min-h-[80px] p-1 rounded-lg transition-all cursor-pointer ${
-                      day ? 'hover:bg-slate-800/50' : ''
-                    } ${selectedDate === day ? 'bg-primary/20 border border-primary' : ''} ${
-                      isToday(day) ? 'bg-accent/10 border border-accent' : ''
-                    }`}
-                  >
-                    {day && (
-                      <>
-                        <span className={`text-sm font-bold ${isToday(day) ? 'text-accent' : 'text-white'}`}>{day}</span>
-                        <div className="space-y-0.5 mt-1">
-                          {dayEventsForCell.slice(0, 3).map(event => (
-                            <div
-                              key={event.event_id}
-                              className={`text-[9px] px-1 py-0.5 rounded truncate text-white ${EVENT_TYPES[event.event_type]?.color || 'bg-primary'}`}
-                            >
-                              {event.title}
-                            </div>
-                          ))}
-                          {dayEventsForCell.length > 3 && (
-                            <span className="text-[9px] text-slate-400">+{dayEventsForCell.length - 3} more</span>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
+                    events={dayEventsForCell}
+                  />
                 );
               })}
             </div>
           </div>
+
+          {/* Drag Overlay */}
+          <DragOverlay>
+            {activeEvent && (
+              <div className={`text-[10px] px-2 py-1 rounded text-white shadow-xl ${EVENT_TYPES[activeEvent.event_type]?.color || 'bg-primary'} opacity-90 max-w-[120px]`}>
+                <div className="flex items-center gap-1">
+                  <Move className="w-3 h-3" />
+                  <span className="truncate">{activeEvent.title}</span>
+                </div>
+              </div>
+            )}
+          </DragOverlay>
+          </DndContext>
 
           {/* Selected Date Events */}
           {selectedDate && (

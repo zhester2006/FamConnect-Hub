@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Plus, ShoppingCart, CheckCircle, Clock, Users, Sun, Cloud, CloudRain, Wind, Snowflake, CloudLightning, Sparkles, X, ChevronLeft, ChevronRight, Star, Bell, CalendarDays, Briefcase, ChevronDown, ChevronUp, Lock, Maximize2, Monitor, Smartphone, UserCheck } from 'lucide-react';
+import { Calendar, Plus, ShoppingCart, CheckCircle, Clock, Users, Sun, Cloud, CloudRain, Wind, Snowflake, CloudLightning, Sparkles, X, ChevronLeft, ChevronRight, Star, Bell, CalendarDays, Briefcase, ChevronDown, ChevronUp, Lock, Maximize2, Monitor, Smartphone, UserCheck, StickyNote, Palette, Trash2, MessageSquare } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { toast } from 'sonner';
 import { SCREENSAVER_IMAGES } from '@/utils/pageBackgrounds';
@@ -135,6 +135,16 @@ export default function HomeHub({ user }) {
     event_type: 'appointment'
   });
   const [newItem, setNewItem] = useState('');
+  
+  // Sticky notes state
+  const [stickyNotes, setStickyNotes] = useState([]);
+  const [showAddNote, setShowAddNote] = useState(false);
+  const [newNote, setNewNote] = useState('');
+  const [noteColor, setNoteColor] = useState('bg-yellow-300');
+  
+  // Hub theme state
+  const [hubTheme, setHubTheme] = useState('classic');
+  const [showThemeSelector, setShowThemeSelector] = useState(false);
 
   // Screensaver background state
   const [bgIndex, setBgIndex] = useState(() => Math.floor(Math.random() * SCREENSAVER_IMAGES.length));
@@ -198,13 +208,15 @@ export default function HomeHub({ user }) {
   const fetchHubData = async () => {
     try {
       const headers = getAuthHeaders();
-      const [membersRes, eventsRes, quoteRes, shoppingRes, choresRes, pendingChoresRes] = await Promise.all([
+      const [membersRes, eventsRes, quoteRes, shoppingRes, choresRes, pendingChoresRes, notesRes, hubSettingsRes] = await Promise.all([
         fetch(`${BACKEND_URL}/api/family/members`, { credentials: 'include', headers }),
         fetch(`${BACKEND_URL}/api/events`, { credentials: 'include', headers }),
         fetch(`${BACKEND_URL}/api/family-wall/daily-quote?quote_type=${quoteType}`, { credentials: 'include', headers }),
         fetch(`${BACKEND_URL}/api/shopping`, { credentials: 'include', headers }),
         fetch(`${BACKEND_URL}/api/chores`, { credentials: 'include', headers }),
-        fetch(`${BACKEND_URL}/api/chores/pending-by-member`, { credentials: 'include', headers })
+        fetch(`${BACKEND_URL}/api/chores/pending-by-member`, { credentials: 'include', headers }),
+        fetch(`${BACKEND_URL}/api/hub/notes`, { credentials: 'include', headers }),
+        fetch(`${BACKEND_URL}/api/hub/settings`, { credentials: 'include', headers })
       ]);
 
       const members = await membersRes.json();
@@ -213,12 +225,16 @@ export default function HomeHub({ user }) {
       const shopping = await shoppingRes.json();
       const chores = await choresRes.json();
       const pendingChores = pendingChoresRes.ok ? await pendingChoresRes.json() : { members: [] };
+      const notesData = notesRes.ok ? await notesRes.json() : { notes: [] };
+      const hubSettings = hubSettingsRes.ok ? await hubSettingsRes.json() : {};
 
       setFamilyMembers(members.members || []);
       setEvents(eventsData.events || []);
       setQuote(quoteData.quote || '');
       setShoppingItems(shopping.items || []);
       setPendingChoresByMember(pendingChores.members || []);
+      setStickyNotes(notesData.notes || []);
+      if (hubSettings.theme) setHubTheme(hubSettings.theme);
       const today = new Date().toISOString().split('T')[0];
       setTodayChores((chores.chores || []).filter(c => c.scheduled_date === today));
     } catch (error) {
@@ -246,6 +262,9 @@ export default function HomeHub({ user }) {
         break;
       case 'addItem':
         setShowAddItem(true);
+        break;
+      case 'addNote':
+        setShowAddNote(true);
         break;
       case 'completeChore':
         executeCompleteChore(action.data.choreId, verifiedMember);
@@ -330,6 +349,46 @@ export default function HomeHub({ user }) {
         const data = await res.json();
         toast.error(data.detail || 'Failed to complete chore');
       }
+
+  const handleAddNote = async () => {
+    if (!newNote.trim()) return;
+    try {
+      const headers = { 'Content-Type': 'application/json', ...getAuthHeaders() };
+      const res = await fetch(`${BACKEND_URL}/api/hub/notes`, {
+        method: 'POST', headers, credentials: 'include',
+        body: JSON.stringify({ text: newNote, color: noteColor, submitted_by: verifiedUser?.user_id })
+      });
+      if (res.ok) {
+        toast.success('Note added!');
+        setNewNote('');
+        setShowAddNote(false);
+        setVerifiedUser(null);
+        fetchHubData();
+      }
+    } catch (e) { toast.error('Failed to add note'); }
+  };
+
+  const handleDeleteNote = async (noteId) => {
+    try {
+      const headers = getAuthHeaders();
+      await fetch(`${BACKEND_URL}/api/hub/notes/${noteId}`, { method: 'DELETE', headers, credentials: 'include' });
+      fetchHubData();
+    } catch (e) { toast.error('Failed to delete'); }
+  };
+
+  const handleSetTheme = async (themeId) => {
+    try {
+      const headers = { 'Content-Type': 'application/json', ...getAuthHeaders() };
+      await fetch(`${BACKEND_URL}/api/hub/theme`, {
+        method: 'PUT', headers, credentials: 'include',
+        body: JSON.stringify({ theme: themeId })
+      });
+      setHubTheme(themeId);
+      setShowThemeSelector(false);
+      toast.success('Theme updated!');
+    } catch (e) { toast.error('Failed to set theme'); }
+  };
+
       setVerifiedUser(null);
       fetchHubData();
     } catch (error) {
@@ -423,6 +482,14 @@ export default function HomeHub({ user }) {
 
             {/* Family Online + Orientation Toggle */}
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowThemeSelector(!showThemeSelector)}
+                className="glass-card rounded-xl px-3 py-2 flex items-center gap-2 hover:bg-slate-800/50 transition-all"
+                title="Change Hub theme"
+                data-testid="theme-toggle"
+              >
+                <Palette className="w-4 h-4 text-slate-400" />
+              </button>
               <button
                 onClick={() => setOrientation(o => o === 'landscape' ? 'portrait' : 'landscape')}
                 className="glass-card rounded-xl px-3 py-2 flex items-center gap-2 hover:bg-slate-800/50 transition-all"
@@ -640,6 +707,40 @@ export default function HomeHub({ user }) {
                   </div>
                 </div>
               )}
+
+              {/* Sticky Notes / Message Board */}
+              <div className="glass-card rounded-xl p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-bold text-white flex items-center space-x-1">
+                    <MessageSquare className="w-3 h-3 text-yellow-400" />
+                    <span>Message Board</span>
+                  </h3>
+                  <button 
+                    onClick={() => { requirePin('addNote'); }}
+                    className="p-1 bg-yellow-500/20 hover:bg-yellow-500/40 rounded transition-all flex items-center gap-1"
+                    data-testid="add-note-btn"
+                  >
+                    <Lock className="w-2 h-2 text-yellow-400" />
+                    <Plus className="w-3 h-3 text-yellow-400" />
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto">
+                  {stickyNotes.length === 0 ? (
+                    <p className="text-[10px] text-slate-500">No notes yet. Pin a message for the family!</p>
+                  ) : stickyNotes.map(note => (
+                    <div key={note.note_id} className={`${note.color || 'bg-yellow-300'} rounded-lg p-2 min-w-[100px] max-w-[160px] relative group`}>
+                      <p className="text-[10px] text-slate-900 font-medium break-words">{note.text}</p>
+                      <p className="text-[8px] text-slate-600 mt-1">- {note.created_by_name}</p>
+                      <button 
+                        onClick={() => handleDeleteNote(note.note_id)}
+                        className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-2.5 h-2.5 text-white" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -803,6 +904,88 @@ export default function HomeHub({ user }) {
         actionLabel="Verify & Continue"
         title="Who's making this request?"
       />
+
+      {/* Add Note Modal (shown AFTER PIN verification) */}
+      {showAddNote && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-card rounded-2xl p-5 max-w-sm w-full">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-black text-white">Add Note</h2>
+                {verifiedUser && (
+                  <p className="text-xs text-primary flex items-center gap-1">
+                    <UserCheck className="w-3 h-3" /> Posting as {verifiedUser.name}
+                  </p>
+                )}
+              </div>
+              <button onClick={() => { setShowAddNote(false); setVerifiedUser(null); }} className="p-1 hover:bg-slate-800 rounded-lg">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <textarea
+                placeholder="Leave a message for the family..."
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 text-sm resize-none h-24"
+                autoFocus
+                data-testid="note-text-input"
+              />
+              <div className="flex gap-2">
+                {['bg-yellow-300', 'bg-pink-300', 'bg-blue-300', 'bg-green-300', 'bg-purple-300', 'bg-orange-300'].map(color => (
+                  <button
+                    key={color}
+                    onClick={() => setNoteColor(color)}
+                    className={`w-8 h-8 rounded-lg ${color} ${noteColor === color ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-900' : 'opacity-60 hover:opacity-100'} transition-all`}
+                  />
+                ))}
+              </div>
+              <button
+                onClick={handleAddNote}
+                className="w-full bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-bold py-2.5 rounded-full transition-all text-sm"
+                data-testid="submit-note-btn"
+              >
+                Pin to Message Board
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Theme Selector Modal */}
+      {showThemeSelector && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowThemeSelector(false)}>
+          <div className="glass-card rounded-2xl p-5 max-w-md w-full" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-black text-white flex items-center gap-2"><Palette className="w-5 h-5 text-accent" /> Hub Themes</h2>
+              <button onClick={() => setShowThemeSelector(false)} className="p-1 hover:bg-slate-800 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { id: 'classic', name: 'Classic', gradient: 'from-slate-900 to-slate-800' },
+                { id: 'sunset', name: 'Sunset Glow', gradient: 'from-orange-900 to-pink-900' },
+                { id: 'ocean', name: 'Ocean Calm', gradient: 'from-blue-900 to-cyan-900' },
+                { id: 'forest', name: 'Forest', gradient: 'from-green-900 to-emerald-900' },
+                { id: 'midnight', name: 'Midnight', gradient: 'from-indigo-950 to-purple-950' },
+                { id: 'warm', name: 'Warm Earth', gradient: 'from-amber-900 to-red-900' },
+                { id: 'neon', name: 'Neon City', gradient: 'from-fuchsia-900 to-violet-900' },
+                { id: 'minimal', name: 'Minimal', gradient: 'from-neutral-900 to-stone-900' }
+              ].map(theme => (
+                <button
+                  key={theme.id}
+                  onClick={() => handleSetTheme(theme.id)}
+                  className={`p-3 rounded-xl border-2 transition-all ${
+                    hubTheme === theme.id ? 'border-primary' : 'border-transparent hover:border-slate-600'
+                  }`}
+                >
+                  <div className={`h-12 rounded-lg bg-gradient-to-r ${theme.gradient} mb-2`} />
+                  <p className="text-xs font-bold text-white">{theme.name}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

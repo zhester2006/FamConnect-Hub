@@ -3,7 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, Calendar, MessageCircle, Users, ShoppingCart, Award, 
   Settings, LogOut, Utensils, Trophy, Book, MapPin, Menu, X,
-  LayoutDashboard, Sparkles, ChevronLeft, ChevronRight, GripVertical, BarChart3, Bell, Medal
+  LayoutDashboard, Sparkles, ChevronLeft, ChevronRight, GripVertical, BarChart3, Bell, Medal,
+  Sun, Flame
 } from 'lucide-react';
 
 import NotificationContext from '../context/NotificationContext';
@@ -130,11 +131,13 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     { icon: Users, label: 'Family', path: '/family', color: 'text-cyan-400' },
     { icon: Calendar, label: 'Calendar', path: '/calendar', color: 'text-emerald-400' },
     { icon: GripVertical, label: 'Chores', path: '/chore-scheduler', color: 'text-teal-400' },
+    { icon: Sun, label: 'Routines', path: '/routines', color: 'text-amber-300' },
     { icon: MessageCircle, label: 'Chat', path: '/chat', color: 'text-pink-400' },
     { icon: LayoutDashboard, label: 'Wall', path: '/family-wall', color: 'text-rose-400' },
     { icon: ShoppingCart, label: 'Shopping', path: '/shopping', color: 'text-orange-400' },
     { icon: Trophy, label: 'Leaderboard', path: '/leaderboard', color: 'text-yellow-400' },
     { icon: Medal, label: 'Achievements', path: '/achievements', color: 'text-fuchsia-400' },
+    { icon: Flame, label: 'Weekly Recap', path: '/weekly-recap', color: 'text-orange-400' },
     { icon: Utensils, label: 'Dinner', path: '/dinner', color: 'text-amber-400' },
     { icon: Award, label: 'Rewards', path: '/rewards', color: 'text-purple-400' },
     { icon: Book, label: 'Reading', path: '/reading', color: 'text-sky-400' },
@@ -147,6 +150,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     { icon: Home, label: 'My Space', path: '/space', color: 'text-blue-400' },
     { icon: Sparkles, label: 'Home Hub', path: '/hub', color: 'text-indigo-400' },
     { icon: Calendar, label: 'Calendar', path: '/calendar', color: 'text-emerald-400' },
+    { icon: Sun, label: 'Routines', path: '/routines', color: 'text-amber-300' },
     { icon: MessageCircle, label: 'Chat', path: '/chat', color: 'text-pink-400' },
     { icon: LayoutDashboard, label: 'Wall', path: '/family-wall', color: 'text-rose-400' },
     { icon: ShoppingCart, label: 'Shopping', path: '/shopping', color: 'text-orange-400' },

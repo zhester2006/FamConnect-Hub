@@ -21,6 +21,8 @@ import CheckIns from '@/pages/CheckIns';
 import Analytics from '@/pages/Analytics';
 import ChoreScheduler from '@/pages/ChoreScheduler';
 import Achievements from '@/pages/Achievements';
+import Routines from '@/pages/Routines';
+import WeeklyRecap from '@/pages/WeeklyRecap';
 import JoinFamily from '@/pages/JoinFamily';
 import ChildLogin from '@/pages/ChildLogin';
 import SetupWizard from '@/pages/SetupWizard';
@@ -167,6 +169,8 @@ function AppRouter() {
       <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
       <Route path="/chore-scheduler" element={<ProtectedRoute><ChoreScheduler /></ProtectedRoute>} />
       <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
+      <Route path="/routines" element={<ProtectedRoute><Routines /></ProtectedRoute>} />
+      <Route path="/weekly-recap" element={<ProtectedRoute><WeeklyRecap /></ProtectedRoute>} />
       <Route path="/join/:code" element={<JoinFamily />} />
       <Route path="/parent" element={<Navigate to="/dashboard" replace />} />
     </Routes>

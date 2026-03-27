@@ -80,6 +80,11 @@ export default function DinnerPlanner({ user }) {
   // Plan day selections (per-day ingredient sets)
   var [planDayIngs, setPlanDayIngs] = useState({});
   var [planDayTargets, setPlanDayTargets] = useState({});
+  // Recipe Book
+  var [recipes, setRecipes] = useState([]);
+  var [showRecipeBook, setShowRecipeBook] = useState(false);
+  var [showAddRecipe, setShowAddRecipe] = useState(false);
+  var [newRecipe, setNewRecipe] = useState({ name: '', category: 'dinner', prep_time: '', cook_time: '', ingredients: '', steps: '', servings: 4 });
 
   var fetchSchedule = useCallback(function() {
     return fetch(BACKEND_URL + '/api/dinner/schedule?week_start=' + WEEK_DATES[0].date, { credentials: 'include' })
@@ -88,13 +93,59 @@ export default function DinnerPlanner({ user }) {
       .catch(function() {});
   }, []);
 
-  useEffect(function() { fetchSavedPlans(); fetchSchedule(); }, [fetchSchedule]);
+  useEffect(function() { fetchSavedPlans(); fetchSchedule(); fetchRecipes(); }, [fetchSchedule]);
 
   function fetchSavedPlans() {
     fetch(BACKEND_URL + '/api/dinner/plans', { credentials: 'include' })
       .then(function(r) { return r.json(); })
       .then(function(data) { setSavedPlans(data.plans || []); })
       .catch(function() {});
+  }
+
+  function fetchRecipes() {
+    var token = localStorage.getItem('dev_session_token');
+    var headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+    fetch(BACKEND_URL + '/api/recipes', { credentials: 'include', headers: headers })
+      .then(function(r) { return r.json(); })
+      .then(function(data) { setRecipes(data.recipes || []); })
+      .catch(function() {});
+  }
+
+  function handleSaveRecipe() {
+    if (!newRecipe.name.trim()) { toast.error('Recipe name required'); return; }
+    var token = localStorage.getItem('dev_session_token');
+    var headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    var ingredientsList = newRecipe.ingredients.split('\n').filter(function(i) { return i.trim(); });
+    var stepsList = newRecipe.steps.split('\n').filter(function(s) { return s.trim(); });
+    fetch(BACKEND_URL + '/api/recipes', {
+      method: 'POST', headers: headers, credentials: 'include',
+      body: JSON.stringify({
+        name: newRecipe.name, category: newRecipe.category,
+        prep_time: newRecipe.prep_time, cook_time: newRecipe.cook_time,
+        ingredients: ingredientsList, steps: stepsList, servings: parseInt(newRecipe.servings) || 4
+      })
+    }).then(function(r) { if (r.ok) { toast.success('Recipe saved!'); setShowAddRecipe(false); setNewRecipe({ name: '', category: 'dinner', prep_time: '', cook_time: '', ingredients: '', steps: '', servings: 4 }); fetchRecipes(); } })
+      .catch(function() { toast.error('Failed to save recipe'); });
+  }
+
+  function handleRecipeToShopping(recipeId) {
+    var token = localStorage.getItem('dev_session_token');
+    var headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+    fetch(BACKEND_URL + '/api/recipes/' + recipeId + '/to-shopping', {
+      method: 'POST', headers: headers, credentials: 'include'
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      toast.success(data.message || 'Ingredients added!');
+    }).catch(function() { toast.error('Failed'); });
+  }
+
+  function handleDeleteRecipe(recipeId) {
+    var token = localStorage.getItem('dev_session_token');
+    var headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+    fetch(BACKEND_URL + '/api/recipes/' + recipeId, {
+      method: 'DELETE', headers: headers, credentials: 'include'
+    }).then(function() { toast.success('Recipe deleted'); fetchRecipes(); })
+      .catch(function() { toast.error('Failed'); });
   }
 
   function handleGetSuggestion(e) {
@@ -306,6 +357,9 @@ export default function DinnerPlanner({ user }) {
                 <History className="w-4 h-4 text-slate-400" /><span className="text-sm text-slate-300 hidden sm:inline">History</span>
               </button>
             )}
+            <button onClick={function() { setShowRecipeBook(!showRecipeBook); }} className={'flex items-center space-x-2 px-4 py-2 rounded-full transition-all ' + (showRecipeBook ? 'bg-primary text-white' : 'bg-slate-800 hover:bg-slate-700')} data-testid="recipe-book-btn">
+              <Utensils className="w-4 h-4" /><span className="text-sm hidden sm:inline">Recipe Book</span>
+            </button>
           </header>
 
           <div className="glass-card rounded-2xl p-5 space-y-4" data-testid="dinner-schedule">
@@ -465,6 +519,104 @@ export default function DinnerPlanner({ user }) {
             <h3 className="text-lg font-bold text-white mb-4">Quick Meal Ideas</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{quickMealCards}</div>
           </div>
+
+          {/* Recipe Book */}
+          {showRecipeBook && (
+            <div className="glass-card rounded-2xl p-5 border border-primary/30" data-testid="recipe-book">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2"><Utensils className="w-5 h-5 text-primary" /> Recipe Book</h3>
+                <button onClick={function() { setShowAddRecipe(true); }} className="flex items-center gap-1 px-3 py-1.5 bg-primary hover:bg-primary/80 text-white rounded-full text-xs font-bold" data-testid="add-recipe-btn">
+                  <span>+ Add Recipe</span>
+                </button>
+              </div>
+              {recipes.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-4">No saved recipes yet. Add your family favorites!</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {recipes.map(function(recipe) {
+                    return (
+                      <div key={recipe.recipe_id} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700 hover:border-slate-500 transition-all">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h4 className="text-sm font-bold text-white">{recipe.name}</h4>
+                            <span className="text-[10px] text-primary capitalize">{recipe.category}</span>
+                          </div>
+                          <button onClick={function() { handleDeleteRecipe(recipe.recipe_id); }} className="text-slate-500 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                        {(recipe.prep_time || recipe.cook_time) && (
+                          <p className="text-[10px] text-slate-500 mb-2">
+                            {recipe.prep_time && 'Prep: ' + recipe.prep_time}
+                            {recipe.cook_time && ' | Cook: ' + recipe.cook_time}
+                            {' | Serves ' + recipe.servings}
+                          </p>
+                        )}
+                        {recipe.ingredients && recipe.ingredients.length > 0 && (
+                          <div className="mb-2">
+                            <p className="text-[9px] text-slate-500 uppercase font-bold mb-1">Ingredients ({recipe.ingredients.length})</p>
+                            <p className="text-[10px] text-slate-400 line-clamp-2">{recipe.ingredients.join(', ')}</p>
+                          </div>
+                        )}
+                        <button onClick={function() { handleRecipeToShopping(recipe.recipe_id); }}
+                          className="w-full flex items-center justify-center gap-1 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/30 border border-green-600/30 text-green-400 rounded-lg text-[10px] font-bold transition-all mt-2"
+                          data-testid={'recipe-to-shopping-' + recipe.recipe_id}>
+                          <ShoppingCart className="w-3 h-3" /> Add Ingredients to Shopping
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Add Recipe Modal */}
+          {showAddRecipe && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="glass-card rounded-2xl p-5 max-w-md w-full max-h-[85vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-black text-white">Save Recipe</h2>
+                  <button onClick={function() { setShowAddRecipe(false); }} className="p-1 hover:bg-slate-800 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button>
+                </div>
+                <div className="space-y-3">
+                  <input type="text" placeholder="Recipe name" value={newRecipe.name}
+                    onChange={function(e) { setNewRecipe(Object.assign({}, newRecipe, { name: e.target.value })); }}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:border-primary focus:outline-none" data-testid="recipe-name-input" />
+                  <select value={newRecipe.category} onChange={function(e) { setNewRecipe(Object.assign({}, newRecipe, { category: e.target.value })); }}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
+                    <option value="breakfast">Breakfast</option><option value="lunch">Lunch</option>
+                    <option value="dinner">Dinner</option><option value="snack">Snack</option><option value="dessert">Dessert</option>
+                  </select>
+                  <div className="grid grid-cols-3 gap-2">
+                    <input type="text" placeholder="Prep time" value={newRecipe.prep_time}
+                      onChange={function(e) { setNewRecipe(Object.assign({}, newRecipe, { prep_time: e.target.value })); }}
+                      className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none" />
+                    <input type="text" placeholder="Cook time" value={newRecipe.cook_time}
+                      onChange={function(e) { setNewRecipe(Object.assign({}, newRecipe, { cook_time: e.target.value })); }}
+                      className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none" />
+                    <input type="number" placeholder="Servings" value={newRecipe.servings}
+                      onChange={function(e) { setNewRecipe(Object.assign({}, newRecipe, { servings: e.target.value })); }}
+                      className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">Ingredients (one per line)</label>
+                    <textarea value={newRecipe.ingredients} onChange={function(e) { setNewRecipe(Object.assign({}, newRecipe, { ingredients: e.target.value })); }}
+                      placeholder="1 cup flour&#10;2 eggs&#10;1 tsp salt" rows="4"
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-primary focus:outline-none resize-none" data-testid="recipe-ingredients-input" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">Steps (one per line)</label>
+                    <textarea value={newRecipe.steps} onChange={function(e) { setNewRecipe(Object.assign({}, newRecipe, { steps: e.target.value })); }}
+                      placeholder="Mix dry ingredients&#10;Add wet ingredients&#10;Bake at 350F for 30 min" rows="4"
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-primary focus:outline-none resize-none" data-testid="recipe-steps-input" />
+                  </div>
+                  <button onClick={handleSaveRecipe}
+                    className="w-full bg-primary hover:bg-primary/80 text-white font-bold py-3 rounded-xl" data-testid="save-recipe-btn">
+                    Save Recipe
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>

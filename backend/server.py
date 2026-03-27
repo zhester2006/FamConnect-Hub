@@ -26,6 +26,7 @@ from routers.weather import router as weather_router
 from routers.gifs import router as gifs_router
 from routers.achievements import router as achievements_router
 from routers.misc import router as misc_router
+from routers.hub_features import router as hub_features_router
 
 app = FastAPI()
 
@@ -60,6 +61,7 @@ api_router.include_router(weather_router)
 api_router.include_router(gifs_router)
 api_router.include_router(achievements_router)
 api_router.include_router(misc_router)
+api_router.include_router(hub_features_router)
 
 
 # ============ WebSocket Chat ============
