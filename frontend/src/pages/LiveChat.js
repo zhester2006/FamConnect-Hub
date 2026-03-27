@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Smile, Check, CheckCheck, Wifi, WifiOff, Circle, Mic, MicOff, X, Play, Pause, Heart, ThumbsUp, Laugh, Angry, Frown, Image, Search, Users } from 'lucide-react';
+import { Send, Smile, Check, CheckCheck, Wifi, WifiOff, Circle, Mic, MicOff, X, Play, Pause, Heart, ThumbsUp, Laugh, Angry, Frown, Image, Search, Users, Trash2 } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { Avatar } from '@/components/Avatar';
 import { toast } from 'sonner';
@@ -662,6 +662,28 @@ export default function LiveChat({ user }) {
     setShowEmojiPicker(false);
   };
 
+  // Delete message (parent only)
+  const handleDeleteMessage = async (messageId) => {
+    if (!window.confirm('Delete this message?')) return;
+    try {
+      const token = localStorage.getItem('dev_session_token');
+      const res = await fetch(`${BACKEND_URL}/api/messages/${messageId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.detail || 'Failed to delete');
+        return;
+      }
+      setMessages(prev => prev.filter(m => m.message_id !== messageId));
+      toast.success('Message deleted');
+    } catch (error) {
+      toast.error('Failed to delete message');
+    }
+  };
+
   // Handle image file selection
   const handleImageSelect = (e) => {
     const file = e.target.files?.[0];
@@ -843,7 +865,7 @@ export default function LiveChat({ user }) {
                 className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
                 data-testid="chat-message"
               >
-                <div className={`flex items-end space-x-2 max-w-[85%] lg:max-w-[75%] ${isOwn ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                <div className={`flex items-end space-x-2 max-w-[85%] lg:max-w-[75%] group ${isOwn ? 'flex-row-reverse space-x-reverse' : ''}`}>
                   {!isOwn && (
                     <div className="relative flex-shrink-0">
                       <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xs font-black text-white overflow-hidden">
@@ -920,6 +942,16 @@ export default function LiveChat({ user }) {
                         familyMembers={familyMembers} 
                         currentUserId={user?.user_id} 
                       />
+                      {user?.role === 'parent' && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDeleteMessage(message.message_id); }}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded transition-all"
+                          data-testid="delete-message-btn"
+                          title="Delete message"
+                        >
+                          <Trash2 className="w-3 h-3 text-slate-500 hover:text-red-400" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

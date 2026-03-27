@@ -4,7 +4,7 @@ import {
   Home, Calendar, MessageCircle, Users, ShoppingCart, Award, 
   Settings, LogOut, Utensils, Trophy, Book, MapPin, Menu, X,
   LayoutDashboard, Sparkles, ChevronLeft, ChevronRight, GripVertical, BarChart3, Bell, Medal,
-  Sun, Flame
+  Sun, Flame, Package
 } from 'lucide-react';
 
 import NotificationContext from '../context/NotificationContext';
@@ -139,6 +139,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     { icon: Medal, label: 'Achievements', path: '/achievements', color: 'text-fuchsia-400' },
     { icon: Flame, label: 'Weekly Recap', path: '/weekly-recap', color: 'text-orange-400' },
     { icon: Utensils, label: 'Dinner', path: '/dinner', color: 'text-amber-400' },
+    { icon: Package, label: 'Pantry', path: '/pantry', color: 'text-green-400' },
     { icon: Award, label: 'Rewards', path: '/rewards', color: 'text-purple-400' },
     { icon: Book, label: 'Reading', path: '/reading', color: 'text-sky-400' },
     { icon: MapPin, label: 'Location', path: '/checkins', color: 'text-red-400' },
@@ -154,6 +155,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     { icon: MessageCircle, label: 'Chat', path: '/chat', color: 'text-pink-400' },
     { icon: LayoutDashboard, label: 'Wall', path: '/family-wall', color: 'text-rose-400' },
     { icon: ShoppingCart, label: 'Shopping', path: '/shopping', color: 'text-orange-400' },
+    { icon: Package, label: 'Pantry', path: '/pantry', color: 'text-green-400' },
     { icon: Trophy, label: 'Leaderboard', path: '/leaderboard', color: 'text-yellow-400' },
     { icon: Medal, label: 'Achievements', path: '/achievements', color: 'text-fuchsia-400' },
     { icon: Award, label: 'Rewards', path: '/rewards', color: 'text-purple-400' },
@@ -170,6 +172,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     { icon: ShoppingCart, label: 'Shopping', path: '/shopping', color: 'text-orange-400' },
     { icon: Trophy, label: 'Leaderboard', path: '/leaderboard', color: 'text-yellow-400' },
     { icon: Utensils, label: 'Dinner', path: '/dinner', color: 'text-amber-400' },
+    { icon: Package, label: 'Pantry', path: '/pantry', color: 'text-green-400' },
     { icon: Award, label: 'Rewards', path: '/rewards', color: 'text-purple-400' },
   ], []);
 

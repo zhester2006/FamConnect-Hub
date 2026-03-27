@@ -269,7 +269,7 @@ async def scan_receipt_or_item(request: Request, data: dict):
             - quantity: estimated quantity if visible (string, empty if unknown)
             Return ONLY the JSON array, no other text. Example:
             [{"name": "Whole Milk", "category": "fridge", "quantity": "1 gallon"}, {"name": "Rice", "category": "shelf", "quantity": "2 lbs"}]"""
-        ).with_model("openai", "gpt-4o")
+        ).with_model("openai", "gpt-5.2")
         
         image_content = ImageContent(image_base64=image_base64)
         

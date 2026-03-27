@@ -26,7 +26,9 @@ import WeeklyRecap from '@/pages/WeeklyRecap';
 import JoinFamily from '@/pages/JoinFamily';
 import ChildLogin from '@/pages/ChildLogin';
 import SetupWizard from '@/pages/SetupWizard';
+import Pantry from '@/pages/Pantry';
 import WelcomeTutorial from '@/components/WelcomeTutorial';
+import PixieChat from '@/components/PixieChat';
 import { NotificationProvider } from '@/context/NotificationContext';
 import NotificationBell from '@/components/NotificationBell';
 
@@ -135,6 +137,7 @@ function ProtectedRoute({ children }) {
     <NotificationProvider user={user}>
       <WelcomeTutorial user={user} />
       {React.cloneElement(children, { user })}
+      <PixieChat user={user} />
     </NotificationProvider>
   ) : null;
 }
@@ -171,6 +174,7 @@ function AppRouter() {
       <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
       <Route path="/routines" element={<ProtectedRoute><Routines /></ProtectedRoute>} />
       <Route path="/weekly-recap" element={<ProtectedRoute><WeeklyRecap /></ProtectedRoute>} />
+      <Route path="/pantry" element={<ProtectedRoute><Pantry /></ProtectedRoute>} />
       <Route path="/join/:code" element={<JoinFamily />} />
       <Route path="/parent" element={<Navigate to="/dashboard" replace />} />
     </Routes>

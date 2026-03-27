@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Heart, MessageCircle, Image as ImageIcon, Plus, TrendingUp, Smile, Send, X, BarChart2, Check, Search, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { Heart, MessageCircle, Image as ImageIcon, Plus, TrendingUp, Smile, Send, X, BarChart2, Check, Search, Loader2, RefreshCw, Sparkles, Trash2 } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { Avatar } from '@/components/Avatar';
 import { toast } from 'sonner';
@@ -377,6 +377,27 @@ export default function FamilyWall({ user }) {
     }
   };
 
+  const handleDeletePost = async (postId) => {
+    if (!window.confirm('Delete this post?')) return;
+    try {
+      const token = localStorage.getItem('dev_session_token');
+      const res = await fetch(`${BACKEND_URL}/api/family-wall/${postId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.detail || 'Failed to delete');
+        return;
+      }
+      toast.success('Post deleted');
+      fetchPosts();
+    } catch (error) {
+      toast.error('Failed to delete post');
+    }
+  };
+
   return (
     <div className="flex h-screen bg-slate-950">
       <Sidebar user={user} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
@@ -502,6 +523,16 @@ export default function FamilyWall({ user }) {
                       <MessageCircle className="w-4 h-4" />
                       <span className="text-xs">Comment</span>
                     </button>
+                    {user?.role === 'parent' && (
+                      <button 
+                        onClick={() => handleDeletePost(post.post_id)} 
+                        className="flex items-center space-x-1 text-slate-400 hover:text-red-500 transition-all ml-auto"
+                        data-testid="delete-post-btn"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span className="text-xs">Delete</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
