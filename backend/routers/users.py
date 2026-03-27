@@ -79,10 +79,29 @@ async def get_user(user_id: str, request: Request):
 async def get_family_members(request: Request):
     current_user = await get_current_user(request)
     if current_user['role'] in ('parent', 'homehub'):
-        # For parent: find self + all children/homehubs under them
-        # For homehub: find all members under the parent who created this homehub
+        # Resolve the parent user_id
         parent_id = current_user['user_id'] if current_user['role'] == 'parent' else current_user.get('parent_id')
-        members = await db.users.find({"$or": [{"user_id": parent_id}, {"parent_id": parent_id}]}, {"_id": 0}).to_list(100)
+        
+        # Find direct family members (self + children + homehubs under this parent)
+        direct_members = await db.users.find({"$or": [{"user_id": parent_id}, {"parent_id": parent_id}]}, {"_id": 0}).to_list(100)
+        member_ids = {m['user_id'] for m in direct_members}
+        
+        # Also find co-parents via family memberships
+        family_id = current_user.get('current_family_id') or current_user.get('family_id')
+        if not family_id:
+            # Check families collection for families created by this parent
+            family_doc = await db.families.find_one({"created_by": parent_id}, {"_id": 0})
+            if family_doc:
+                family_id = family_doc['family_id']
+        
+        if family_id:
+            memberships = await db.family_memberships.find({"family_id": family_id}, {"_id": 0}).to_list(100)
+            membership_user_ids = [m['user_id'] for m in memberships if m['user_id'] not in member_ids]
+            if membership_user_ids:
+                co_parents = await db.users.find({"user_id": {"$in": membership_user_ids}}, {"_id": 0}).to_list(100)
+                direct_members.extend(co_parents)
+        
+        members = direct_members
     else:
         members = await db.users.find({"user_id": {"$in": [current_user['user_id'], current_user.get('parent_id')]}}, {"_id": 0}).to_list(100)
     

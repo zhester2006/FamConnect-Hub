@@ -25,7 +25,6 @@ export function Avatar({ name, picture, size = 'md', className = '' }) {
           src={picture}
           alt={name}
           referrerPolicy="no-referrer"
-          crossOrigin="anonymous"
           className="w-full h-full object-cover"
           onError={() => setImgError(true)}
         />
