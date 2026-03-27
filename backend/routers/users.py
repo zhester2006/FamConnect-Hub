@@ -20,8 +20,9 @@ async def get_family_profiles(request: Request):
     """Get all family member profiles for Home Hub dropdown"""
     current_user = await get_current_user(request)
     family_id = current_user.get('family_id') or current_user.get('parent_id') or current_user.get('user_id')
+    current_family_id = current_user.get('current_family_id')
     
-    # Get all family members
+    # Get direct family members
     members = await db.users.find({
         "$or": [
             {"family_id": family_id},
@@ -29,6 +30,24 @@ async def get_family_profiles(request: Request):
             {"user_id": family_id}
         ]
     }, {"_id": 0, "pin": 0}).to_list(100)
+    seen_ids = {m['user_id'] for m in members}
+    
+    # Also get members from family_memberships (catches co-parents like Elizabeth)
+    membership_family_ids = [family_id]
+    if current_family_id and current_family_id != family_id:
+        membership_family_ids.append(current_family_id)
+    
+    memberships = await db.family_memberships.find(
+        {"family_id": {"$in": membership_family_ids}},
+        {"_id": 0, "user_id": 1}
+    ).to_list(100)
+    extra_ids = [m['user_id'] for m in memberships if m['user_id'] not in seen_ids]
+    if extra_ids:
+        extra_members = await db.users.find(
+            {"user_id": {"$in": extra_ids}},
+            {"_id": 0, "pin": 0}
+        ).to_list(100)
+        members.extend(extra_members)
     
     # Filter out homehub profiles from the selection - they are shared devices, not people
     profiles = [m for m in members if m.get('role') != 'homehub']
@@ -37,6 +56,7 @@ async def get_family_profiles(request: Request):
     for member in profiles:
         member_full = await db.users.find_one({"user_id": member['user_id']})
         member['has_pin'] = bool(member_full.get('pin'))
+        member['picture'] = sanitize_picture(member.get('picture'), fallback_name=member.get('name'))
     
     return {"profiles": profiles}
 

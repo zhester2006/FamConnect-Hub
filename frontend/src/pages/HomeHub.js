@@ -501,7 +501,7 @@ export default function HomeHub({ user }) {
               <div className="glass-card rounded-xl px-4 py-2 flex items-center space-x-3">
                 <Users className="w-4 h-4 text-primary" />
                 <div className="flex -space-x-2">
-                  {familyMembers.slice(0, 5).map(member => (
+                  {familyMembers.slice(0, 7).map(member => (
                     <div key={member.user_id} className="relative" title={member.name}>
                       <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-slate-950 flex-shrink-0">
                         {member.picture ? (

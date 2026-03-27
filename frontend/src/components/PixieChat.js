@@ -4,21 +4,25 @@ import { toast } from 'sonner';
 import { ChatBubble } from './pixie/ChatBubble';
 import { PinModal } from './pixie/PinModal';
 import { EmptyState } from './pixie/EmptyState';
+import { VoiceActivityDetector } from './pixie/VoiceActivityDetector';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 function RecordingBar({ duration, onCancel, onSend }) {
   const formatted = Math.floor(duration / 60) + ':' + (duration % 60).toString().padStart(2, '0');
   return (
-    <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3" data-testid="pixie-recording">
-      <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-      <span className="text-red-400 font-mono text-sm flex-1">{formatted}</span>
-      <button onClick={onCancel} className="p-2 hover:bg-slate-800 rounded-full" data-testid="pixie-cancel-recording">
-        <X className="w-4 h-4 text-slate-400" />
-      </button>
-      <button onClick={onSend} className="p-2 bg-primary rounded-full hover:bg-primary/80" data-testid="pixie-send-recording">
-        <Send className="w-4 h-4 text-white" />
-      </button>
+    <div className="flex flex-col gap-2" data-testid="pixie-recording">
+      <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
+        <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+        <span className="text-red-400 font-mono text-sm flex-1">{formatted}</span>
+        <button onClick={onCancel} className="p-2 hover:bg-slate-800 rounded-full" data-testid="pixie-cancel-recording">
+          <X className="w-4 h-4 text-slate-400" />
+        </button>
+        <button onClick={onSend} className="p-2 bg-primary rounded-full hover:bg-primary/80" data-testid="pixie-send-recording">
+          <Send className="w-4 h-4 text-white" />
+        </button>
+      </div>
+      <p className="text-[10px] text-slate-500 text-center">Speak now — Pixie will respond when you stop</p>
     </div>
   );
 }
@@ -63,6 +67,7 @@ export default function PixieChat({ user }) {
   const timerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
+  const vadRef = useRef(null);
   const isHomehub = user?.role === 'homehub';
 
   useEffect(() => {
@@ -266,12 +271,26 @@ export default function PixieChat({ user }) {
       setIsRecording(true);
       setRecordingDuration(0);
       timerRef.current = setInterval(() => setRecordingDuration(d => d + 1), 1000);
+
+      // Start Voice Activity Detection for auto-stop
+      if (vadRef.current) vadRef.current.stop();
+      vadRef.current = new VoiceActivityDetector({
+        silenceThreshold: 0.015,
+        silenceDuration: 1800,
+        minRecordingDuration: 800,
+        onSilence: () => {
+          // Auto-stop and send when user stops speaking
+          stopRecordingAndSend();
+        }
+      });
+      vadRef.current.start(stream);
     } catch (e) {
       toast.error('Microphone access denied. Please allow mic permissions.');
     }
   };
 
   const stopRecordingAndSend = async () => {
+    if (vadRef.current) { vadRef.current.stop(); vadRef.current = null; }
     const recorder = mediaRecorderRef.current;
     if (!recorder || !isRecording) return;
     return new Promise((resolve) => {
@@ -325,6 +344,7 @@ export default function PixieChat({ user }) {
   };
 
   const cancelRecording = () => {
+    if (vadRef.current) { vadRef.current.stop(); vadRef.current = null; }
     const recorder = mediaRecorderRef.current;
     if (recorder && isRecording) {
       if (recorder.stream) recorder.stream.getTracks().forEach(t => t.stop());
