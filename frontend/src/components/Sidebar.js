@@ -26,9 +26,8 @@ const triggerHaptic = (type = 'light') => {
 
 // Mobile Bottom Navigation Component
 function MobileBottomNav({ user, currentPath, onNavigate }) {
-  const isOnHub = currentPath === '/hub';
   const navItems = useMemo(() => {
-    if (isOnHub || user?.role === 'homehub') return [
+    if (user?.role === 'homehub') return [
       { icon: Sparkles, label: 'Hub', path: '/hub' },
       { icon: Calendar, label: 'Calendar', path: '/calendar' },
       { icon: MessageCircle, label: 'Chat', path: '/chat' },
@@ -49,7 +48,7 @@ function MobileBottomNav({ user, currentPath, onNavigate }) {
       { icon: Trophy, label: 'Rewards', path: '/rewards' },
       { icon: Settings, label: 'More', path: '/settings' },
     ];
-  }, [user?.role, isOnHub]);
+  }, [user?.role]);
 
   const navigateWithHaptic = useCallback((path) => {
     triggerHaptic('light');
@@ -170,16 +169,11 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     { icon: Award, label: 'Rewards', path: '/rewards', color: 'text-purple-400' },
   ], []);
 
-  // When on /hub route, ALWAYS show restricted HomeHub menu regardless of user role
-  const isOnHub = location.pathname === '/hub';
-  const menuItems = isOnHub || user?.role === 'homehub' 
+  const menuItems = user?.role === 'homehub' 
     ? homehubMenuItems 
     : user?.role === 'parent' 
       ? parentMenuItems 
       : childMenuItems;
-
-  // Display role: show "Home Hub" when on hub route
-  const displayRole = isOnHub ? 'Home Hub' : (user?.role || 'Member');
 
   // Sidebar width for margin calculation: 64px collapsed, 256px expanded
   const sidebarWidth = isCollapsed ? 'w-16' : 'w-64';
@@ -249,7 +243,7 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-white text-sm truncate">{user?.name || 'User'}</p>
-                  <p className="text-xs text-slate-400 capitalize">{displayRole}</p>
+                  <p className="text-xs text-slate-400 capitalize">{user?.role || 'Member'}</p>
                 </div>
               </div>
             </div>
