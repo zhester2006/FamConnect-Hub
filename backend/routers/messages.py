@@ -142,5 +142,17 @@ async def send_voice_message(request: Request, audio: UploadFile = File(...), du
     await db.messages.insert_one(message_doc)
     return await db.messages.find_one({"message_id": message_id}, {"_id": 0})
 
+@router.delete("/messages/{message_id}")
+async def delete_message(message_id: str, request: Request):
+    """Delete a chat message - parents only"""
+    current_user = await get_current_user(request)
+    if current_user.get('role') != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can delete messages")
+    result = await db.messages.delete_one({"message_id": message_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Message not found")
+    return {"message": "Message deleted"}
+
+
 # Events/Calendar
 

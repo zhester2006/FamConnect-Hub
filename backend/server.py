@@ -27,6 +27,7 @@ from routers.gifs import router as gifs_router
 from routers.achievements import router as achievements_router
 from routers.misc import router as misc_router
 from routers.hub_features import router as hub_features_router
+from routers.pantry import router as pantry_router
 
 app = FastAPI()
 
@@ -62,6 +63,7 @@ api_router.include_router(gifs_router)
 api_router.include_router(achievements_router)
 api_router.include_router(misc_router)
 api_router.include_router(hub_features_router)
+api_router.include_router(pantry_router)
 
 
 # ============ WebSocket Chat ============

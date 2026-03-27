@@ -210,5 +210,17 @@ async def get_daily_quote(request: Request, refresh: bool = False, quote_type: s
     
     return quote_doc
 
+@router.delete("/family-wall/{post_id}")
+async def delete_wall_post(post_id: str, request: Request):
+    """Delete a wall post - parents only"""
+    current_user = await get_current_user(request)
+    if current_user.get('role') != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can delete wall posts")
+    result = await db.family_wall.delete_one({"post_id": post_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Post not found")
+    return {"message": "Post deleted"}
+
+
 # Messages/Chat
 

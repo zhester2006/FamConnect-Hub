@@ -237,5 +237,5 @@ FamFocusHub/
 ## Support
 
 For issues or questions about the mobile app, check:
-- Backend API: `https://chore-share-test.preview.emergentagent.com/docs`
+- Backend API: `https://family-pantry-hub-2.preview.emergentagent.com/docs`
 - Expo documentation: `https://docs.expo.dev`
