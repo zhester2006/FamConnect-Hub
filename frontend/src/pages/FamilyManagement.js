@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Users, Plus, UserPlus, Check, X, Crown, Mail, Loader2, Trash2, Edit2, Baby, User, Shield, Lock, Copy, Link, Home, Share2, MessageCircle } from 'lucide-react';
+import { Users, Plus, UserPlus, Check, X, Crown, Mail, Loader2, Trash2, Edit2, Baby, User, Shield, Lock, Copy, Link, Home, Share2, MessageCircle, Monitor, Eye, EyeOff } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { Avatar } from '@/components/Avatar';
 import { toast } from 'sonner';
@@ -43,6 +43,8 @@ export default function FamilyManagement({ user }) {
   const [childFormData, setChildFormData] = useState({ name: '', pin: '', picture: '', username: '', password: '' });
   const [createdInviteLink, setCreatedInviteLink] = useState(null);
   const [inviteResult, setInviteResult] = useState(null);
+  const [hubFormData, setHubFormData] = useState({ name: '', email: '', password: '' });
+  const [createdHubResult, setCreatedHubResult] = useState(null);
   const [editCredentialsModal, setEditCredentialsModal] = useState(null);
 
   const fetchData = useCallback(async () => {
@@ -259,6 +261,58 @@ export default function FamilyManagement({ user }) {
       setProcessing(null);
     }
   };
+
+  const handleCreateHomeHub = async () => {
+    if (!hubFormData.name.trim()) {
+      toast.error('Please enter a name for the Home Hub');
+      return;
+    }
+    if (!hubFormData.email.trim()) {
+      toast.error('Please enter an email for the Home Hub');
+      return;
+    }
+    if (!hubFormData.password || hubFormData.password.length < 4) {
+      toast.error('Password must be at least 4 characters');
+      return;
+    }
+    
+    setProcessing('createHub');
+    try {
+      const token = localStorage.getItem('dev_session_token');
+      const res = await fetch(`${BACKEND_URL}/api/family/homehub/create`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: hubFormData.name,
+          email: hubFormData.email,
+          password: hubFormData.password
+        })
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(data.message || 'Home Hub profile created!');
+        setCreatedHubResult({
+          name: hubFormData.name,
+          email: hubFormData.email,
+          password: hubFormData.password
+        });
+        fetchData();
+      } else {
+        const data = await res.json();
+        toast.error(data.detail || 'Failed to create Home Hub profile');
+      }
+    } catch (error) {
+      toast.error('Failed to create Home Hub profile');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
 
   const handleSetMemberPin = async (memberId) => {
     const pin = prompt('Enter a 4-digit PIN for this family member:');
@@ -480,6 +534,13 @@ export default function FamilyManagement({ user }) {
                     >
                       <Baby className="w-5 h-5" /> Add Child Profile
                     </button>
+                    <button 
+                      onClick={() => { setHubFormData({ name: '', email: '', password: '' }); setCreatedHubResult(null); setModal({ type: 'addHomeHub' }); }}
+                      className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-600/80 rounded-xl text-white font-bold transition-all"
+                      data-testid="create-homehub-btn"
+                    >
+                      <Monitor className="w-5 h-5" /> Create Home Hub
+                    </button>
                   </div>
                 )}
 
@@ -530,7 +591,7 @@ export default function FamilyManagement({ user }) {
                                 data-testid={`edit-member-${member.user_id}`}
                               >
                                 <User className="w-4 h-4" />
-                              </button>}
+                              </button>
                               <button 
                                 onClick={() => handleSetMemberPin(member.user_id)}
                                 disabled={processing === member.user_id}
@@ -1057,6 +1118,114 @@ export default function FamilyManagement({ user }) {
               Save Changes
             </button>
           </div>
+        </Modal>
+      )}
+
+      {/* Create Home Hub Modal */}
+      {modal.type === 'addHomeHub' && (
+        <Modal title="Create Home Hub Profile" icon={<Monitor className="w-5 h-5 text-teal-400" />} onClose={() => { setModal({ type: null }); setCreatedHubResult(null); }}>
+          {!createdHubResult ? (
+            <div className="max-h-[70vh] overflow-y-auto">
+              <p className="text-sm text-slate-400 mb-4">
+                Create a dedicated Home Hub profile for a shared family device. This profile will have restricted access and be automatically assigned to your family.
+              </p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Home Hub Name</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g., Kitchen Hub, Living Room Display" 
+                    value={hubFormData.name} 
+                    onChange={(e) => setHubFormData({ ...hubFormData, name: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-teal-500"
+                    autoFocus
+                    data-testid="hub-name-input"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block flex items-center gap-2">
+                    <Mail className="w-3 h-3" /> Login Email
+                  </label>
+                  <input 
+                    type="email" 
+                    placeholder="homehub@example.com" 
+                    value={hubFormData.email} 
+                    onChange={(e) => setHubFormData({ ...hubFormData, email: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-teal-500"
+                    data-testid="hub-email-input"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Used to login on the Home Hub device</p>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block flex items-center gap-2">
+                    <Lock className="w-3 h-3" /> Password
+                  </label>
+                  <input 
+                    type="password" 
+                    placeholder="At least 4 characters" 
+                    value={hubFormData.password} 
+                    onChange={(e) => setHubFormData({ ...hubFormData, password: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-teal-500"
+                    data-testid="hub-password-input"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex gap-3 mt-6">
+                <button onClick={() => setModal({ type: null })} className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-white font-medium">Cancel</button>
+                <button 
+                  onClick={handleCreateHomeHub} 
+                  disabled={processing === 'createHub'}
+                  className="flex-1 px-4 py-3 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 rounded-xl text-white font-bold flex items-center justify-center gap-2"
+                  data-testid="hub-create-submit"
+                >
+                  {processing === 'createHub' && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Create Home Hub
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div className="text-center mb-4">
+                <div className="w-16 h-16 bg-teal-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Check className="w-8 h-8 text-teal-400" />
+                </div>
+                <h3 className="text-lg font-bold text-white">Home Hub Created!</h3>
+                <p className="text-sm text-slate-400 mt-1">Use these credentials on the shared device</p>
+              </div>
+              
+              <div className="bg-slate-800 rounded-xl p-4 mb-4 space-y-3">
+                <div>
+                  <p className="text-xs text-slate-400">Name:</p>
+                  <p className="text-white font-bold">{createdHubResult.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400">Login Email:</p>
+                  <p className="text-white font-mono">{createdHubResult.email}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400">Password:</p>
+                  <p className="text-white font-mono">{createdHubResult.password}</p>
+                </div>
+              </div>
+
+              <div className="bg-teal-500/10 border border-teal-500/30 rounded-xl p-3 mb-4">
+                <p className="text-xs text-teal-300 text-center">
+                  On the Home Hub device, go to the login page and tap "Home Hub Login" to sign in.
+                </p>
+              </div>
+              
+              <button 
+                onClick={() => { setModal({ type: null }); setCreatedHubResult(null); setHubFormData({ name: '', email: '', password: '' }); }}
+                className="w-full px-4 py-3 bg-primary hover:bg-primary/80 rounded-xl text-white font-bold"
+              >
+                Done
+              </button>
+            </div>
+          )}
         </Modal>
       )}
     </div>

@@ -2,7 +2,7 @@
 // IMPORTANT: Change this URL to your production server before release
 // For local development, use your computer's IP address (not localhost)
 // Example: 'http://192.168.1.100:8001/api'
-const API_BASE_URL = 'https://family-connect-app-4.preview.emergentagent.com/api';
+const API_BASE_URL = 'https://chore-share-test.preview.emergentagent.com/api';
 
 // Production mode flag - set to true for release builds
 export const IS_PRODUCTION = !__DEV__;

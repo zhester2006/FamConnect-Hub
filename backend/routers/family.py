@@ -1098,5 +1098,65 @@ async def delete_family_member(family_id: str, member_id: str, request: Request)
     
     return {"success": True}
 
+# ==================== HOME HUB PROFILE CREATION ====================
+
+@router.post("/family/homehub/create")
+async def create_homehub_profile(request: Request, data: dict):
+    """Parent creates a Home Hub profile with email and password, auto-assigned to their family"""
+    current_user = await get_current_user(request)
+    
+    if current_user.get('role') != 'parent':
+        raise HTTPException(status_code=403, detail="Only parents can create Home Hub profiles")
+    
+    name = data.get('name', '').strip()
+    email = data.get('email', '').strip().lower()
+    password = data.get('password', '')
+    
+    if not name:
+        raise HTTPException(status_code=400, detail="Name is required")
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+    if not password or len(password) < 4:
+        raise HTTPException(status_code=400, detail="Password must be at least 4 characters")
+    
+    # Check if email already exists
+    existing = await db.users.find_one({"email": email})
+    if existing:
+        raise HTTPException(status_code=400, detail="An account with this email already exists")
+    
+    # Determine the family
+    family_id = current_user.get('family_id') or current_user.get('parent_id', current_user['user_id'])
+    
+    # Create the Home Hub user
+    user_id = f"homehub_{uuid.uuid4().hex[:12]}"
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    
+    user_doc = {
+        "user_id": user_id,
+        "email": email,
+        "name": name,
+        "role": "homehub",
+        "password_hash": password_hash,
+        "family_id": family_id,
+        "parent_id": current_user['user_id'],
+        "points": 0,
+        "badges": [],
+        "settings": {"theme": "cosmic_explorer", "notifications_enabled": True},
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": current_user['user_id'],
+        "online_status": False,
+        "last_seen": datetime.now(timezone.utc).isoformat()
+    }
+    await db.users.insert_one(user_doc)
+    
+    # Return user without sensitive fields
+    user_data = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
+    
+    return {
+        "success": True,
+        "user": user_data,
+        "message": f"Home Hub profile '{name}' created successfully! Use the email and password to login on the Home Hub device."
+    }
+
 # ==================== WELCOME TUTORIAL ====================
 

@@ -8,7 +8,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://family-connect-app-4.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://chore-share-test.preview.emergentagent.com')
 
 class TestDevLogin:
     """Test dev-login with email parameter"""

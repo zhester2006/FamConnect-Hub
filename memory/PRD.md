@@ -1,7 +1,7 @@
 # FamFocus Hub - Product Requirements Document
 
 ## Status: PRODUCTION READY | Last Updated: March 27, 2026
-## Live URL: https://family-connect-app-4.preview.emergentagent.com
+## Live URL: https://chore-share-test.preview.emergentagent.com
 
 ---
 

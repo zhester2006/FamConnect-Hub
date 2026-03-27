@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, Calendar, MessageCircle, Award, TrendingUp } from 'lucide-react';
+import { Sparkles, Calendar, MessageCircle, Award, TrendingUp, Monitor, Mail, Lock, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
-const REDIRECT_URL_BASE = typeof window !== 'undefined' ? window.location.origin : '';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 const PixieAssistant = () => {
@@ -134,10 +135,154 @@ const PixieAssistant = () => {
 };
 
 export default function WelcomePage() {
+  const navigate = useNavigate();
+  const [showHubLogin, setShowHubLogin] = useState(false);
+  const [hubEmail, setHubEmail] = useState('');
+  const [hubPassword, setHubPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [hubLoading, setHubLoading] = useState(false);
+  const [hubError, setHubError] = useState('');
+
+  // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
   const handleLogin = () => {
-    const redirectUrl = `${REDIRECT_URL_BASE}/dashboard`;
+    const redirectUrl = window.location.origin + '/dashboard';
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
   };
+
+  const handleHubLogin = async (e) => {
+    e.preventDefault();
+    setHubError('');
+    if (!hubEmail.trim() || !hubPassword.trim()) {
+      setHubError('Please enter email and password');
+      return;
+    }
+    setHubLoading(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/auth/homehub-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email: hubEmail, password: hubPassword })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('dev_session_token', data.session_token);
+        toast.success(`Welcome, ${data.user.name}!`);
+        navigate('/hub', { state: { user: data.user } });
+      } else {
+        setHubError(data.detail || 'Invalid email or password');
+      }
+    } catch (error) {
+      setHubError('Failed to login. Please try again.');
+    } finally {
+      setHubLoading(false);
+    }
+  };
+
+  if (showHubLogin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950/20 to-slate-950 flex items-center justify-center p-4" data-testid="homehub-login-page">
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-green-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+        </div>
+
+        <div className="relative z-10 w-full max-w-md">
+          <button
+            onClick={() => setShowHubLogin(false)}
+            className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors"
+            data-testid="back-to-home-btn"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Home</span>
+          </button>
+
+          <div className="glass-card rounded-3xl p-8 border border-white/10">
+            <div className="text-center mb-8">
+              <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-teal-500/30">
+                <Monitor className="w-10 h-10 text-white" />
+              </div>
+              <h1 className="text-2xl font-black text-white mb-2">Home Hub Login</h1>
+              <p className="text-slate-400">Sign in to your family's shared display</p>
+            </div>
+
+            <form onSubmit={handleHubLogin} className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                  <input
+                    type="email"
+                    value={hubEmail}
+                    onChange={(e) => setHubEmail(e.target.value)}
+                    placeholder="Enter Home Hub email"
+                    className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-12 py-4 text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/30 transition-all"
+                    autoComplete="email"
+                    autoFocus
+                    data-testid="homehub-email-input"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={hubPassword}
+                    onChange={(e) => setHubPassword(e.target.value)}
+                    placeholder="Enter password"
+                    className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-12 py-4 text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/30 transition-all"
+                    autoComplete="current-password"
+                    data-testid="homehub-password-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {hubError && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center" data-testid="homehub-login-error">
+                  {hubError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={hubLoading}
+                className="w-full bg-gradient-to-r from-teal-500 to-green-600 hover:from-teal-400 hover:to-green-500 disabled:from-slate-700 disabled:to-slate-700 text-white font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-teal-500/30"
+                data-testid="homehub-login-submit"
+              >
+                {hubLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  <>
+                    <Monitor className="w-5 h-5" />
+                    Sign In to Home Hub
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <p className="text-slate-500 text-sm">
+                Home Hub profile is created by a parent in Family Settings.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 relative overflow-hidden" data-testid="welcome-page">
@@ -201,11 +346,21 @@ export default function WelcomePage() {
             {/* Kid's Login Link */}
             <a 
               href="/child-login"
-              className="block text-center mt-4 py-3 px-6 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 text-white font-bold rounded-full transition-all hover:scale-105"
+              className="block text-center py-3 px-6 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 text-white font-bold rounded-full transition-all hover:scale-105"
               data-testid="child-login-link"
             >
               Kid's Login
             </a>
+
+            {/* Home Hub Login */}
+            <button
+              onClick={() => setShowHubLogin(true)}
+              className="w-full py-3 px-6 bg-gradient-to-r from-teal-600 to-green-600 hover:from-teal-500 hover:to-green-500 text-white font-bold rounded-full transition-all hover:scale-105 flex items-center justify-center gap-2"
+              data-testid="homehub-login-link"
+            >
+              <Monitor className="w-5 h-5" />
+              Home Hub Login
+            </button>
 
             <p className="text-xs text-slate-500">
               Secure authentication powered by Google

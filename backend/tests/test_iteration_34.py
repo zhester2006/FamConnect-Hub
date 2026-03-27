@@ -12,7 +12,7 @@ import requests
 import os
 from datetime import datetime, timezone
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://family-connect-app-4.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://chore-share-test.preview.emergentagent.com')
 
 # Test credentials from the review request
 ZACHERY_EMAIL = "zhesterusar@gmail.com"

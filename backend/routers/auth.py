@@ -302,6 +302,58 @@ async def firebase_signup(response: Response, data: FirebaseAuthRequest):
     
     return {"session_token": session_token, "user": user}
 
+@router.post("/auth/homehub-login")
+async def homehub_login(data: dict, response: Response):
+    """Login for Home Hub accounts using email and password"""
+    email = data.get('email', '').strip().lower()
+    password = data.get('password', '')
+    
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="Email and password required")
+    
+    # Find user by email
+    user = await db.users.find_one({"email": email})
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    # Verify the account is a homehub role
+    if user.get('role') != 'homehub':
+        raise HTTPException(status_code=401, detail="This account is not a Home Hub profile. Please use Google Sign In.")
+    
+    # Verify password
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    if user.get('password_hash') != password_hash:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    # Create session
+    session_token = str(uuid.uuid4())
+    await db.user_sessions.insert_one({
+        "session_token": session_token,
+        "user_id": user['user_id'],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "expires_at": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+    })
+    
+    # Set session cookie
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        max_age=30*24*60*60,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/"
+    )
+    
+    # Return user without sensitive fields
+    user_data = await db.users.find_one({"user_id": user['user_id']}, {"_id": 0, "password_hash": 0, "pin": 0})
+    
+    return {
+        "success": True,
+        "session_token": session_token,
+        "user": user_data
+    }
+
 @router.post("/auth/child-login")
 async def child_login(data: dict, response: Response):
     """Login for children using username and password"""
