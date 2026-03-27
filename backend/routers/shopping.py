@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request, Response
-from deps import db, get_current_user, get_session_token, sanitize_picture, generate_family_code, send_email_async, send_push_notification, check_geofences, ADMIN_EMAIL
+from deps import db, get_current_user, get_session_token, sanitize_picture, generate_family_code, send_email_async, send_push_notification, check_geofences, ADMIN_EMAIL, resolve_acting_user
 from deps import User, Family, Chore, ShoppingItem, FamilyWallPost, Message, Event, ReadingLog, Reward, CheckIn, FirebaseAuthRequest
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict, Any
@@ -23,36 +23,41 @@ async def get_shopping_list(request: Request):
 @router.post("/shopping")
 async def add_shopping_item(request: Request, data: dict):
     current_user = await get_current_user(request)
+    acting_user = await resolve_acting_user(current_user, data)
     item_id = f"item_{uuid.uuid4().hex[:12]}"
-    status = "approved" if current_user['role'] == 'parent' else "pending"
+    is_parent = acting_user['role'] == 'parent'
+    status = "approved" if is_parent else "pending"
     
     item_doc = {
         "item_id": item_id,
-        "family_id": current_user.get('parent_id', current_user['user_id']),
+        "family_id": acting_user.get('parent_id', acting_user['user_id']),
         "name": data['name'],
-        "requested_by": current_user['user_id'],
+        "requested_by": acting_user['user_id'],
+        "requested_by_name": acting_user.get('name', 'Unknown'),
         "status": status,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.shopping_items.insert_one(item_doc)
     
     # If child created item, notify parent it needs approval
-    if current_user['role'] == 'child':
-        parent_id = current_user.get('parent_id')
+    if acting_user['role'] == 'child':
+        parent_id = acting_user.get('parent_id')
         if parent_id:
             notif = {
                 "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
                 "user_id": parent_id,
                 "type": "shopping_pending",
                 "title": "Shopping Item Request",
-                "message": f"{current_user.get('name', 'A family member')} wants to add '{data['name']}' to the shopping list",
+                "message": f"{acting_user.get('name', 'A family member')} wants to add '{data['name']}' to the shopping list",
                 "data": {"item_id": item_id},
                 "read": False,
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
             await db.notifications.insert_one(notif)
     
-    return await db.shopping_items.find_one({"item_id": item_id}, {"_id": 0})
+    item = await db.shopping_items.find_one({"item_id": item_id}, {"_id": 0})
+    message = "Added to shopping list" if is_parent else "Submitted for approval"
+    return {"item": item, "message": message, "status": status, "submitted_by_name": acting_user.get('name')}
 
 @router.put("/shopping/{item_id}")
 async def update_shopping_item(item_id: str, request: Request, data: dict):

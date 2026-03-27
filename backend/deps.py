@@ -100,6 +100,16 @@ async def get_current_user(request: Request):
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
+# Helper: resolve acting user for HomeHub proxy actions
+async def resolve_acting_user(current_user, data):
+    """When a HomeHub account submits on behalf of a family member, resolve the actual acting user."""
+    submitted_by = data.get('submitted_by') if isinstance(data, dict) else None
+    if submitted_by and current_user.get('role') == 'homehub':
+        acting_user = await db.users.find_one({"user_id": submitted_by}, {"_id": 0, "password_hash": 0, "pin": 0})
+        if acting_user:
+            return acting_user
+    return current_user
+
 # Helper: sanitize picture data
 def sanitize_picture(picture_data, max_len=500, fallback_name=None):
     if not picture_data:

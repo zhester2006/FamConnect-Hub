@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request, Response
-from deps import db, get_current_user, get_session_token, sanitize_picture, generate_family_code, send_email_async, send_push_notification, check_geofences, ADMIN_EMAIL
+from deps import db, get_current_user, get_session_token, sanitize_picture, generate_family_code, send_email_async, send_push_notification, check_geofences, ADMIN_EMAIL, resolve_acting_user
 from deps import User, Family, Chore, ShoppingItem, FamilyWallPost, Message, Event, ReadingLog, Reward, CheckIn, FirebaseAuthRequest
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict, Any
@@ -58,12 +58,14 @@ async def get_events(request: Request, start_date: Optional[str] = None, end_dat
 @router.post("/events")
 async def create_event(request: Request, data: dict):
     current_user = await get_current_user(request)
+    acting_user = await resolve_acting_user(current_user, data)
     event_id = f"event_{uuid.uuid4().hex[:12]}"
-    status = "approved" if current_user['role'] == 'parent' else "pending"
+    is_parent = acting_user['role'] == 'parent'
+    status = "approved" if is_parent else "pending"
     
     event_doc = {
         "event_id": event_id,
-        "family_id": current_user.get('parent_id', current_user['user_id']),
+        "family_id": acting_user.get('parent_id', acting_user['user_id']),
         "title": data['title'],
         "description": data.get('description'),
         "event_date": data['event_date'],
@@ -72,9 +74,9 @@ async def create_event(request: Request, data: dict):
         "work_start_time": data.get('work_start_time'),
         "work_end_time": data.get('work_end_time'),
         "assigned_to": data.get('assigned_to'),  # Optional assignee
-        "created_by": current_user['user_id'],
-        "created_by_name": current_user['name'],
-        "created_by_picture": current_user.get('picture'),
+        "created_by": acting_user['user_id'],
+        "created_by_name": acting_user['name'],
+        "created_by_picture": acting_user.get('picture'),
         "status": status,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
@@ -96,22 +98,24 @@ async def create_event(request: Request, data: dict):
         await db.notifications.insert_one(notif)
     
     # If child created event, notify parent it needs approval
-    if current_user['role'] == 'child':
-        parent_id = current_user.get('parent_id')
+    if acting_user['role'] == 'child':
+        parent_id = acting_user.get('parent_id')
         if parent_id:
             notif = {
                 "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
                 "user_id": parent_id,
                 "type": "event_pending",
                 "title": "Event Needs Approval",
-                "message": f"{current_user.get('name', 'A family member')} wants to add '{data['title']}' on {data['event_date']}",
+                "message": f"{acting_user.get('name', 'A family member')} wants to add '{data['title']}' on {data['event_date']}",
                 "data": {"event_id": event_id},
                 "read": False,
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
             await db.notifications.insert_one(notif)
     
-    return await db.events.find_one({"event_id": event_id}, {"_id": 0})
+    event = await db.events.find_one({"event_id": event_id}, {"_id": 0})
+    message = "Event added to calendar" if is_parent else "Event submitted for approval"
+    return {"event": event, "message": message, "status": status, "submitted_by_name": acting_user.get('name')}
 
 # Approve/Deny calendar event (parent only)
 @router.put("/events/{event_id}/approve")

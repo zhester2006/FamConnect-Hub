@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request, Response
 from emergentintegrations.llm.chat import LlmChat, UserMessage
-from deps import db, get_current_user, get_session_token, sanitize_picture, generate_family_code, send_email_async, send_push_notification, check_geofences, ADMIN_EMAIL
+from deps import db, get_current_user, get_session_token, sanitize_picture, generate_family_code, send_email_async, send_push_notification, check_geofences, ADMIN_EMAIL, resolve_acting_user
 from deps import User, Family, Chore, ShoppingItem, FamilyWallPost, Message, Event, ReadingLog, Reward, CheckIn, FirebaseAuthRequest
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict, Any
@@ -137,33 +137,59 @@ async def create_chore(request: Request, data: dict):
     return await db.chores.find_one({"chore_id": chore_id}, {"_id": 0})
 
 @router.put("/chores/{chore_id}/complete")
-async def complete_chore(chore_id: str, request: Request):
+async def complete_chore(chore_id: str, request: Request, data: dict = None):
     current_user = await get_current_user(request)
+    acting_user = await resolve_acting_user(current_user, data or {})
     chore = await db.chores.find_one({"chore_id": chore_id}, {"_id": 0})
     if not chore:
         raise HTTPException(status_code=404, detail="Chore not found")
     
-    await db.chores.update_one(
-        {"chore_id": chore_id},
-        {"$set": {"status": "completed", "completed_at": datetime.now(timezone.utc).isoformat(), "completed_by": current_user['user_id']}}
-    )
+    is_parent = acting_user['role'] == 'parent'
+    
+    # If parent completes (or approves via completion), auto-approve
+    if is_parent:
+        await db.chores.update_one(
+            {"chore_id": chore_id},
+            {"$set": {
+                "status": "approved",
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+                "completed_by": acting_user['user_id'],
+                "approved_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        # Award points
+        points = chore.get('points', 10)
+        assigned_to = chore.get('assigned_to')
+        if assigned_to:
+            await db.users.update_one(
+                {"user_id": assigned_to},
+                {"$inc": {"points": points}}
+            )
+        message = "Chore completion approved"
+    else:
+        await db.chores.update_one(
+            {"chore_id": chore_id},
+            {"$set": {"status": "completed", "completed_at": datetime.now(timezone.utc).isoformat(), "completed_by": acting_user['user_id']}}
+        )
+        message = "Submitted for approval"
     
     # Get the parent to notify them
-    parent_id = current_user.get('parent_id', current_user['user_id'])
-    if current_user['role'] == 'child' and parent_id:
+    parent_id = acting_user.get('parent_id', acting_user['user_id'])
+    if acting_user['role'] == 'child' and parent_id:
         notification_doc = {
             "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
             "user_id": parent_id,
             "type": "chore_completed",
             "title": "Chore Needs Approval",
-            "message": f"{current_user.get('nickname') or current_user.get('name', 'Child')} completed '{chore.get('title', 'a chore')}' and needs your approval",
-            "data": {"chore_id": chore_id, "child_id": current_user['user_id']},
+            "message": f"{acting_user.get('nickname') or acting_user.get('name', 'Child')} completed '{chore.get('title', 'a chore')}' and needs your approval",
+            "data": {"chore_id": chore_id, "child_id": acting_user['user_id']},
             "read": False,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.notifications.insert_one(notification_doc)
     
-    return await db.chores.find_one({"chore_id": chore_id}, {"_id": 0})
+    updated_chore = await db.chores.find_one({"chore_id": chore_id}, {"_id": 0})
+    return {"chore": updated_chore, "message": message, "status": updated_chore.get('status'), "submitted_by_name": acting_user.get('name')}
 
 @router.put("/chores/{chore_id}/approve")
 async def approve_chore(chore_id: str, request: Request, data: dict):

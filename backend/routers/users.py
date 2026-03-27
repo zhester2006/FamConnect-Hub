@@ -30,12 +30,15 @@ async def get_family_profiles(request: Request):
         ]
     }, {"_id": 0, "pin": 0}).to_list(100)
     
+    # Filter out homehub profiles from the selection - they are shared devices, not people
+    profiles = [m for m in members if m.get('role') != 'homehub']
+    
     # Add has_pin flag
-    for member in members:
+    for member in profiles:
         member_full = await db.users.find_one({"user_id": member['user_id']})
         member['has_pin'] = bool(member_full.get('pin'))
     
-    return {"profiles": members}
+    return {"profiles": profiles}
 
 @router.post("/users/verify-pin")
 async def verify_user_pin(request: Request, data: dict):
@@ -75,8 +78,11 @@ async def get_user(user_id: str, request: Request):
 @router.get("/family/members")
 async def get_family_members(request: Request):
     current_user = await get_current_user(request)
-    if current_user['role'] == 'parent':
-        members = await db.users.find({"$or": [{"user_id": current_user['user_id']}, {"parent_id": current_user['user_id']}]}, {"_id": 0}).to_list(100)
+    if current_user['role'] in ('parent', 'homehub'):
+        # For parent: find self + all children/homehubs under them
+        # For homehub: find all members under the parent who created this homehub
+        parent_id = current_user['user_id'] if current_user['role'] == 'parent' else current_user.get('parent_id')
+        members = await db.users.find({"$or": [{"user_id": parent_id}, {"parent_id": parent_id}]}, {"_id": 0}).to_list(100)
     else:
         members = await db.users.find({"user_id": {"$in": [current_user['user_id'], current_user.get('parent_id')]}}, {"_id": 0}).to_list(100)
     
