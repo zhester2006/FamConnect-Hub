@@ -462,12 +462,12 @@ async def create_new_family(request: Request, data: dict):
     }
     await db.families.insert_one(family_doc)
     
-    # Add creator as admin
+    # Add creator as parent
     membership_doc = {
         "membership_id": f"mem_{uuid.uuid4().hex[:12]}",
         "family_id": family_id,
         "user_id": current_user['user_id'],
-        "role": "admin",
+        "role": "parent",
         "joined_at": datetime.now(timezone.utc).isoformat()
     }
     await db.family_memberships.insert_one(membership_doc)
@@ -915,7 +915,7 @@ async def get_family_members(family_id: str, request: Request):
                 "user_id": m['user_id'],
                 "name": user.get('name', 'Unknown'),
                 "email": user.get('email', ''),
-                "role": m.get('role', 'member'),
+                "role": "parent" if m.get('role') == 'admin' else m.get('role', 'member'),
                 "picture": user.get('picture'),
                 "username": user.get('username'),
                 "has_pin": bool(user.get('pin')),

@@ -54,7 +54,9 @@ function AuthCallback() {
     })
       .then(res => res.json())
       .then(data => {
-        navigate(data.user.role === 'parent' ? '/dashboard' : '/space', {
+        const role = data.user.role;
+        const redirectPath = role === 'homehub' ? '/hub' : role === 'parent' ? '/dashboard' : '/space';
+        navigate(redirectPath, {
           replace: true,
           state: { user: data.user }
         });
