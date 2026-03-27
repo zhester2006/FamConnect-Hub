@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { X, Send, Mic, MicOff, Loader2, Sparkles } from 'lucide-react';
+import { X, Send, Mic, MicOff, Loader2, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { toast } from 'sonner';
 import { ChatBubble } from './pixie/ChatBubble';
 import { PinModal } from './pixie/PinModal';
@@ -37,6 +37,16 @@ function LoadingDots() {
   );
 }
 
+function playAudio(base64Audio) {
+  if (!base64Audio) return;
+  try {
+    const audio = new Audio('data:audio/mp3;base64,' + base64Audio);
+    audio.play().catch(() => {});
+  } catch (e) {
+    // Silently fail if audio can't play
+  }
+}
+
 export default function PixieChat({ user }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -46,6 +56,8 @@ export default function PixieChat({ user }) {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [listening, setListening] = useState(false);
   const [pinModal, setPinModal] = useState(null);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [lastVoiceMode, setLastVoiceMode] = useState(false);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const timerRef = useRef(null);
@@ -54,12 +66,32 @@ export default function PixieChat({ user }) {
   const isHomehub = user?.role === 'homehub';
 
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Wake word: "Pixie" / "Hey Pixie"
+  // Load preferences and auto-enable listening on HomeHub
+  useEffect(() => {
+    const loadPrefs = async () => {
+      try {
+        const token = localStorage.getItem('dev_session_token');
+        const headers = {};
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        const res = await fetch(BACKEND_URL + '/api/pixie/preferences', { headers, credentials: 'include' });
+        if (res.ok) {
+          const prefs = await res.json();
+          setVoiceEnabled(prefs.voice_responses !== false);
+          if (prefs.always_listening || isHomehub) {
+            setListening(true);
+          }
+        }
+      } catch (e) {
+        // Use defaults
+      }
+    };
+    loadPrefs();
+  }, [isHomehub]);
+
+  // Wake word: "Pixie" / "Hey Pixie" - auto start on HomeHub or if always_listening
   useEffect(() => {
     const SpeechRecog = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecog) return;
@@ -75,6 +107,10 @@ export default function PixieChat({ user }) {
         const t = event.results[i][0].transcript.toLowerCase().trim();
         if (t.includes('pixie') || t.includes('hey pixie') || t.includes('pixy')) {
           if (!isOpen) setIsOpen(true);
+          // Auto-start recording after wake word detected
+          setTimeout(() => {
+            if (!isRecording && !loading) startRecording();
+          }, 500);
           break;
         }
         i++;
@@ -83,28 +119,57 @@ export default function PixieChat({ user }) {
 
     recognition.onerror = () => {};
     recognition.onend = () => {
-      if (listening) {
+      if (listening && !isRecording) {
         try { recognition.start(); } catch (e) { /* ignore */ }
       }
     };
 
     recognitionRef.current = recognition;
+
+    // Auto-start if listening is enabled
+    if (listening) {
+      navigator.mediaDevices?.getUserMedia({ audio: true }).then(() => {
+        try { recognition.start(); } catch (e) { /* ignore */ }
+      }).catch(() => {});
+    }
+
     return () => { try { recognition.stop(); } catch (e) { /* ignore */ } };
-  }, [isOpen, listening]);
+  }, [listening, isOpen, isRecording, loading]);
 
   const toggleWakeWord = useCallback(() => {
-    if (listening) {
-      setListening(false);
+    const newVal = !listening;
+    setListening(newVal);
+    if (!newVal) {
       try { recognitionRef.current?.stop(); } catch (e) { /* ignore */ }
     } else {
-      setListening(true);
       navigator.mediaDevices?.getUserMedia({ audio: true }).then(() => {
         try { recognitionRef.current?.start(); } catch (e) { /* ignore */ }
       }).catch(() => {
         toast.error('Microphone access needed for wake word');
+        setListening(false);
       });
     }
+    // Save preference
+    const token = localStorage.getItem('dev_session_token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    fetch(BACKEND_URL + '/api/pixie/preferences', {
+      method: 'POST', headers, credentials: 'include',
+      body: JSON.stringify({ always_listening: newVal })
+    }).catch(() => {});
   }, [listening]);
+
+  const toggleVoice = useCallback(() => {
+    const newVal = !voiceEnabled;
+    setVoiceEnabled(newVal);
+    const token = localStorage.getItem('dev_session_token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    fetch(BACKEND_URL + '/api/pixie/preferences', {
+      method: 'POST', headers, credentials: 'include',
+      body: JSON.stringify({ voice_responses: newVal })
+    }).catch(() => {});
+  }, [voiceEnabled]);
 
   const getHeaders = useCallback(() => {
     const token = localStorage.getItem('dev_session_token');
@@ -122,18 +187,23 @@ export default function PixieChat({ user }) {
     return ctx;
   }, [messages]);
 
-  const processResponse = useCallback((data) => {
+  const processResponse = useCallback((data, isVoice) => {
     if (data.needs_pin && data.needs_user_selection) {
       setPinModal({ members: data.family_members || [], actions_planned: data.actions_planned || [] });
       setMessages(prev => [...prev, { content: data.response, isUser: false }]);
+      if (isVoice && voiceEnabled && data.audio) playAudio(data.audio);
     } else {
       const taken = data.actions_taken || [];
       setMessages(prev => [...prev, { content: data.response, isUser: false, actions: taken }]);
       let successes = 0;
       for (let i = 0; i < taken.length; i++) { if (taken[i].success) successes++; }
       if (successes > 0) toast.success('Pixie completed ' + successes + ' action' + (successes > 1 ? 's' : ''));
+      // Play TTS audio if voice mode
+      if (isVoice && voiceEnabled && data.audio) {
+        playAudio(data.audio);
+      }
     }
-  }, []);
+  }, [voiceEnabled]);
 
   const sendTextMessage = async () => {
     if (!input.trim() || loading) return;
@@ -141,14 +211,19 @@ export default function PixieChat({ user }) {
     setInput('');
     setMessages(prev => [...prev, { content: text, isUser: true }]);
     setLoading(true);
+    setLastVoiceMode(false);
 
     try {
       const res = await fetch(BACKEND_URL + '/api/pixie/command', {
         method: 'POST', headers: getHeaders(), credentials: 'include',
-        body: JSON.stringify({ message: text, context: getContext(), mode: isHomehub ? 'homehub' : 'normal' })
+        body: JSON.stringify({
+          message: text, context: getContext(),
+          mode: isHomehub ? 'homehub' : 'normal',
+          voice_mode: voiceEnabled
+        })
       });
       const data = await res.json();
-      processResponse(data);
+      processResponse(data, voiceEnabled);
     } catch (e) {
       toast.error('Pixie is taking a nap. Try again!');
     }
@@ -166,13 +241,13 @@ export default function PixieChat({ user }) {
       const res = await fetch(BACKEND_URL + '/api/pixie/command', {
         method: 'POST', headers: getHeaders(), credentials: 'include',
         body: JSON.stringify({
-          message: lastUserMsg?.content || '',
-          context: getContext(), mode: 'homehub',
-          acting_user_id: userId, acting_user_pin: pin
+          message: lastUserMsg?.content || '', context: getContext(),
+          mode: 'homehub', acting_user_id: userId, acting_user_pin: pin,
+          voice_mode: lastVoiceMode && voiceEnabled
         })
       });
       const data = await res.json();
-      processResponse(data);
+      processResponse(data, lastVoiceMode);
     } catch (e) {
       toast.error('Verification failed');
     }
@@ -192,7 +267,7 @@ export default function PixieChat({ user }) {
       setRecordingDuration(0);
       timerRef.current = setInterval(() => setRecordingDuration(d => d + 1), 1000);
     } catch (e) {
-      toast.error('Microphone access denied. Please allow microphone permissions.');
+      toast.error('Microphone access denied. Please allow mic permissions.');
     }
   };
 
@@ -204,6 +279,7 @@ export default function PixieChat({ user }) {
         if (recorder.stream) recorder.stream.getTracks().forEach(t => t.stop());
         clearInterval(timerRef.current);
         setIsRecording(false);
+        setLastVoiceMode(true);
 
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         if (blob.size < 1000) { toast.error('Recording too short'); resolve(); return; }
@@ -222,7 +298,7 @@ export default function PixieChat({ user }) {
           if (token) headers['Authorization'] = 'Bearer ' + token;
 
           const res = await fetch(BACKEND_URL + '/api/pixie/voice-command', {
-            method: 'POST', headers: headers, credentials: 'include', body: formData
+            method: 'POST', headers, credentials: 'include', body: formData
           });
           const data = await res.json();
 
@@ -232,7 +308,7 @@ export default function PixieChat({ user }) {
               updated[updated.length - 1] = { content: data.transcription || 'Voice message', isUser: true, isVoice: true };
               return updated;
             });
-            processResponse(data);
+            processResponse(data, true);
           } else {
             toast.error('Voice command failed');
             setMessages(prev => prev.slice(0, -1));
@@ -258,7 +334,6 @@ export default function PixieChat({ user }) {
     setIsRecording(false);
   };
 
-  // Render message list
   const renderMessages = () => {
     const items = [];
     for (let i = 0; i < messages.length; i++) {
@@ -274,14 +349,23 @@ export default function PixieChat({ user }) {
       <div className="fixed bottom-24 md:bottom-6 right-4 z-40 flex flex-col items-end gap-2">
         {listening && (
           <div className="bg-violet-600/90 text-white text-[10px] font-bold px-3 py-1.5 rounded-full animate-pulse shadow-lg" data-testid="pixie-wake-indicator">
-            Listening for "Hey Pixie"...
+            {isHomehub ? 'Home Hub: "Hey Pixie" active' : 'Listening for "Hey Pixie"...'}
           </div>
         )}
         <div className="flex gap-2">
           <button
+            onClick={toggleVoice}
+            className={'w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110 ' + (voiceEnabled ? 'bg-emerald-600 shadow-emerald-500/30' : 'bg-slate-800 border border-slate-700')}
+            data-testid="pixie-voice-toggle"
+            title={voiceEnabled ? 'Voice responses ON' : 'Voice responses OFF'}
+          >
+            {voiceEnabled ? <Volume2 className="w-4 h-4 text-white" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
+          </button>
+          <button
             onClick={toggleWakeWord}
             className={'w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110 ' + (listening ? 'bg-violet-600 shadow-violet-500/30' : 'bg-slate-800 border border-slate-700')}
             data-testid="pixie-wake-toggle"
+            title={listening ? 'Wake word active' : 'Enable "Hey Pixie"'}
           >
             {listening ? <Mic className="w-4 h-4 text-white" /> : <MicOff className="w-4 h-4 text-slate-400" />}
           </button>
@@ -310,6 +394,14 @@ export default function PixieChat({ user }) {
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <button
+            onClick={toggleVoice}
+            className={'p-1.5 rounded-lg transition-all ' + (voiceEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'hover:bg-slate-800 text-slate-500')}
+            data-testid="pixie-voice-header-toggle"
+            title={voiceEnabled ? 'Voice ON' : 'Voice OFF'}
+          >
+            {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+          </button>
           <button
             onClick={toggleWakeWord}
             className={'p-1.5 rounded-lg transition-all ' + (listening ? 'bg-violet-500/20 text-violet-400' : 'hover:bg-slate-800 text-slate-500')}

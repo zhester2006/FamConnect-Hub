@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Form
+from fastapi.responses import Response
 from emergentintegrations.llm.chat import LlmChat, UserMessage
-from emergentintegrations.llm.openai import OpenAISpeechToText
+from emergentintegrations.llm.openai import OpenAISpeechToText, OpenAITextToSpeech
 from deps import db, get_current_user, sanitize_picture, send_push_notification
 from datetime import datetime, timezone, timedelta
 import uuid
@@ -8,9 +9,101 @@ import json
 import os
 import logging
 import tempfile
+import base64
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+PIXIE_VOICE = "nova"  # Energetic, upbeat woman's voice
+PIXIE_TTS_MODEL = "tts-1"  # Fast for real-time conversation
+
+
+async def generate_tts(text, api_key):
+    """Generate TTS audio from text, return base64-encoded mp3."""
+    try:
+        # Truncate to 4096 chars (TTS limit)
+        clean_text = text[:4096]
+        tts = OpenAITextToSpeech(api_key=api_key)
+        audio_b64 = await tts.generate_speech_base64(
+            text=clean_text,
+            model=PIXIE_TTS_MODEL,
+            voice=PIXIE_VOICE,
+            response_format="mp3",
+            speed=1.05
+        )
+        return audio_b64
+    except Exception as e:
+        logger.error(f"TTS generation failed: {e}")
+        return None
+
+
+async def get_pixie_memory(user_id, family_id):
+    """Get Pixie's learned memory about a user - habits, preferences, patterns."""
+    memory = await db.pixie_memory.find_one(
+        {"user_id": user_id, "family_id": family_id},
+        {"_id": 0}
+    )
+    return memory or {}
+
+
+async def update_pixie_memory(user_id, family_id, message, response_text, actions):
+    """Store conversation and learn from interactions."""
+    now = datetime.now(timezone.utc).isoformat()
+    # Store conversation log (keep last 50)
+    await db.pixie_conversations.insert_one({
+        "user_id": user_id,
+        "family_id": family_id,
+        "user_message": message,
+        "pixie_response": response_text,
+        "actions": actions,
+        "timestamp": now
+    })
+    # Trim old conversations
+    count = await db.pixie_conversations.count_documents({"user_id": user_id, "family_id": family_id})
+    if count > 50:
+        oldest = await db.pixie_conversations.find(
+            {"user_id": user_id, "family_id": family_id}
+        ).sort("timestamp", 1).limit(count - 50).to_list(count - 50)
+        if oldest:
+            ids = [o["_id"] for o in oldest]
+            await db.pixie_conversations.delete_many({"_id": {"$in": ids}})
+
+    # Update user preference/pattern tracking
+    await db.pixie_memory.update_one(
+        {"user_id": user_id, "family_id": family_id},
+        {"$set": {"last_interaction": now},
+         "$inc": {"interaction_count": 1},
+         "$push": {"recent_topics": {"$each": [message[:100]], "$slice": -20}}},
+        upsert=True
+    )
+
+
+async def get_user_patterns(user_id, family_id):
+    """Analyze user patterns from past conversations for personalized suggestions."""
+    memory = await get_pixie_memory(user_id, family_id)
+    recent_convos = await db.pixie_conversations.find(
+        {"user_id": user_id, "family_id": family_id},
+        {"_id": 0, "user_message": 1, "actions": 1, "timestamp": 1}
+    ).sort("timestamp", -1).limit(10).to_list(10)
+
+    patterns = []
+    if memory.get('interaction_count', 0) > 0:
+        patterns.append(f"User has had {memory.get('interaction_count', 0)} conversations with Pixie.")
+    if memory.get('recent_topics'):
+        topics = memory['recent_topics'][-5:]
+        patterns.append(f"Recent topics: {', '.join(topics)}")
+
+    # Analyze action patterns
+    action_counts = {}
+    for c in recent_convos:
+        for a in (c.get('actions') or []):
+            a_type = a.get('type', 'unknown')
+            action_counts[a_type] = action_counts.get(a_type, 0) + 1
+    if action_counts:
+        top_actions = sorted(action_counts.items(), key=lambda x: -x[1])[:3]
+        patterns.append(f"Most used actions: {', '.join([f'{a[0]}({a[1]}x)' for a in top_actions])}")
+
+    return "\n".join(patterns) if patterns else ""
 
 
 async def get_family_context(user):
@@ -116,7 +209,7 @@ async def get_family_context(user):
     }
 
 
-def build_system_prompt(user, context, mode="normal"):
+def build_system_prompt(user, context, mode="normal", user_patterns=""):
     user_name = user.get('nickname') or user.get('name', 'Friend')
     user_role = user.get('role', 'child')
     members_str = ", ".join([f"{m['name']} ({m['role']})" for m in context['members']])
@@ -183,6 +276,10 @@ FAMILY WALL (newest first):
 ROUTINES:
 {routines_str}
 {pending_str}
+
+USER PATTERNS & LEARNING:
+{user_patterns if user_patterns else "New user - no patterns yet. Be welcoming!"}
+Use these patterns to personalize your responses. If you notice the user frequently asks about certain things, proactively offer related info. Adapt your tone and suggestions based on their patterns.
 
 RESPONSE FORMAT: You MUST respond with valid JSON only. No markdown, no extra text. Structure:
 {{
@@ -369,6 +466,7 @@ async def pixie_command(request: Request, data: dict):
     message = data.get('message', '')
     context_history = data.get('context', [])
     mode = data.get('mode', 'normal')
+    voice_mode = data.get('voice_mode', False)
 
     if not message.strip():
         raise HTTPException(status_code=400, detail="Message required")
@@ -382,15 +480,21 @@ async def pixie_command(request: Request, data: dict):
     if mode == 'homehub' and data.get('acting_user_id'):
         resolved = await db.users.find_one({"user_id": data['acting_user_id']}, {"_id": 0, "password_hash": 0})
         if resolved:
-            # Verify PIN
             pin = data.get('acting_user_pin', '')
             if str(resolved.get('pin', '')) != str(pin):
-                return {"response": "That PIN doesn't match. Please try again.", "actions_taken": [], "needs_pin": True}
+                resp = {"response": "That PIN doesn't match. Please try again.", "actions_taken": [], "needs_pin": True}
+                if voice_mode:
+                    audio_b64 = await generate_tts(resp["response"], api_key)
+                    if audio_b64:
+                        resp["audio"] = audio_b64
+                return resp
             acting_user = resolved
 
-    # Gather family context
+    # Gather family context and user patterns
+    family_id = acting_user.get('current_family_id') or acting_user.get('parent_id', acting_user['user_id'])
     family_ctx = await get_family_context(acting_user)
-    system_prompt = build_system_prompt(acting_user, family_ctx, mode)
+    patterns = await get_user_patterns(acting_user['user_id'], family_id)
+    system_prompt = build_system_prompt(acting_user, family_ctx, mode, patterns)
 
     # Build conversation history
     history_str = ""
@@ -446,15 +550,31 @@ Remember: respond with ONLY valid JSON. No markdown backticks."""
         # Execute actions
         action_results = await execute_actions(actions, acting_user, family_ctx) if actions else []
 
-        return {
+        # Learn from this interaction
+        await update_pixie_memory(acting_user['user_id'], family_id, message, pixie_text, action_results)
+
+        resp = {
             "response": pixie_text,
             "actions_taken": action_results,
             "needs_pin": False
         }
 
+        # Generate TTS if voice mode
+        if voice_mode:
+            audio_b64 = await generate_tts(pixie_text, api_key)
+            if audio_b64:
+                resp["audio"] = audio_b64
+
+        return resp
+
     except json.JSONDecodeError:
-        # If AI didn't return valid JSON, just use the raw text as response
-        return {"response": raw_response.strip() if raw_response else "I'm not sure how to help with that.", "actions_taken": []}
+        fallback = raw_response.strip() if raw_response else "I'm not sure how to help with that."
+        resp = {"response": fallback, "actions_taken": []}
+        if voice_mode:
+            audio_b64 = await generate_tts(fallback, api_key)
+            if audio_b64:
+                resp["audio"] = audio_b64
+        return resp
     except Exception as e:
         error_msg = str(e)
         logger.error(f"Pixie command error: {error_msg}")
@@ -465,7 +585,7 @@ Remember: respond with ONLY valid JSON. No markdown backticks."""
 
 @router.post("/pixie/voice-command")
 async def pixie_voice_command(request: Request, audio: UploadFile = File(...), context: str = Form(default="[]"), mode: str = Form(default="normal")):
-    """Voice command for Pixie: transcribe audio then process as command."""
+    """Voice command for Pixie: transcribe, process, respond with TTS audio."""
     current_user = await get_current_user(request)
 
     api_key = os.environ.get('EMERGENT_LLM_KEY')
@@ -493,24 +613,24 @@ async def pixie_voice_command(request: Request, audio: UploadFile = File(...), c
         transcribed = stt_response.text if hasattr(stt_response, 'text') else str(stt_response)
 
         if not transcribed.strip():
-            return {"transcription": "", "response": "I couldn't hear anything. Could you try again?", "actions_taken": [], "success": True}
+            no_hear = "I couldn't hear anything. Could you try again?"
+            audio_b64 = await generate_tts(no_hear, api_key)
+            return {"transcription": "", "response": no_hear, "actions_taken": [], "success": True, "audio": audio_b64}
 
     except Exception as e:
         logger.error(f"Voice transcription failed: {e}")
         raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
 
-    # Step 2: Process as command
+    # Step 2: Process as smart command
     try:
         ctx = json.loads(context) if context else []
     except Exception:
         ctx = []
 
-    # Reuse the command endpoint logic
-    cmd_data = {"message": transcribed, "context": ctx, "mode": mode}
-
-    # Gather family context
+    family_id = current_user.get('current_family_id') or current_user.get('parent_id', current_user['user_id'])
     family_ctx = await get_family_context(current_user)
-    system_prompt = build_system_prompt(current_user, family_ctx, mode)
+    patterns = await get_user_patterns(current_user['user_id'], family_id)
+    system_prompt = build_system_prompt(current_user, family_ctx, mode, patterns)
 
     history_str = ""
     if ctx:
@@ -547,6 +667,7 @@ Remember: respond with ONLY valid JSON. No markdown backticks."""
         actions = parsed.get('actions', [])
 
         if mode == 'homehub' and actions:
+            audio_b64 = await generate_tts(pixie_text, api_key)
             return {
                 "transcription": transcribed,
                 "response": pixie_text,
@@ -555,14 +676,82 @@ Remember: respond with ONLY valid JSON. No markdown backticks."""
                 "needs_user_selection": True,
                 "family_members": [{"user_id": m['user_id'], "name": m['name'], "role": m['role']} for m in family_ctx['members']],
                 "actions_taken": [],
-                "success": True
+                "success": True,
+                "audio": audio_b64
             }
 
         action_results = await execute_actions(actions, current_user, family_ctx) if actions else []
-        return {"transcription": transcribed, "response": pixie_text, "actions_taken": action_results, "success": True}
+
+        # Learn from voice interaction
+        await update_pixie_memory(current_user['user_id'], family_id, transcribed, pixie_text, action_results)
+
+        # Generate TTS response
+        audio_b64 = await generate_tts(pixie_text, api_key)
+
+        return {
+            "transcription": transcribed,
+            "response": pixie_text,
+            "actions_taken": action_results,
+            "success": True,
+            "audio": audio_b64
+        }
 
     except json.JSONDecodeError:
-        return {"transcription": transcribed, "response": raw_response.strip() if raw_response else "I didn't understand that.", "actions_taken": [], "success": True}
+        fallback = raw_response.strip() if raw_response else "I didn't understand that."
+        audio_b64 = await generate_tts(fallback, api_key)
+        return {"transcription": transcribed, "response": fallback, "actions_taken": [], "success": True, "audio": audio_b64}
     except Exception as e:
         logger.error(f"Pixie voice command error: {e}")
-        return {"transcription": transcribed, "response": "Oops! Something went wrong. Try again?", "actions_taken": [], "success": True}
+        err_msg = "Oops! Something went wrong. Try again?"
+        return {"transcription": transcribed, "response": err_msg, "actions_taken": [], "success": True}
+
+
+@router.get("/pixie/preferences")
+async def get_pixie_preferences(request: Request):
+    """Get user's Pixie preferences (always-listening, etc.)."""
+    current_user = await get_current_user(request)
+    prefs = await db.pixie_preferences.find_one(
+        {"user_id": current_user['user_id']},
+        {"_id": 0}
+    )
+    defaults = {
+        "always_listening": current_user.get('role') == 'homehub',
+        "voice_responses": True
+    }
+    if prefs:
+        defaults.update(prefs)
+    return defaults
+
+
+@router.post("/pixie/preferences")
+async def update_pixie_preferences(request: Request, data: dict):
+    """Update user's Pixie preferences."""
+    current_user = await get_current_user(request)
+    allowed_keys = {"always_listening", "voice_responses"}
+    update_data = {k: v for k, v in data.items() if k in allowed_keys}
+    update_data["user_id"] = current_user['user_id']
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.pixie_preferences.update_one(
+        {"user_id": current_user['user_id']},
+        {"$set": update_data},
+        upsert=True
+    )
+    return {"success": True}
+
+
+@router.post("/pixie/tts")
+async def pixie_tts(request: Request, data: dict):
+    """Generate TTS audio for a text response (used for text-mode voice playback)."""
+    await get_current_user(request)
+    text = data.get('text', '')
+    if not text:
+        raise HTTPException(status_code=400, detail="Text required")
+
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AI service not configured")
+
+    audio_b64 = await generate_tts(text, api_key)
+    if audio_b64:
+        return {"audio": audio_b64, "success": True}
+    raise HTTPException(status_code=500, detail="TTS generation failed")
