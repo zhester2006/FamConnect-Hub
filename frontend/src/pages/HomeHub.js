@@ -479,12 +479,12 @@ export default function HomeHub({ user }) {
           {/* Main Content Grid - Single Screen */}
           <div className={`flex-1 gap-3 min-h-0 ${
             orientation === 'landscape' 
-              ? 'grid grid-cols-12' 
+              ? 'grid grid-cols-12 overflow-y-auto' 
               : 'flex flex-col overflow-y-auto'
           }`}>
             {/* Left Column: Calendar */}
             <div className={`flex flex-col gap-3 ${
-              orientation === 'landscape' ? 'col-span-3' : ''
+              orientation === 'landscape' ? 'col-span-3 overflow-y-auto' : ''
             }`}>
               {/* Mini Calendar */}
               <div className="glass-card rounded-xl p-3">
@@ -540,7 +540,7 @@ export default function HomeHub({ user }) {
 
             {/* Right Column: Chores, Shopping, Quote */}
             <div className={`flex flex-col gap-3 ${
-              orientation === 'landscape' ? 'col-span-9' : ''
+              orientation === 'landscape' ? 'col-span-9 overflow-y-auto' : ''
             }`}>
               {/* Daily Inspiration */}
               <div className="glass-card rounded-xl p-3 relative overflow-hidden">

@@ -35,6 +35,23 @@ async def add_shopping_item(request: Request, data: dict):
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.shopping_items.insert_one(item_doc)
+    
+    # If child created item, notify parent it needs approval
+    if current_user['role'] == 'child':
+        parent_id = current_user.get('parent_id')
+        if parent_id:
+            notif = {
+                "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+                "user_id": parent_id,
+                "type": "shopping_pending",
+                "title": "Shopping Item Request",
+                "message": f"{current_user.get('name', 'A family member')} wants to add '{data['name']}' to the shopping list",
+                "data": {"item_id": item_id},
+                "read": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.notifications.insert_one(notif)
+    
     return await db.shopping_items.find_one({"item_id": item_id}, {"_id": 0})
 
 @router.put("/shopping/{item_id}")
@@ -43,7 +60,27 @@ async def update_shopping_item(item_id: str, request: Request, data: dict):
     if current_user['role'] != 'parent' and data.get('status') == 'approved':
         raise HTTPException(status_code=403, detail="Only parents can approve items")
     
+    item = await db.shopping_items.find_one({"item_id": item_id}, {"_id": 0})
+    
     await db.shopping_items.update_one({"item_id": item_id}, {"$set": data})
+    
+    # Notify requester about approval/denial
+    new_status = data.get('status')
+    if new_status in ['approved', 'rejected'] and item and item.get('requested_by'):
+        requester_id = item['requested_by']
+        if requester_id != current_user['user_id']:
+            notif = {
+                "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+                "user_id": requester_id,
+                "type": "shopping_decision",
+                "title": f"Shopping Item {'Approved' if new_status == 'approved' else 'Denied'}",
+                "message": f"Your request for '{item.get('name', 'item')}' was {'approved' if new_status == 'approved' else 'denied'}",
+                "data": {"item_id": item_id, "status": new_status},
+                "read": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.notifications.insert_one(notif)
+    
     return await db.shopping_items.find_one({"item_id": item_id}, {"_id": 0})
 
 @router.delete("/shopping/{item_id}")

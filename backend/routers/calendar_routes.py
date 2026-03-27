@@ -79,6 +79,38 @@ async def create_event(request: Request, data: dict):
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.events.insert_one(event_doc)
+    
+    # Notify assigned user about new event
+    assigned_to = data.get('assigned_to')
+    if assigned_to and assigned_to != current_user['user_id']:
+        notif = {
+            "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+            "user_id": assigned_to,
+            "type": "event_assigned",
+            "title": "New Event",
+            "message": f"You have a new event: '{data['title']}' on {data['event_date']}",
+            "data": {"event_id": event_id},
+            "read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.notifications.insert_one(notif)
+    
+    # If child created event, notify parent it needs approval
+    if current_user['role'] == 'child':
+        parent_id = current_user.get('parent_id')
+        if parent_id:
+            notif = {
+                "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+                "user_id": parent_id,
+                "type": "event_pending",
+                "title": "Event Needs Approval",
+                "message": f"{current_user.get('name', 'A family member')} wants to add '{data['title']}' on {data['event_date']}",
+                "data": {"event_id": event_id},
+                "read": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.notifications.insert_one(notif)
+    
     return await db.events.find_one({"event_id": event_id}, {"_id": 0})
 
 # Approve/Deny calendar event (parent only)

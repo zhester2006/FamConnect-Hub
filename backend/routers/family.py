@@ -209,18 +209,60 @@ async def update_member_role(member_id: str, request: Request, data: dict):
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
     
-    # Verify member belongs to same family
-    family_id = current_user.get('family_id') or current_user.get('parent_id', current_user['user_id'])
-    member_family = member.get('family_id') or member.get('parent_id')
+    # Verify member belongs to same family through multiple checks
+    current_user_id = current_user['user_id']
+    family_id = current_user.get('family_id') or current_user.get('parent_id', current_user_id)
+    current_family_id = current_user.get('current_family_id')
     
-    if member_family != family_id and member.get('user_id') != family_id:
+    member_family = member.get('family_id') or member.get('parent_id') or member.get('current_family_id')
+    
+    # Check direct family link
+    is_same_family = (
+        member_family == family_id or
+        member.get('user_id') == family_id or
+        member.get('parent_id') == current_user_id
+    )
+    
+    # Also check via family_memberships (shared real family)
+    if not is_same_family and current_family_id:
+        shared_membership = await db.family_memberships.find_one({
+            "family_id": current_family_id,
+            "user_id": member_id
+        })
+        if shared_membership:
+            is_same_family = True
+    
+    # Also check if both are in ANY common family via memberships
+    if not is_same_family:
+        my_families = await db.family_memberships.find(
+            {"user_id": current_user_id}, {"_id": 0, "family_id": 1}
+        ).to_list(20)
+        my_family_ids = {m['family_id'] for m in my_families}
+        my_family_ids.add(family_id)
+        
+        member_families = await db.family_memberships.find(
+            {"user_id": member_id}, {"_id": 0, "family_id": 1}
+        ).to_list(20)
+        for mf in member_families:
+            if mf['family_id'] in my_family_ids:
+                is_same_family = True
+                break
+    
+    if not is_same_family:
         raise HTTPException(status_code=403, detail="Member does not belong to your family")
     
-    # Update role
+    # Update role in users collection
     await db.users.update_one(
         {"user_id": member_id},
         {"$set": {"role": new_role}}
     )
+    
+    # Also update role in family_memberships
+    if current_family_id:
+        await db.family_memberships.update_many(
+            {"user_id": member_id, "family_id": current_family_id},
+            {"$set": {"role": new_role}}
+        )
     
     # Notify the member about role change
     if member_id != current_user['user_id']:

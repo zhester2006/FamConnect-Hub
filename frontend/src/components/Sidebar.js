@@ -26,19 +26,29 @@ const triggerHaptic = (type = 'light') => {
 
 // Mobile Bottom Navigation Component
 function MobileBottomNav({ user, currentPath, onNavigate }) {
-  const navItems = useMemo(() => user?.role === 'parent' ? [
-    { icon: Home, label: 'Home', path: '/dashboard' },
-    { icon: Calendar, label: 'Calendar', path: '/calendar' },
-    { icon: MessageCircle, label: 'Chat', path: '/chat' },
-    { icon: LayoutDashboard, label: 'Wall', path: '/family-wall' },
-    { icon: Settings, label: 'More', path: '/settings' },
-  ] : [
-    { icon: Home, label: 'Space', path: '/space' },
-    { icon: Calendar, label: 'Calendar', path: '/calendar' },
-    { icon: MessageCircle, label: 'Chat', path: '/chat' },
-    { icon: Trophy, label: 'Rewards', path: '/rewards' },
-    { icon: Settings, label: 'More', path: '/settings' },
-  ], [user?.role]);
+  const navItems = useMemo(() => {
+    if (user?.role === 'homehub') return [
+      { icon: Sparkles, label: 'Hub', path: '/hub' },
+      { icon: Calendar, label: 'Calendar', path: '/calendar' },
+      { icon: MessageCircle, label: 'Chat', path: '/chat' },
+      { icon: ShoppingCart, label: 'Shopping', path: '/shopping' },
+      { icon: LayoutDashboard, label: 'Wall', path: '/family-wall' },
+    ];
+    if (user?.role === 'parent') return [
+      { icon: Home, label: 'Home', path: '/dashboard' },
+      { icon: Calendar, label: 'Calendar', path: '/calendar' },
+      { icon: MessageCircle, label: 'Chat', path: '/chat' },
+      { icon: LayoutDashboard, label: 'Wall', path: '/family-wall' },
+      { icon: Settings, label: 'More', path: '/settings' },
+    ];
+    return [
+      { icon: Home, label: 'Space', path: '/space' },
+      { icon: Calendar, label: 'Calendar', path: '/calendar' },
+      { icon: MessageCircle, label: 'Chat', path: '/chat' },
+      { icon: Trophy, label: 'Rewards', path: '/rewards' },
+      { icon: Settings, label: 'More', path: '/settings' },
+    ];
+  }, [user?.role]);
 
   const navigateWithHaptic = useCallback((path) => {
     triggerHaptic('light');
@@ -147,7 +157,19 @@ export default function Sidebar({ user, isOpen, setIsOpen, collapsed, setCollaps
     { icon: Settings, label: 'Settings', path: '/settings', color: 'text-slate-400' },
   ], []);
 
-  const menuItems = user?.role === 'parent' ? parentMenuItems : childMenuItems;
+  // HomeHub role: restricted to only Hub + shared family screens
+  const homehubMenuItems = useMemo(() => [
+    { icon: Sparkles, label: 'Home Hub', path: '/hub', color: 'text-indigo-400' },
+    { icon: Calendar, label: 'Calendar', path: '/calendar', color: 'text-emerald-400' },
+    { icon: MessageCircle, label: 'Chat', path: '/chat', color: 'text-pink-400' },
+    { icon: LayoutDashboard, label: 'Wall', path: '/family-wall', color: 'text-rose-400' },
+    { icon: ShoppingCart, label: 'Shopping', path: '/shopping', color: 'text-orange-400' },
+    { icon: Trophy, label: 'Leaderboard', path: '/leaderboard', color: 'text-yellow-400' },
+    { icon: Utensils, label: 'Dinner', path: '/dinner', color: 'text-amber-400' },
+    { icon: Award, label: 'Rewards', path: '/rewards', color: 'text-purple-400' },
+  ], []);
+
+  const menuItems = user?.role === 'homehub' ? homehubMenuItems : user?.role === 'parent' ? parentMenuItems : childMenuItems;
 
   // Sidebar width for margin calculation: 64px collapsed, 256px expanded
   const sidebarWidth = isCollapsed ? 'w-16' : 'w-64';

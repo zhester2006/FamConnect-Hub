@@ -118,6 +118,22 @@ async def create_chore(request: Request, data: dict):
         "recurring": data.get('recurring', False)
     }
     await db.chores.insert_one(chore_doc)
+    
+    # Notify the assigned person about the new chore
+    assigned_to = data.get('assigned_to')
+    if assigned_to and assigned_to != current_user['user_id']:
+        notification_doc = {
+            "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+            "user_id": assigned_to,
+            "type": "chore_assigned",
+            "title": "New Chore Assigned",
+            "message": f"You have a new chore: '{data['title']}' scheduled for {data['scheduled_date']}",
+            "data": {"chore_id": chore_id},
+            "read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.notifications.insert_one(notification_doc)
+    
     return await db.chores.find_one({"chore_id": chore_id}, {"_id": 0})
 
 @router.put("/chores/{chore_id}/complete")
