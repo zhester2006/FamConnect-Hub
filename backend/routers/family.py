@@ -175,12 +175,40 @@ async def get_family_info(request: Request):
 async def get_family_members_detailed(request: Request):
     """Get detailed family members list for management UI"""
     current_user = await get_current_user(request)
-    family_id = current_user.get('family_id') or current_user.get('parent_id', current_user['user_id'])
+    family_id = current_user.get('current_family_id') or current_user.get('family_id') or current_user.get('parent_id', current_user['user_id'])
+    
+    # Get member user_ids from family_memberships first
+    membership_ids = set()
+    memberships = await db.family_memberships.find({"family_id": family_id}, {"_id": 0, "user_id": 1}).to_list(100)
+    for m in memberships:
+        membership_ids.add(m['user_id'])
+    # Also check with user_id as family_id (legacy)
+    memberships2 = await db.family_memberships.find({"family_id": current_user['user_id']}, {"_id": 0, "user_id": 1}).to_list(100)
+    for m in memberships2:
+        membership_ids.add(m['user_id'])
+    
+    # Build query combining old-style and membership-based lookups
+    query_conditions = [
+        {"family_id": family_id},
+        {"parent_id": family_id},
+        {"user_id": family_id}
+    ]
+    if membership_ids:
+        query_conditions.append({"user_id": {"$in": list(membership_ids)}})
     
     members = await db.users.find(
-        {"$or": [{"family_id": family_id}, {"parent_id": family_id}, {"user_id": family_id}]},
+        {"$or": query_conditions},
         {"_id": 0}
     ).to_list(100)
+    
+    # Deduplicate by user_id
+    seen = set()
+    unique_members = []
+    for member in members:
+        if member['user_id'] not in seen:
+            seen.add(member['user_id'])
+            unique_members.append(member)
+    members = unique_members
     
     # Sanitize and enhance member data
     for member in members:

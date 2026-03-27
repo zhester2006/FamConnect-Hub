@@ -1,45 +1,37 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { X, Send, Mic, MicOff, Loader2, Sparkles, Volume2 } from 'lucide-react';
+import { X, Send, Mic, MicOff, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { ChatBubble } from './pixie/ChatBubble';
+import { PinModal } from './pixie/PinModal';
+import { EmptyState } from './pixie/EmptyState';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
-function VoicePulse({ isRecording }) {
-  if (!isRecording) return null;
+function RecordingBar({ duration, onCancel, onSend }) {
+  const formatted = Math.floor(duration / 60) + ':' + (duration % 60).toString().padStart(2, '0');
   return (
-    <div className="flex items-center gap-1.5">
-      {[0, 1, 2, 3, 4].map(i => (
-        <div
-          key={i}
-          className="w-1 bg-red-400 rounded-full animate-pulse"
-          style={{
-            height: `${12 + Math.random() * 16}px`,
-            animationDelay: `${i * 80}ms`,
-            animationDuration: '0.6s'
-          }}
-        />
-      ))}
+    <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3" data-testid="pixie-recording">
+      <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+      <span className="text-red-400 font-mono text-sm flex-1">{formatted}</span>
+      <button onClick={onCancel} className="p-2 hover:bg-slate-800 rounded-full" data-testid="pixie-cancel-recording">
+        <X className="w-4 h-4 text-slate-400" />
+      </button>
+      <button onClick={onSend} className="p-2 bg-primary rounded-full hover:bg-primary/80" data-testid="pixie-send-recording">
+        <Send className="w-4 h-4 text-white" />
+      </button>
     </div>
   );
 }
 
-function ChatBubble({ message, isUser }) {
+function LoadingDots() {
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}>
-      <div
-        className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-          isUser
-            ? 'bg-primary text-white rounded-br-md'
-            : 'bg-slate-800/80 text-slate-200 border border-slate-700/50 rounded-bl-md'
-        }`}
-        data-testid={isUser ? 'pixie-user-msg' : 'pixie-bot-msg'}
-      >
-        {!isUser && message.transcription && (
-          <p className="text-[10px] text-slate-500 mb-1 italic">
-            You said: "{message.transcription}"
-          </p>
-        )}
-        <p className="whitespace-pre-wrap">{message.content}</p>
+    <div className="flex items-center gap-2 mb-3">
+      <div className="bg-slate-800/80 border border-slate-700/50 rounded-2xl rounded-bl-md px-4 py-3">
+        <div className="flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" />
+          <div className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+          <div className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+        </div>
       </div>
     </div>
   );
@@ -52,15 +44,67 @@ export default function PixieChat({ user }) {
   const [loading, setLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const [listening, setListening] = useState(false);
+  const [pinModal, setPinModal] = useState(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const timerRef = useRef(null);
   const messagesEndRef = useRef(null);
-  const inputRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const isHomehub = user?.role === 'homehub';
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
+
+  // Wake word: "Pixie" / "Hey Pixie"
+  useEffect(() => {
+    const SpeechRecog = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecog) return;
+
+    const recognition = new SpeechRecog();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = (event) => {
+      let i = event.resultIndex;
+      while (i < event.results.length) {
+        const t = event.results[i][0].transcript.toLowerCase().trim();
+        if (t.includes('pixie') || t.includes('hey pixie') || t.includes('pixy')) {
+          if (!isOpen) setIsOpen(true);
+          break;
+        }
+        i++;
+      }
+    };
+
+    recognition.onerror = () => {};
+    recognition.onend = () => {
+      if (listening) {
+        try { recognition.start(); } catch (e) { /* ignore */ }
+      }
+    };
+
+    recognitionRef.current = recognition;
+    return () => { try { recognition.stop(); } catch (e) { /* ignore */ } };
+  }, [isOpen, listening]);
+
+  const toggleWakeWord = useCallback(() => {
+    if (listening) {
+      setListening(false);
+      try { recognitionRef.current?.stop(); } catch (e) { /* ignore */ }
+    } else {
+      setListening(true);
+      navigator.mediaDevices?.getUserMedia({ audio: true }).then(() => {
+        try { recognitionRef.current?.start(); } catch (e) { /* ignore */ }
+      }).catch(() => {
+        toast.error('Microphone access needed for wake word');
+      });
+    }
+  }, [listening]);
 
   const getHeaders = useCallback(() => {
     const token = localStorage.getItem('dev_session_token');
@@ -70,11 +114,26 @@ export default function PixieChat({ user }) {
   }, []);
 
   const getContext = useCallback(() => {
-    return messages.slice(-6).map(m => ({
-      role: m.isUser ? 'user' : 'assistant',
-      content: m.content
-    }));
+    const recent = messages.slice(-6);
+    const ctx = [];
+    for (let i = 0; i < recent.length; i++) {
+      ctx.push({ role: recent[i].isUser ? 'user' : 'assistant', content: recent[i].content });
+    }
+    return ctx;
   }, [messages]);
+
+  const processResponse = useCallback((data) => {
+    if (data.needs_pin && data.needs_user_selection) {
+      setPinModal({ members: data.family_members || [], actions_planned: data.actions_planned || [] });
+      setMessages(prev => [...prev, { content: data.response, isUser: false }]);
+    } else {
+      const taken = data.actions_taken || [];
+      setMessages(prev => [...prev, { content: data.response, isUser: false, actions: taken }]);
+      let successes = 0;
+      for (let i = 0; i < taken.length; i++) { if (taken[i].success) successes++; }
+      if (successes > 0) toast.success('Pixie completed ' + successes + ' action' + (successes > 1 ? 's' : ''));
+    }
+  }, []);
 
   const sendTextMessage = async () => {
     if (!input.trim() || loading) return;
@@ -84,16 +143,38 @@ export default function PixieChat({ user }) {
     setLoading(true);
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/ai/pixie`, {
-        method: 'POST',
-        headers: getHeaders(),
-        credentials: 'include',
-        body: JSON.stringify({ message: text, context: getContext() })
+      const res = await fetch(BACKEND_URL + '/api/pixie/command', {
+        method: 'POST', headers: getHeaders(), credentials: 'include',
+        body: JSON.stringify({ message: text, context: getContext(), mode: isHomehub ? 'homehub' : 'normal' })
       });
       const data = await res.json();
-      setMessages(prev => [...prev, { content: data.response, isUser: false }]);
+      processResponse(data);
     } catch (e) {
       toast.error('Pixie is taking a nap. Try again!');
+    }
+    setLoading(false);
+  };
+
+  const handlePinSubmit = async (userId, pin) => {
+    if (!pinModal) return;
+    setLoading(true);
+    setPinModal(null);
+    const userMsgs = messages.filter(m => m.isUser);
+    const lastUserMsg = userMsgs.length > 0 ? userMsgs[userMsgs.length - 1] : null;
+
+    try {
+      const res = await fetch(BACKEND_URL + '/api/pixie/command', {
+        method: 'POST', headers: getHeaders(), credentials: 'include',
+        body: JSON.stringify({
+          message: lastUserMsg?.content || '',
+          context: getContext(), mode: 'homehub',
+          acting_user_id: userId, acting_user_pin: pin
+        })
+      });
+      const data = await res.json();
+      processResponse(data);
+    } catch (e) {
+      toast.error('Verification failed');
     }
     setLoading(false);
   };
@@ -101,41 +182,31 @@ export default function PixieChat({ user }) {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = recorder;
       chunksRef.current = [];
-
-      mediaRecorderRef.current.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-
-      mediaRecorderRef.current.onstop = () => {
-        stream.getTracks().forEach(t => t.stop());
-      };
-
-      mediaRecorderRef.current.start();
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      recorder.onstop = () => { stream.getTracks().forEach(t => t.stop()); };
+      recorder.start();
       setIsRecording(true);
       setRecordingDuration(0);
       timerRef.current = setInterval(() => setRecordingDuration(d => d + 1), 1000);
     } catch (e) {
-      toast.error('Microphone access denied');
+      toast.error('Microphone access denied. Please allow microphone permissions.');
     }
   };
 
   const stopRecordingAndSend = async () => {
-    if (!mediaRecorderRef.current || !isRecording) return;
-
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || !isRecording) return;
     return new Promise((resolve) => {
-      mediaRecorderRef.current.onstop = async () => {
-        mediaRecorderRef.current.stream?.getTracks().forEach(t => t.stop());
+      recorder.onstop = async () => {
+        if (recorder.stream) recorder.stream.getTracks().forEach(t => t.stop());
         clearInterval(timerRef.current);
         setIsRecording(false);
 
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        if (blob.size < 1000) {
-          toast.error('Recording too short');
-          resolve();
-          return;
-        }
+        if (blob.size < 1000) { toast.error('Recording too short'); resolve(); return; }
 
         setMessages(prev => [...prev, { content: 'Listening...', isUser: true, isVoice: true }]);
         setLoading(true);
@@ -145,32 +216,23 @@ export default function PixieChat({ user }) {
           const formData = new FormData();
           formData.append('audio', blob, 'voice.webm');
           formData.append('context', JSON.stringify(getContext()));
+          formData.append('mode', isHomehub ? 'homehub' : 'normal');
 
           const headers = {};
           if (token) headers['Authorization'] = 'Bearer ' + token;
 
-          const res = await fetch(`${BACKEND_URL}/api/ai/pixie/voice`, {
-            method: 'POST',
-            headers,
-            credentials: 'include',
-            body: formData
+          const res = await fetch(BACKEND_URL + '/api/pixie/voice-command', {
+            method: 'POST', headers: headers, credentials: 'include', body: formData
           });
-
           const data = await res.json();
-          if (data.success) {
+
+          if (data.success !== false) {
             setMessages(prev => {
-              const updated = [...prev];
-              updated[updated.length - 1] = {
-                content: data.transcription || 'Voice message',
-                isUser: true,
-                isVoice: true
-              };
-              return [...updated, {
-                content: data.response,
-                isUser: false,
-                transcription: data.transcription
-              }];
+              const updated = prev.slice();
+              updated[updated.length - 1] = { content: data.transcription || 'Voice message', isUser: true, isVoice: true };
+              return updated;
             });
+            processResponse(data);
           } else {
             toast.error('Voice command failed');
             setMessages(prev => prev.slice(0, -1));
@@ -182,39 +244,61 @@ export default function PixieChat({ user }) {
         setLoading(false);
         resolve();
       };
-
-      mediaRecorderRef.current.stop();
+      recorder.stop();
     });
   };
 
   const cancelRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stream?.getTracks().forEach(t => t.stop());
-      mediaRecorderRef.current.stop();
+    const recorder = mediaRecorderRef.current;
+    if (recorder && isRecording) {
+      if (recorder.stream) recorder.stream.getTracks().forEach(t => t.stop());
+      recorder.stop();
     }
     clearInterval(timerRef.current);
     setIsRecording(false);
-    setRecordingDuration(0);
   };
 
-  const formatDuration = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+  // Render message list
+  const renderMessages = () => {
+    const items = [];
+    for (let i = 0; i < messages.length; i++) {
+      items.push(<ChatBubble key={i} message={messages[i]} isUser={messages[i].isUser} />);
+    }
+    return items;
+  };
+
+  const firstName = user?.name ? user.name.split(' ')[0] : 'there';
 
   if (!isOpen) {
     return (
-      <button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-24 md:bottom-6 right-4 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 shadow-lg shadow-violet-500/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-        data-testid="pixie-fab"
-        title="Talk to Pixie"
-      >
-        <Sparkles className="w-6 h-6 text-white" />
-      </button>
+      <div className="fixed bottom-24 md:bottom-6 right-4 z-40 flex flex-col items-end gap-2">
+        {listening && (
+          <div className="bg-violet-600/90 text-white text-[10px] font-bold px-3 py-1.5 rounded-full animate-pulse shadow-lg" data-testid="pixie-wake-indicator">
+            Listening for "Hey Pixie"...
+          </div>
+        )}
+        <div className="flex gap-2">
+          <button
+            onClick={toggleWakeWord}
+            className={'w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110 ' + (listening ? 'bg-violet-600 shadow-violet-500/30' : 'bg-slate-800 border border-slate-700')}
+            data-testid="pixie-wake-toggle"
+          >
+            {listening ? <Mic className="w-4 h-4 text-white" /> : <MicOff className="w-4 h-4 text-slate-400" />}
+          </button>
+          <button
+            onClick={() => setIsOpen(true)}
+            className="w-14 h-14 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 shadow-lg shadow-violet-500/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+            data-testid="pixie-fab"
+          >
+            <Sparkles className="w-6 h-6 text-white" />
+          </button>
+        </div>
+      </div>
     );
   }
 
   return (
     <div className="fixed bottom-24 md:bottom-6 right-4 z-50 w-[340px] sm:w-[380px] max-h-[520px] flex flex-col bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden" data-testid="pixie-chat-panel">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-gradient-to-r from-violet-900/40 to-indigo-900/40">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center">
@@ -222,106 +306,48 @@ export default function PixieChat({ user }) {
           </div>
           <div>
             <p className="text-sm font-bold text-white">Pixie</p>
-            <p className="text-[10px] text-slate-400">Family AI Assistant</p>
+            <p className="text-[10px] text-slate-400">{isHomehub ? 'HomeHub Mode' : 'Family AI Assistant'}</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <div className="flex items-center gap-1 px-2 py-1 bg-green-500/20 rounded-full mr-1">
-            <Mic className="w-3 h-3 text-green-400" />
-            <span className="text-[10px] text-green-400 font-bold">Voice</span>
-          </div>
-          <button onClick={() => setIsOpen(false)} className="p-1.5 hover:bg-slate-800 rounded-lg transition-all" data-testid="pixie-close-btn">
+          <button
+            onClick={toggleWakeWord}
+            className={'p-1.5 rounded-lg transition-all ' + (listening ? 'bg-violet-500/20 text-violet-400' : 'hover:bg-slate-800 text-slate-500')}
+            data-testid="pixie-wake-header-toggle"
+          >
+            {listening ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+          </button>
+          <button onClick={() => setIsOpen(false)} className="p-1.5 hover:bg-slate-800 rounded-lg" data-testid="pixie-close-btn">
             <X className="w-4 h-4 text-slate-400" />
           </button>
         </div>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-3 min-h-[280px] max-h-[360px]">
-        {messages.length === 0 && (
-          <div className="text-center py-8">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-500/20 to-indigo-500/20 flex items-center justify-center mx-auto mb-3">
-              <Sparkles className="w-8 h-8 text-violet-400" />
-            </div>
-            <p className="text-sm font-bold text-white mb-1">Hey {user?.name?.split(' ')[0] || 'there'}!</p>
-            <p className="text-xs text-slate-400 max-w-[240px] mx-auto">
-              Ask me anything or tap the mic to use voice commands
-            </p>
-            <div className="mt-4 space-y-1.5">
-              {['What should we have for dinner?', 'Suggest a family activity', 'Help with homework tips'].map((q, i) => (
-                <button
-                  key={i}
-                  onClick={() => { setInput(q); }}
-                  className="block w-full text-left text-xs text-slate-400 hover:text-white bg-slate-800/40 hover:bg-slate-800 rounded-lg px-3 py-2 transition-all"
-                  data-testid={`pixie-suggestion-${i}`}
-                >
-                  {q}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {messages.map((msg, i) => (
-          <ChatBubble key={i} message={msg} isUser={msg.isUser} />
-        ))}
-
-        {loading && (
-          <div className="flex items-center gap-2 mb-3">
-            <div className="bg-slate-800/80 border border-slate-700/50 rounded-2xl rounded-bl-md px-4 py-3">
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-              </div>
-            </div>
-          </div>
-        )}
+        {messages.length === 0 && <EmptyState userName={firstName} onSelect={setInput} />}
+        {renderMessages()}
+        {pinModal && <PinModal members={pinModal.members} onSubmit={handlePinSubmit} onCancel={() => setPinModal(null)} />}
+        {loading && <LoadingDots />}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
       <div className="border-t border-slate-800 p-3">
         {isRecording ? (
-          <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3" data-testid="pixie-recording">
-            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-            <VoicePulse isRecording={isRecording} />
-            <span className="text-red-400 font-mono text-sm flex-1">{formatDuration(recordingDuration)}</span>
-            <button onClick={cancelRecording} className="p-2 hover:bg-slate-800 rounded-full" data-testid="pixie-cancel-recording">
-              <X className="w-4 h-4 text-slate-400" />
-            </button>
-            <button onClick={stopRecordingAndSend} className="p-2 bg-primary rounded-full hover:bg-primary/80" data-testid="pixie-send-recording">
-              <Send className="w-4 h-4 text-white" />
-            </button>
-          </div>
+          <RecordingBar duration={recordingDuration} onCancel={cancelRecording} onSend={stopRecordingAndSend} />
         ) : (
           <form onSubmit={(e) => { e.preventDefault(); sendTextMessage(); }} className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={startRecording}
-              disabled={loading}
+            <button type="button" onClick={startRecording} disabled={loading}
               className="p-2.5 hover:bg-violet-500/20 rounded-full transition-all flex-shrink-0 disabled:opacity-50"
-              data-testid="pixie-mic-btn"
-              title="Voice command"
-            >
+              data-testid="pixie-mic-btn">
               <Mic className="w-5 h-5 text-violet-400" />
             </button>
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask Pixie..."
-              disabled={loading}
+            <input type="text" value={input} onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask Pixie anything..." disabled={loading}
               className="flex-1 bg-slate-800/50 border border-slate-700 rounded-full px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none disabled:opacity-50"
-              data-testid="pixie-input"
-            />
-            <button
-              type="submit"
-              disabled={!input.trim() || loading}
+              data-testid="pixie-input" />
+            <button type="submit" disabled={!input.trim() || loading}
               className="p-2.5 bg-violet-600 hover:bg-violet-500 disabled:bg-slate-700 rounded-full transition-all flex-shrink-0 disabled:cursor-not-allowed"
-              data-testid="pixie-send-btn"
-            >
+              data-testid="pixie-send-btn">
               {loading ? <Loader2 className="w-5 h-5 text-white animate-spin" /> : <Send className="w-5 h-5 text-white" />}
             </button>
           </form>
